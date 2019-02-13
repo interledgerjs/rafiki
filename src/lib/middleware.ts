@@ -68,7 +68,7 @@ export function constructMiddlewarePipeline<T,U> (pipeline: Pipeline<T,U>, endHa
   return (param: T) => middleware(param, endHandler)
 }
 
-export async function constructAccountPipelines (account: Account, middlewares: { [key: string]: Middleware }): Promise<Pipelines> {
+export async function constructPipelines (middlewares: { [key: string]: Middleware }): Promise<Pipelines> {
   const pipelines: Pipelines = {
     startup: new MiddlewarePipeline<void, void>(),
     incomingData: new MiddlewarePipeline<IlpPrepare, IlpReply>(),
@@ -80,7 +80,7 @@ export async function constructAccountPipelines (account: Account, middlewares: 
   for (const middlewareName of Object.keys(middlewares)) {
     const middleware = middlewares[middlewareName]
     try {
-      await middleware.applyToPipelines(pipelines, account)
+      await middleware.applyToPipelines(pipelines)
     } catch (err) {
       const errInfo = (err && typeof err === 'object' && err.stack) ? err.stack : String(err)
 

@@ -42,7 +42,7 @@ export interface Pipelines {
 }
 
 export default interface Middleware {
-  applyToPipelines: (pipelines: Pipelines, account: Account) => Promise<void>
+  applyToPipelines: (pipelines: Pipelines) => Promise<void>
 }
 
 export interface MiddlewareConstructor {
