@@ -12,7 +12,7 @@ import { PeerInfo } from '../../../src/types/peer';
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 
-describe('ildcp', function () {
+describe('Ildcp Middlware', function () {
 
   let pipelines: Pipelines
   let ildcpMiddleware: IldcpMiddleware
