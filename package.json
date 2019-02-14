@@ -32,6 +32,7 @@
     "debug": "^4.1.0",
     "ilp-packet": "^3.0.8",
     "ilp-protocol-ccp": "^1.1.1",
+    "ilp-protocol-ildcp": "^2.0.1",
     "reduct": "^3.3.1",
     "supports-color": "^5.5.0"
   },
