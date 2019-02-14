@@ -9,12 +9,10 @@ export default class ExpireMiddleware implements Middleware {
     pipelines.outgoingData.insertLast({
       name: 'expire',
       method: async (packet: IlpPrepare, next: MiddlewareCallback<IlpPrepare, IlpReply>) => {
-        console.log(packet)
         if (isPrepare(packet)) {
           const { executionCondition, expiresAt } = packet
 
           const duration = expiresAt.getTime() - Date.now()
-          console.log(duration)
 
           const promise = next(packet)
 
