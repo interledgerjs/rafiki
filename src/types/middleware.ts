@@ -7,7 +7,7 @@ export interface MiddlewareDefinition {
 }
 
 export interface MiddlewareServices {
-  
+
 }
 
 export interface MiddlewareCallback<T,U> {
