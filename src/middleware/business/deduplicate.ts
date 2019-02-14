@@ -4,7 +4,7 @@ import { createHash } from 'crypto'
 import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill, IlpFulfill, serializeIlpPrepare, deserializeEnvelope } from 'ilp-packet'
 import Middleware, { MiddlewareCallback, MiddlewareServices, Pipelines } from '../../types/middleware'
 import BigNumber from 'bignumber.js'
-import { PeerInfo } from '../../types/peer';
+import { PeerInfo } from '../../types/peer'
 
 // Where in the ILP packet does the static data begin (i.e. the data that is not modified hop-to-hop)
 const STATIC_DATA_OFFSET = 25 // 8 byte amount + 17 byte expiry date
@@ -62,35 +62,35 @@ export default class DeduplicateMiddleware implements Middleware {
     pipelines.outgoingData.insertLast({
       name: 'deduplicate',
       method: async (packet: IlpPrepare, next: MiddlewareCallback<IlpPrepare, IlpReply>) => {
-          
-          const { contents } = deserializeEnvelope(serializeIlpPrepare(packet))
 
-          const index = createHash('sha256')
+        const { contents } = deserializeEnvelope(serializeIlpPrepare(packet))
+
+        const index = createHash('sha256')
             .update(contents.slice(STATIC_DATA_OFFSET))
             .digest()
             .slice(0, 16) // 128 bits is enough and saves some memory
             .toString('base64')
 
-          const { amount, expiresAt } = packet
-          const cachedPacket = this.packetCache.get(index)
+        const { amount, expiresAt } = packet
+        const cachedPacket = this.packetCache.get(index)
 
-          if (cachedPacket) {
+        if (cachedPacket) {
             // We have seen this packet before, let's check if previous amount and expiresAt were larger
-            if (new BigNumber(cachedPacket.amount).gte(amount) && cachedPacket.expiresAt >= expiresAt) {
-              //TODO add back logging
+          if (new BigNumber(cachedPacket.amount).gte(amount) && cachedPacket.expiresAt >= expiresAt) {
+              // TODO add back logging
               // log.warn('deduplicate packet cache hit. accountId=%s elapsed=%s amount=%s', accountId, cachedPacket.expiresAt.getTime() - Date.now(), amount)
-              return cachedPacket.promise
-            }
+            return cachedPacket.promise
           }
+        }
 
-          const promise = next(packet)
-          this.packetCache.set(index, {
-            amount,
-            expiresAt,
-            promise
-          })
+        const promise = next(packet)
+        this.packetCache.set(index, {
+          amount,
+          expiresAt,
+          promise
+        })
 
-          return promise
+        return promise
       }
     })
   }
