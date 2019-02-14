@@ -19,7 +19,7 @@ describe('Alert Middleware', function () {
     const peerInfo: PeerInfo = {
       id: 'harry',
       relation: 'peer',
-      assertScale: 9,
+      assetScale: 9,
       assetCode: 'XRP'
     } 
 
