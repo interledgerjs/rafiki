@@ -38,7 +38,9 @@ describe('Ildcp Middlware', function () {
   })
 
   afterEach(function () {
-    ILDCPStub.restore()
+    if(ILDCPStub) {
+      ILDCPStub.restore()
+    }
   })
 
   it('inserts itself into the incoming data pipeline', async function () {
