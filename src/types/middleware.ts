@@ -6,6 +6,10 @@ export interface MiddlewareDefinition {
   options?: object
 }
 
+export interface MiddlewareServices {
+  
+}
+
 export interface MiddlewareCallback<T,U> {
   (val: T): Promise<U>
 }
@@ -46,5 +50,5 @@ export default interface Middleware {
 }
 
 export interface MiddlewareConstructor {
-  new (options: object, deps: reduct.Injector): Middleware
+  new (options: MiddlewareServices): Middleware
 }
