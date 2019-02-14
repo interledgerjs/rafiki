@@ -5,4 +5,9 @@ export interface PeerInfo {
   relation: Relation
   assetScale: number,
   assetCode: string,
+  rateLimit?: {
+    refillPeriod?: number,
+    refillCount?: number,
+    capacity?: number
+  }
 }
