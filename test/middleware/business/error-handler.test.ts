@@ -75,7 +75,6 @@ describe('Error-handler Middleware', function () {
       }
       let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
       const reply = await handler(preparePacket)
-      console.log(reply)
       assert.isTrue(isFulfill(reply))
       assert.deepEqual(reply, fulfillPacket)
     })
