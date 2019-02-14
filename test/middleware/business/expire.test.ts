@@ -78,7 +78,11 @@ describe('Expire Middleware', function () {
       let handler = constructMiddlewarePipeline(pipelines.outgoingData, endHandler)
       try {
         await handler(preparePacket)
-      } catch (err) { return; }
+      } catch (err) { 
+        if(err instanceof TransferTimedOutError){
+          return
+        }
+       }
       throw new Error('Should have thrown an error');
     })
 })
