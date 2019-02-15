@@ -16,7 +16,7 @@
     "lint": "tslint --project .",
     "lintFix": "tslint --project . --fix",
     "pretest": "tsc --build",
-    "test": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register test/**/*.ts",
+    "test": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register test/**/*.test.ts",
     "doc": "typedoc --options typedoc.js src/index.ts",
     "codecov": "codecov",
     "preversion": "npm run lint && npm test",

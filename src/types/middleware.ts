@@ -1,4 +1,3 @@
-import * as reduct from 'reduct'
 import { IlpPacket, IlpReply, IlpPrepare } from 'ilp-packet'
 
 export interface MiddlewareDefinition {

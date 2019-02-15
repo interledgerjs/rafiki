@@ -1,4 +1,3 @@
-import reduct = require('reduct')
 import Middleware,
 {
   MiddlewareDefinition,

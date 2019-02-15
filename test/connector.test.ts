@@ -7,8 +7,9 @@ import ValidateFulfillmentMiddleware from '../src/middleware/business/validate-f
 import { PeerInfo } from '../src/types/peer'
 import MockIlpEndpoint from './mocks/mockIlpEndpoint';
 import { IlpPrepare, IlpFulfill } from 'ilp-packet';
-import CcpMiddleware, { CcpMiddlewareServices } from '../src/middleware/protocol/ccp';
-import { Ildcp as IldcpMiddleware, IldcpMiddlewareServices } from '../src/middleware/protocol/ildcp';
+import CcpMiddleware from '../src/middleware/protocol/ccp';
+import { Ildcp as IldcpMiddleware } from '../src/middleware/protocol/ildcp';
+import MockMiddleware from './mocks/mockMiddleware';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -22,7 +23,13 @@ describe('Connector', function () {
     assetScale: 2,
     assetCode: 'USD',
   }
-
+  const preparePacket = {
+    amount: '52',
+    executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
+    expiresAt: new Date(START_DATE + 2000),
+    destination: 'test.connie.alice',
+    data: Buffer.alloc(0)
+  }
   const fulfillPacket: IlpFulfill = {
     fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
     data: Buffer.alloc(0)
@@ -48,29 +55,53 @@ describe('Connector', function () {
       sinon.assert.calledOnce(vfMiddlewareSpy)
     })
 
-    it('adds protocol middleware to pipelines', async function () {
+    it.skip('adds protocol middleware to pipelines', async function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
-      const vfMiddlewareSpy = sinon.spy(vfMiddleware, 'applyToPipelines')
+      const ildcpMiddlewareSpy = sinon.spy(IldcpMiddleware.prototype, 'applyToPipelines')
+      const ccpMiddlewareSpy = sinon.spy(CcpMiddleware.prototype, 'applyToPipelines')
 
-      connector.addPeer(peerInfo, endpoint, middleware)
+      connector.addPeer(peerInfo, endpoint, {})
 
-      sinon.assert.calledOnce(vfMiddlewareSpy)
+      sinon.assert.calledOnce(ildcpMiddlewareSpy)
+      sinon.assert.calledOnce(ccpMiddlewareSpy)
     })
 
-    it('connects pipelines to ilp-endpoint', async function () {
+    it('connects ilp-endpoint to incoming data pipeline', async function () {
+      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+      let isConnected: boolean = false
+      const mockMiddleware = new MockMiddleware(async (packet: IlpPrepare) => {
+        isConnected = true
+        return fulfillPacket
+      })
+      await connector.addPeer(peerInfo, endpoint, {'mock': mockMiddleware})
 
+      await endpoint.handler({} as IlpPrepare)
+
+      assert.isOk(isConnected)
     })
 
-    it('connects data pipelines to sendIlpPacket', async function () {
+    it('connects outgoing data pipeline to endpoints request', async function () {
+      let isConnected: boolean = false
+      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => {
+        console.log('in request ')
+        isConnected = true
+        return fulfillPacket
+      })
+      await connector.addPeer(peerInfo, endpoint, {})
 
+      const reply = await connector.sendIlpPacket(preparePacket)
+
+      assert.isOk(isConnected)
     })
 
     it('adds peer controller into peer controller map', async function () {
+      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+      const mockMiddleware = new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)
+      await connector.addPeer(peerInfo, endpoint, {'mock': mockMiddleware})
 
-    })
+      const peerController = connector.getPeer('alice')
 
-    it('binds changedPrefixes onto peer controller', async function () {
-
+      assert.isOk(peerController)
     })
   })
 

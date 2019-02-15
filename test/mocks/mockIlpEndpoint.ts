@@ -17,9 +17,13 @@ export default class MockIlpEndpoint extends EventEmitter implements Endpoint<Il
   constructor(outgoingHandler: (packet: IlpPrepare) => Promise<IlpReply>) {
     super()
     this.outgoingHandler = outgoingHandler
+    this.handler = (packet: IlpPrepare) => {
+      throw new Error('There is no handler specified')
+    }
   }
 
   async request (packet: IlpPrepare): Promise<IlpReply> {
+    console.log('in request object')
     if(!this.outgoingHandler) throw new Error('A packet handler needs to be set.')
 
     return this.outgoingHandler(packet)
