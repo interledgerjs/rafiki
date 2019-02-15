@@ -74,6 +74,7 @@ describe('Connector', function () {
   
       assert.isOk(ILDCPStub.called)
       assert.strictEqual(reply.data.toString(), 'test data')
+      ILDCPStub.restore()
     })
 
     it('adds ccp protocol middleware to pipelines', async function () {
