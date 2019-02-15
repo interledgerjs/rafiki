@@ -6,9 +6,8 @@ import Connector from '../src/connector'
 import ValidateFulfillmentMiddleware from '../src/middleware/business/validate-fulfillment'
 import { PeerInfo } from '../src/types/peer'
 import MockIlpEndpoint from './mocks/mockIlpEndpoint';
-import { IlpPrepare, IlpFulfill } from 'ilp-packet';
-import CcpMiddleware from '../src/middleware/protocol/ccp';
-import { Ildcp as IldcpMiddleware } from '../src/middleware/protocol/ildcp';
+import { IlpPrepare, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
+import * as ILDCP from 'ilp-protocol-ildcp'
 import MockMiddleware from './mocks/mockMiddleware';
 
 Chai.use(chaiAsPromised)
@@ -55,15 +54,48 @@ describe('Connector', function () {
       sinon.assert.calledOnce(vfMiddlewareSpy)
     })
 
-    it.skip('adds protocol middleware to pipelines', async function () {
+    it('adds ildcp protocol middleware to pipelines', async function () {
+      const IldcpFulfill = {
+        fulfillment: Buffer.alloc(32),
+        data: Buffer.from('test data')
+      }
+      const packet: IlpPrepare = {
+        amount: '100',
+        executionCondition: Buffer.alloc(32),
+        expiresAt: new Date(),
+        destination: 'peer.config',
+        data: Buffer.alloc(0)
+      }
+      const ILDCPStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IldcpFulfill))
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
-      const ildcpMiddlewareSpy = sinon.spy(IldcpMiddleware.prototype, 'applyToPipelines')
-      const ccpMiddlewareSpy = sinon.spy(CcpMiddleware.prototype, 'applyToPipelines')
 
-      connector.addPeer(peerInfo, endpoint, {})
+      await connector.addPeer(peerInfo, endpoint, {})
+      const reply = await endpoint.handler(packet)
+  
+      assert.isOk(ILDCPStub.called)
+      assert.strictEqual(reply.data.toString(), 'test data')
+    })
 
-      sinon.assert.calledOnce(ildcpMiddlewareSpy)
-      sinon.assert.calledOnce(ccpMiddlewareSpy)
+    it('adds ccp protocol middleware to pipelines', async function () {
+      const ccpRouteControlFulfill = {
+        fulfillment: Buffer.alloc(32),
+        data: Buffer.from('test data')
+      }
+      const packet: IlpPrepare = {
+        amount: '100',
+        executionCondition: Buffer.alloc(32),
+        expiresAt: new Date(),
+        destination: 'peer.route.control',
+        data: Buffer.alloc(0)
+      }
+      const handleRouteControlStub = sinon.stub(connector, <any>'_handleCcpRouteControl').resolves(ccpRouteControlFulfill)
+      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+
+      await connector.addPeer(peerInfo, endpoint, {})
+      const reply = await endpoint.handler(packet)
+  
+      assert.isOk(handleRouteControlStub.called)
+      assert.strictEqual(reply.data.toString(), 'test data')
     })
 
     it('connects ilp-endpoint to incoming data pipeline', async function () {
@@ -83,13 +115,12 @@ describe('Connector', function () {
     it('connects outgoing data pipeline to endpoints request', async function () {
       let isConnected: boolean = false
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => {
-        console.log('in request ')
         isConnected = true
         return fulfillPacket
       })
       await connector.addPeer(peerInfo, endpoint, {})
 
-      const reply = await connector.sendIlpPacket(preparePacket)
+      await connector.sendIlpPacket(preparePacket)
 
       assert.isOk(isConnected)
     })
