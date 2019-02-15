@@ -14,7 +14,7 @@ const { RateLimitedError } = Errors
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
-describe('Max Packet Amount Middleware', function () {
+describe('Rate Limit Middleware', function () {
   let pipelines: Pipelines
   let stats: Stats
   let rateLimitMiddleware: RateLimitMiddleware

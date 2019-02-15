@@ -10,4 +10,9 @@ export interface PeerInfo {
     refillCount?: number,
     capacity?: number
   }
+  throughput?: {
+    refillPeriod?: number,
+    incomingAmount?: string,
+    outgoingAmount?: string
+  }
 }
