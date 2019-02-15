@@ -35,7 +35,6 @@
     "ilp-protocol-ccp": "^1.1.1",
     "ilp-protocol-ildcp": "^2.0.1",
     "prom-client": "^11.2.1",
-    "reduct": "^3.3.1",
     "supports-color": "^5.5.0"
   },
   "devDependencies": {
