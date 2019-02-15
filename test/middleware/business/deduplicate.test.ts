@@ -63,6 +63,7 @@ describe('Deduplicate Middleware', function () {
     this.clock.tick(cleanupInterval)
 
     sinon.assert.calledOnce(cleanupCacheSpy)
+    this.clock.restore()
   })
 
   it('clears the cleanup interval in the shutdown pipeline', async function () {
@@ -76,6 +77,7 @@ describe('Deduplicate Middleware', function () {
     this.clock.tick(cleanupInterval)
 
     sinon.assert.notCalled(cleanupCacheSpy)
+    this.clock.restore()
   })
 
   it('Adds outgoing packets into duplicate cache', async function () {

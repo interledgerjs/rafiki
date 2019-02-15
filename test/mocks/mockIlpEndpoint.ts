@@ -23,7 +23,6 @@ export default class MockIlpEndpoint extends EventEmitter implements Endpoint<Il
   }
 
   async request (packet: IlpPrepare): Promise<IlpReply> {
-    console.log('in request object')
     if(!this.outgoingHandler) throw new Error('A packet handler needs to be set.')
 
     return this.outgoingHandler(packet)
