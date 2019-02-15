@@ -199,38 +199,5 @@ describe('Throughput Middleware', function () {
       assert.isEmpty(pipelines.shutdown.getMethods())
     })
   })
-
-
-
-
-
-  // it('rejects when payments arrive too quickly', async function () {
-  //   let endHandler = async (data: IlpPrepare) => {
-  //     return Promise.resolve(fulfillPacket)
-  //   }
-  //   let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-
-  //   // Empty the token buffer
-  //   for (let i = 0; i < 3; i++) {
-  //     await handler(preparePacket)
-  //   }
-
-  //   try {
-  //     const reply = await handler(preparePacket)
-  //   } catch (err) { 
-  //     if(err instanceof RateLimitedError){
-  //       return
-  //     }
-  //    }
-  // })
-
-  // it('does not reject when payments arrive fine', async function () {
-  //   let endHandler = async (data: IlpPrepare) => {
-  //     return Promise.resolve(fulfillPacket)
-  //   }
-  //   let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-
-  //   const reply = await handler(preparePacket)
-  //   assert.isTrue(isFulfill(reply))
-  // })
+  
 })
