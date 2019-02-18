@@ -8,11 +8,6 @@ import CcpMiddleware, { CcpMiddlewareServices } from './middleware/protocol/ccp'
 import { Ildcp as IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
 import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcpRouteUpdateRequest } from 'ilp-protocol-ccp'
 
-const fulfillPacket: IlpFulfill = {
-  fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
-  data: Buffer.alloc(0)
-}
-
 const ownAddress: string = 'test.connie'
 export default class Connector {
   routingTable: RoutingTable = new RoutingTable()
@@ -34,7 +29,7 @@ export default class Connector {
 
     const middleware = Object.assign(businessMiddleware, protocolMiddleware)
     const pipelines = await constructPipelines(middleware)
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.incomingData, async (packet: IlpPrepare) => fulfillPacket)
+    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.incomingData, this.sendIlpPacket.bind(this))
     const outgoingIlpPacketHandler = constructMiddlewarePipeline(pipelines.outgoingData, endpoint.request.bind(endpoint))
 
     endpoint.handler = incomingIlpPacketHandler

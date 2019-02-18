@@ -113,6 +113,16 @@ describe('Connector', function () {
       assert.isOk(isConnected)
     })
 
+    it('connects the incoming data pipeline to sendIlpPacket', async function () {
+      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+      const sendIlpPacketSpy = sinon.spy(connector, 'sendIlpPacket')
+      
+      await connector.addPeer(peerInfo, endpoint, {})
+      await endpoint.handler(preparePacket)
+
+      sinon.assert.calledOnce(sendIlpPacketSpy)
+    })
+
     it('connects outgoing data pipeline to endpoints request', async function () {
       let isConnected: boolean = false
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => {
@@ -137,5 +147,62 @@ describe('Connector', function () {
     })
   })
 
+  describe('sendIlpPacket', function () {
+    it('calls the handler for the specified destination', async function () {
+      const bobPeerInfo: PeerInfo = {
+        id: 'bob',
+        relation: 'peer',
+        assetScale: 2,
+        assetCode: 'USD',
+      }
+      const bobFulfillPacket = {
+        fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
+        data: Buffer.from('reply from bob')
+      }
+      const aliceFulfillPacket = {
+        fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
+        data: Buffer.from('reply from alice')
+      }
+      const bobEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => bobFulfillPacket)
+      const aliceEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => aliceFulfillPacket)
+      await connector.addPeer(peerInfo, aliceEndpoint, {})
+      await connector.addPeer(bobPeerInfo, bobEndpoint, {})
 
+      const reply = await connector.sendIlpPacket(preparePacket) // packet addressed to alice
+
+      assert.strictEqual(reply.data.toString(), 'reply from alice')
+    })
+
+    it('throws error if address is not in routing table', async function () {
+      const bobPeerInfo: PeerInfo = {
+        id: 'bob',
+        relation: 'peer',
+        assetScale: 2,
+        assetCode: 'USD',
+      }
+      const bobEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+      await connector.addPeer(bobPeerInfo, bobEndpoint, {})
+
+      try{
+        await connector.sendIlpPacket(preparePacket) // packet addressed to alice
+      } catch (e) {
+        assert.strictEqual(e.message, "Can't route the request due to no route found for given prefix")
+        return
+      }
+
+      assert.fail('Did not throw error for not having address in routing table')
+    })
+  })
+
+  describe('getPeer', function () {
+    it('throws error if cannot find specified peer', async function () {
+      try{
+        connector.getPeer('fred')
+      } catch (e) {
+        assert.strictEqual(e.message, "Cannot find peer with id=fred")
+        return
+      }
+      assert.fail('getPeer did not throw error for not finding specified peer')
+    })
+  })
 })
