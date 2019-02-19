@@ -1,10 +1,8 @@
 
-// import { create as createLogger } from '../common/log'
 import { createHash } from 'crypto'
-import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill, IlpFulfill, serializeIlpPrepare, deserializeEnvelope } from 'ilp-packet'
-import Middleware, { MiddlewareCallback, MiddlewareServices, Pipelines } from '../../types/middleware'
+import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeEnvelope } from 'ilp-packet'
+import { Middleware, IlpRequestHandler } from '../../types/middleware'
 import BigNumber from 'bignumber.js'
-import { PeerInfo } from '../../types/peer'
 
 // Where in the ILP packet does the static data begin (i.e. the data that is not modified hop-to-hop)
 const STATIC_DATA_OFFSET = 25 // 8 byte amount + 17 byte expiry date
@@ -18,73 +16,29 @@ export interface CachedPacket {
   promise: Promise<IlpReply>
 }
 
-export interface DeduplicateMiddlewareServices extends MiddlewareServices {
-  peerInfo: PeerInfo,
-  cleanupInterval?: number,
-  packetLifetime?: number,
-  packetCache?: Map<string, CachedPacket>
+export interface DeduplicateMiddlewareServices {
+  cache: PacketCache
 }
 
-export default class DeduplicateMiddleware implements Middleware {
-  private packetCache: Map<string, CachedPacket> = new Map()
-  private peerInfo: PeerInfo
+export class DeduplicateMiddleware extends Middleware {
+  constructor ({ cache }: DeduplicateMiddlewareServices) {
 
-  private cleanupInterval: number
-  private packetLifetime: number
+    super({
+      processOutgoing: (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void) => {
 
-  constructor ({ peerInfo, cleanupInterval, packetLifetime, packetCache }: DeduplicateMiddlewareServices) {
-    this.peerInfo = peerInfo,
-    this.cleanupInterval = cleanupInterval || DEFAULT_CLEANUP_INTERVAL
-    this.packetLifetime = packetLifetime || DEFAULT_PACKET_LIFETIME
-    this.packetCache = packetCache || new Map()
-  }
-
-  async applyToPipelines (pipelines: Pipelines) {
-    // const log = createLogger(`deduplicate-middleware[${accountId}]`) //TODO add back logging
-
-    let interval: NodeJS.Timeout
-    pipelines.startup.insertLast({
-      name: 'deduplicate',
-      method: async (dummy: void, next: MiddlewareCallback<void, void>) => {
-        interval = setInterval(() => this.cleanupCache(this.packetLifetime), this.cleanupInterval)
-        return next(dummy)
-      }
-    })
-
-    pipelines.shutdown.insertLast({
-      name: 'deduplicate',
-      method: async (dummy: void, next: MiddlewareCallback<void, void>) => {
-        clearInterval(interval)
-        return next(dummy)
-      }
-    })
-
-    pipelines.outgoingData.insertLast({
-      name: 'deduplicate',
-      method: async (packet: IlpPrepare, next: MiddlewareCallback<IlpPrepare, IlpReply>) => {
-
-        const { contents } = deserializeEnvelope(serializeIlpPrepare(packet))
-
-        const index = createHash('sha256')
-            .update(contents.slice(STATIC_DATA_OFFSET))
-            .digest()
-            .slice(0, 16) // 128 bits is enough and saves some memory
-            .toString('base64')
-
-        const { amount, expiresAt } = packet
-        const cachedPacket = this.packetCache.get(index)
+        const key = cacheKey(request)
+        const { amount, expiresAt } = request
+        const cachedPacket = cache.get(key)
 
         if (cachedPacket) {
             // We have seen this packet before, let's check if previous amount and expiresAt were larger
           if (new BigNumber(cachedPacket.amount).gte(amount) && cachedPacket.expiresAt >= expiresAt) {
-              // TODO add back logging
-              // log.warn('deduplicate packet cache hit. accountId=%s elapsed=%s amount=%s', accountId, cachedPacket.expiresAt.getTime() - Date.now(), amount)
             return cachedPacket.promise
           }
         }
 
-        const promise = next(packet)
-        this.packetCache.set(index, {
+        const promise = (next) ? next(request) : Promise.reject(new Error('No next?')) // TODO - This sucks, need to fix
+        cache.set(key, {
           amount,
           expiresAt,
           promise
@@ -93,6 +47,40 @@ export default class DeduplicateMiddleware implements Middleware {
         return promise
       }
     })
+  }
+}
+
+export interface PacketCacheOptions {
+  cleanupInterval?: number,
+  packetLifetime?: number,
+  packetCache?: Map<string, CachedPacket>
+}
+
+export class PacketCache {
+
+  private timer: NodeJS.Timeout
+
+  private packetCache: Map<string, CachedPacket> = new Map()
+  private cleanupInterval: number
+  private packetLifetime: number
+
+  constructor ({ cleanupInterval, packetLifetime, packetCache }: PacketCacheOptions) {
+    this.cleanupInterval = cleanupInterval || DEFAULT_CLEANUP_INTERVAL
+    this.packetLifetime = packetLifetime || DEFAULT_PACKET_LIFETIME
+    this.packetCache = packetCache || new Map()
+    this.timer = setInterval(() => this.cleanupCache(this.packetLifetime), this.cleanupInterval)
+  }
+
+  public get (key: string): CachedPacket | undefined {
+    return this.packetCache.get(key)
+  }
+
+  public set (key: string, packet: CachedPacket) {
+    this.packetCache.set(key, packet)
+  }
+
+  public dispose () {
+    clearInterval(this.timer)
   }
 
   private cleanupCache (packetLifetime: number) {
@@ -106,4 +94,13 @@ export default class DeduplicateMiddleware implements Middleware {
       }
     }
   }
+}
+
+function cacheKey (packet: IlpPrepare): string {
+  const { contents } = deserializeEnvelope(serializeIlpPrepare(packet))
+  return createHash('sha256')
+      .update(contents.slice(STATIC_DATA_OFFSET))
+      .digest()
+      .slice(0, 16) // 128 bits is enough and saves some memory
+      .toString('base64')
 }

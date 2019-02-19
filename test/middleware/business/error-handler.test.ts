@@ -4,34 +4,20 @@ import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import {Pipelines} from '../../../src/types/middleware'
 import { IlpPrepare, isReject, IlpFulfill, isFulfill, IlpReject } from 'ilp-packet';
-import { constructPipelines, constructMiddlewarePipeline } from '../../../src/lib/middleware'
-import ErrorHandlerMiddleware from '../../../src/middleware/business/error-handler'
-import { PeerInfo } from '../../../src/types/peer';
+import { ErrorHandlerMiddleware } from '../../../src/middleware/business/error-handler'
 import { RateLimitedError } from 'ilp-packet/dist/src/errors';
+import { setPipelineHandler } from '../../../src/types/middleware';
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('Error-handler Middleware', function () {
-    let pipelines: Pipelines
     let errorHandlerMiddleware: ErrorHandlerMiddleware
-
     const getOwnIlpAddress = () => 'g.own.address'
 
     beforeEach( async function () {
       errorHandlerMiddleware = new ErrorHandlerMiddleware({getOwnIlpAddress})
-      pipelines = await constructPipelines({'error-handler' : errorHandlerMiddleware})
     })
-
-    it('adds methods to the correct pipeline', async function() {
-      assert.isNotEmpty(pipelines.incomingData.getMethods())
-      assert.equal(pipelines.incomingData.getMethods().length, 1)
-      assert.isEmpty(pipelines.outgoingData.getMethods())
-      assert.isEmpty(pipelines.startup.getMethods())
-      assert.isEmpty(pipelines.shutdown.getMethods())
-    })
-
 
     it('converts ilp packet errors thrown in pipeline to IlpRejects', async function() {
       const preparePacket: IlpPrepare = {
@@ -42,11 +28,10 @@ describe('Error-handler Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      let endHandler = (data: IlpPrepare) => {
+      setPipelineHandler('incoming', errorHandlerMiddleware, async () => {
         throw new RateLimitedError('to many requests, throttling')
-      }
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-      const reply = await handler(preparePacket)
+      })
+      const reply = await errorHandlerMiddleware.incoming.request(preparePacket)
       assert.isTrue(isReject(reply))
       assert.deepEqual(reply, {
         code: "T05",
@@ -70,11 +55,10 @@ describe('Error-handler Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      let endHandler = (data: IlpPrepare) => {
+      setPipelineHandler('incoming', errorHandlerMiddleware, async () => {
         return Promise.resolve(fulfillPacket)
-      }
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-      const reply = await handler(preparePacket)
+      })
+      const reply = await errorHandlerMiddleware.incoming.request(preparePacket)
       assert.isTrue(isFulfill(reply))
       assert.deepEqual(reply, fulfillPacket)
     })
@@ -95,12 +79,11 @@ describe('Error-handler Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      let endHandler = (data: IlpPrepare) => {
+      setPipelineHandler('incoming', errorHandlerMiddleware, async () => {
         return Promise.resolve(rejectPacket)
-      }
+      })
 
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-      const reply = await handler(preparePacket)
+      const reply = await errorHandlerMiddleware.incoming.request(preparePacket)
       assert.isTrue(isReject(reply))
       assert.deepEqual(reply, rejectPacket)
     })
@@ -114,12 +97,11 @@ describe('Error-handler Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      let endHandler = (data: IlpPrepare) => {
+      setPipelineHandler('incoming', errorHandlerMiddleware, async () => {
         return Promise.resolve({} as IlpFulfill)
-      }
+      })
 
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-      const reply = await handler(preparePacket)
+      const reply = await errorHandlerMiddleware.incoming.request(preparePacket)
       assert.isTrue(isReject(reply))
       assert.deepEqual(reply, {
             code: "F00",

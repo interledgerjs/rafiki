@@ -1,25 +1,22 @@
-// import { create as createLogger } from '../common/log'
-// const log = createLogger('expire-middleware')
-import { Type, Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
-import Middleware, { MiddlewareCallback, Pipelines } from '../../types/middleware'
+import { Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
+import { Middleware, IlpRequestHandler } from '../../types/middleware'
 const { TransferTimedOutError } = Errors
 
-export default class ExpireMiddleware implements Middleware {
-  async applyToPipelines (pipelines: Pipelines) {
-    pipelines.outgoingData.insertLast({
-      name: 'expire',
-      method: async (packet: IlpPrepare, next: MiddlewareCallback<IlpPrepare, IlpReply>) => {
-        if (isPrepare(packet)) {
-          const { executionCondition, expiresAt } = packet
+export class ExpireMiddleware extends Middleware {
+
+  constructor () {
+    super({
+      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+        if (isPrepare(request)) {
+          const { expiresAt } = request
 
           const duration = expiresAt.getTime() - Date.now()
 
-          const promise = next(packet)
+          const promise = next(request)
 
           let timeout: NodeJS.Timeout
           const timeoutPromise: Promise<IlpReply> = new Promise((resolve, reject) => {
             timeout = setTimeout(() => {
-              // log.debug('packet expired. cond=%s expiresAt=%s', executionCondition.slice(0, 6).toString('base64'), expiresAt.toISOString())
               reject(new TransferTimedOutError('packet expired.'))
             }, duration)
           })
@@ -31,7 +28,7 @@ export default class ExpireMiddleware implements Middleware {
         }
 
         // TODO: probably don't need to check it is is a prepare packet above
-        return next(packet)
+        return next(request, sendCallback)
       }
     })
   }
