@@ -1,35 +1,26 @@
-import Middleware, { MiddlewareCallback, Pipelines, MiddlewareServices } from '../../types/middleware'
-import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill, IlpFulfill } from 'ilp-packet'
+import { Middleware, IlpRequestHandler } from '../../types/middleware'
+import { IlpPrepare, IlpReply } from 'ilp-packet'
 import { CCP_CONTROL_DESTINATION, CCP_UPDATE_DESTINATION } from 'ilp-protocol-ccp'
-// import { create as createLogger } from '../common/log'
-// const log = createLogger('alert-middleware')
 
-export interface CcpMiddlewareServices extends MiddlewareServices {
-  handleCcpRouteControl: (routeControlPacket: IlpPrepare) => Promise<IlpReply>,
-  handleCcpRouteUpdate: (packet: IlpPrepare) => Promise<IlpReply>,
+export interface CcpMiddlewareServices {
+  handleCcpRouteControl: (request: IlpPrepare) => Promise<IlpReply>,
+  handleCcpRouteUpdate: (request: IlpPrepare) => Promise<IlpReply>,
 }
 
-export default class CcpMiddleware implements Middleware {
-
-  handleCcpRouteControl: (routeControlPacket: IlpPrepare) => Promise<IlpReply>
-  handleCcpRouteUpdate: (packet: IlpPrepare) => Promise<IlpReply>
+export class CcpMiddleware extends Middleware {
 
   constructor ({ handleCcpRouteControl, handleCcpRouteUpdate }: CcpMiddlewareServices) {
-    this.handleCcpRouteControl = handleCcpRouteControl
-    this.handleCcpRouteUpdate = handleCcpRouteUpdate
-  }
-
-  async applyToPipelines (pipelines: Pipelines) {
-    pipelines.incomingData.insertLast({
-      name: 'ccp',
-      method: async (packet: IlpPrepare, next: MiddlewareCallback<IlpPrepare, IlpReply>) => {
-        switch (packet.destination) {
+    super({
+      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+        switch (request.destination) {
           case CCP_CONTROL_DESTINATION:
-            return this.handleCcpRouteControl(packet)
+            if (sendCallback) sendCallback()
+            return handleCcpRouteControl(request)
           case CCP_UPDATE_DESTINATION:
-            return this.handleCcpRouteUpdate(packet)
+            if (sendCallback) sendCallback()
+            return handleCcpRouteUpdate(request)
           default:
-            return next(packet)
+            return next(request, sendCallback)
         }
       }
     })

@@ -2,54 +2,41 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
-import { constructPipelines, constructMiddlewarePipeline } from '../../../src/lib/middleware'
-import { Ildcp as IldcpMiddleware } from '../../../src/middleware/protocol/ildcp'
+import { IldcpMiddleware } from '../../../src/middleware/protocol/ildcp'
 import { IlpPrepare, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
-import { Pipelines } from '../../../src/types/middleware';
 import * as ILDCP from 'ilp-protocol-ildcp'
 import { PeerInfo } from '../../../src/types/peer';
+import { setPipelineHandler } from '../../../src/types/middleware';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 
-describe('Ildcp Middlware', function () {
+describe('ILDCP Middleware', function () {
 
-  let pipelines: Pipelines
   let ildcpMiddleware: IldcpMiddleware
-  let ILDCPStub: sinon.SinonStub
+  let ildcpStub: sinon.SinonStub
+
+  const ildcpServices = {
+    getPeerInfo: () => {
+      return {
+        'id': 'alice',
+        'relation': 'peer',
+        'assetScale': 2,
+        'assetCode': 'TEST'
+      } as PeerInfo
+    },
+    getOwnAddress: () => 'test.connie',
+    getPeerAddress: () => 'test.connie.alice'
+  }
 
   beforeEach(async function () {
-    ildcpMiddleware = new IldcpMiddleware({
-      getPeerInfo: () => {
-        return {
-          'id': 'alice',
-          'relation': 'peer',
-          'assetScale': 2,
-          'assetCode': 'TEST'
-        } as PeerInfo
-      },
-      getOwnAddress: () => 'test.connie',
-      getPeerAddress: () => 'test.connie.alice'
-    })
-    const middleware = {
-      'ildcp': ildcpMiddleware
-    }
-    pipelines = await constructPipelines(middleware)
+    ildcpMiddleware = new IldcpMiddleware(ildcpServices)
   })
 
   afterEach(function () {
-    if(ILDCPStub) {
-      ILDCPStub.restore()
+    if(ildcpStub) {
+      ildcpStub.restore()
     }
-  })
-
-  it('inserts itself into the incoming data pipeline', async function () {
-    assert.equal(pipelines.incomingData.getMethods().length, 1)
-    assert.isEmpty(pipelines.outgoingData.getMethods())
-    assert.isEmpty(pipelines.incomingMoney.getMethods())
-    assert.isEmpty(pipelines.outgoingMoney.getMethods())
-    assert.isEmpty(pipelines.startup.getMethods())
-    assert.isEmpty(pipelines.shutdown.getMethods())
   })
 
   it('does not make an ILDCP serve request and calls next if not handling a peer.config message', async function () {
@@ -65,16 +52,16 @@ describe('Ildcp Middlware', function () {
       data: Buffer.alloc(0)
     }
     let didNextGetCalled: boolean = false
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.incomingData, async (packet: IlpPrepare) => {
+    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async (packet: IlpPrepare) => {
       didNextGetCalled = true
       return IlpFulfill
     })
-    ILDCPStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
+    ildcpStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 
-    await incomingIlpPacketHandler(packet)
+    await sendIncoming(packet)
 
-    assert.isOk(didNextGetCalled)
-    assert.isNotOk(ILDCPStub.called)
+    assert.isTrue(didNextGetCalled)
+    assert.isFalse(ildcpStub.called)
   })
 
   it('makes an ILDCP serve request and does not call next if handling a peer.config message', async function () {
@@ -90,16 +77,17 @@ describe('Ildcp Middlware', function () {
       data: Buffer.alloc(0)
     }
     let didNextGetCalled: boolean = false
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.incomingData, async (packet: IlpPrepare) => {
+    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async (packet: IlpPrepare) => {
       didNextGetCalled = true
       return IlpFulfill
     })
-    ILDCPStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 
-    await incomingIlpPacketHandler(packet)
+    ildcpStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 
-    assert.isNotOk(didNextGetCalled)
-    assert.isOk(ILDCPStub.called)
+    await sendIncoming(packet)
+
+    assert.isFalse(didNextGetCalled)
+    assert.isTrue(ildcpStub.called)
   })
 
   it('uses getPeerInfo service to provide information for peer.config messages', async function () {
@@ -114,11 +102,11 @@ describe('Ildcp Middlware', function () {
       destination: 'peer.config',
       data: Buffer.alloc(0)
     }
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.incomingData, async (packet: IlpPrepare) => IlpFulfill)
-    const getPeerInfoSpy = sinon.spy(ildcpMiddleware, 'getPeerInfo')
-    ILDCPStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
+    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async () => IlpFulfill)
+    const getPeerInfoSpy = sinon.spy(ildcpServices, 'getPeerInfo')
+    ildcpStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 
-    await incomingIlpPacketHandler(packet)
+    await sendIncoming(packet)
 
     sinon.assert.calledOnce(getPeerInfoSpy)
   })
@@ -135,11 +123,11 @@ describe('Ildcp Middlware', function () {
       destination: 'peer.config',
       data: Buffer.alloc(0)
     }
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.incomingData, async (packet: IlpPrepare) => IlpFulfill)
-    const getPeerAddressSpy = sinon.spy(ildcpMiddleware, 'getPeerAddress')
-    ILDCPStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
+    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async () => IlpFulfill)
+    const getPeerAddressSpy = sinon.spy(ildcpServices, 'getPeerAddress')
+    ildcpStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 
-    await incomingIlpPacketHandler(packet)
+    await sendIncoming(packet)
 
     sinon.assert.calledOnce(getPeerAddressSpy)
   })
@@ -156,11 +144,11 @@ describe('Ildcp Middlware', function () {
       destination: 'peer.config',
       data: Buffer.alloc(0)
     }
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.incomingData, async (packet: IlpPrepare) => IlpFulfill)
-    const getOwnAddressSpy = sinon.spy(ildcpMiddleware, 'getOwnAddress')
-    ILDCPStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
+    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async () => IlpFulfill)
+    const getOwnAddressSpy = sinon.spy(ildcpServices, 'getOwnAddress')
+    ildcpStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 
-    await incomingIlpPacketHandler(packet)
+    await sendIncoming(packet)
 
     sinon.assert.calledOnce(getOwnAddressSpy)
   })

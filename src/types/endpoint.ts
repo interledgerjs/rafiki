@@ -1,17 +1,17 @@
-export type RequestHandler<Request, Reply> = (packet: Request) => Promise<Reply>
+export type RequestHandler<Request, Reply> = (packet: Request, sentCallback?: () => void) => Promise<Reply>
 
 /**
  * Connect a pipeline of pipes together and return a new pipe that is the combination of the provided pipes.
  *
- * @param pipes an ordered collection of pipes to connect together
+ * @param duplexes an ordered collection of pipes to connect together
  */
-export function pipeline<Request, Reply> (...pipes: Pipe<Request, Reply>[]): Pipe<Request, Reply> {
-  for (let i = 0; i + 1 < pipes.length; i++) {
-    connect(pipes[i].outgoing, pipes[i + 1].incoming)
+export function pipeline<Request, Reply> (...duplexes: Duplex<Request, Reply>[]): Duplex<Request, Reply> {
+  for (let i = 0; i + 1 < duplexes.length; i++) {
+    connect(duplexes[i].outgoing, duplexes[i + 1].incoming)
   }
   return {
-    incoming: pipes[0].incoming,
-    outgoing: pipes[pipes.length - 1].outgoing
+    incoming: duplexes[0].incoming,
+    outgoing: duplexes[duplexes.length - 1].outgoing
   }
 
 }
@@ -27,11 +27,11 @@ export function pipeline<Request, Reply> (...pipes: Pipe<Request, Reply>[]): Pip
  * |            |<--OUT--|            |
  * |------------|        |------------|
  *
- * IlpPrepare packets are de-serialised by the codec and passed to the controller which returns a Promise
- * that eventually resolves to a reply (IlpFulfill or IlpReject) which the codec serializes and sends to the
+ * Requests are de-serialised by the codec and passed to the controller which returns a Promise
+ * that eventually resolves to a reply which the codec serializes and sends to the
  * original requestor.
  *
- * Similarly, IlpPrepare packets may be sent out by the controller to the HTTP codec which serializes them
+ * Similarly, requests may be sent out by the controller to the HTTP codec which serializes them
  * and sends them out. In parallel it returns a Promise to the controller. When the codec receives a reply
  * it de-serializes it and resolves the Promise with the result.
  *
@@ -39,8 +39,8 @@ export function pipeline<Request, Reply> (...pipes: Pipe<Request, Reply>[]): Pip
  * @param endpoint2 An endpoint interface
  */
 export function connect<Request, Reply> (endpoint1: Endpoint<Request, Reply>, endpoint2: Endpoint<Request, Reply>): void {
-  endpoint2.handler = endpoint1.request
   endpoint1.handler = endpoint2.request
+  endpoint2.handler = endpoint1.request
 }
 
 /**
@@ -48,16 +48,16 @@ export function connect<Request, Reply> (endpoint1: Endpoint<Request, Reply>, en
  *
  * Multiple pipes can be connected to form a pipeline.
  */
-export interface Pipe<Request, Reply> {
+export interface Duplex<Request, Reply> {
   incoming: Endpoint<Request, Reply>
   outgoing: Endpoint<Request, Reply>
 }
 
 /**
- * A standardized interface for sending and receiving ILP packets.
+ * A standardized interface for sending and receiving requests.
  *
  * A component that interfaces with an endpoint must set `endpoint.handler` to a handler for incoming requests
- * (IlpPrepare packets) and call `endpoint.request` to send outgoing requests.
+ * and call `endpoint.request` to send outgoing requests.
  */
 export interface Endpoint<Request, Reply> {
 
@@ -70,19 +70,8 @@ export interface Endpoint<Request, Reply> {
    * Send a Request and wait for the Reply.
    *
    * @param request request payload to send
-   * @param sentCallback Callback invoked by the underlying stream when the message has been sent
+   * @param sentCallback Callback invoked by the underlying transport when the message has been sent
    */
   request: (request: Request, sentCallback?: () => void) => Promise<Reply>
-
-  /**
-   * EventEmitter interface methods for `error` events
-   */
-  addListener (event: 'error', listener: (err: Error) => void): this
-  emit (event: 'error', err: Error): boolean
-  on (event: 'error', listener: (err: Error) => void): this
-  once (event: 'error', listener: (err: Error) => void): this
-  prependListener (event: 'error', listener: (err: Error) => void): this
-  prependOnceListener (event: 'error', listener: (err: Error) => void): this
-  removeListener (event: 'error', listener: (err: Error) => void): this
 
 }

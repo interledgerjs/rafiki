@@ -4,19 +4,19 @@ import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import {Pipelines} from '../../../src/types/middleware'
 import { IlpPrepare, IlpReply, deserializeIlpFulfill } from 'ilp-packet';
-import { constructPipelines, constructMiddlewarePipeline } from '../../../src/lib/middleware'
-import CcpMiddleware from '../../../src/middleware/protocol/ccp'
+import { CcpMiddleware } from '../../../src/middleware/protocol/ccp'
 import {serializeCcpResponse} from 'ilp-protocol-ccp'
+import { setPipelineHandler } from '../../../src/types/middleware';
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('CCP Middleware', function () {
-    let pipelines: Pipelines
     let ccpMiddleware: CcpMiddleware
-
-    let handleCcpRouteControl = (packet: IlpPrepare) => Promise.resolve(deserializeIlpFulfill(serializeCcpResponse()))
+    const services = {
+      handleCcpRouteControl: (packet: IlpPrepare) => Promise.resolve(deserializeIlpFulfill(serializeCcpResponse())),
+      handleCcpRouteUpdate: (packet: IlpPrepare) => Promise.resolve(deserializeIlpFulfill(serializeCcpResponse()))
+    }
 
     const prepareRouteControlPacket: IlpPrepare = {
       amount: '0',
@@ -38,57 +38,41 @@ describe('CCP Middleware', function () {
     }
 
     beforeEach( async function () {
-      ccpMiddleware = new CcpMiddleware({handleCcpRouteControl: handleCcpRouteControl, handleCcpRouteUpdate: handleCcpRouteControl})
-      pipelines = await constructPipelines({'ccp' :ccpMiddleware})
-    })
-
-    it('adds methods to the correct pipeline', async function() {
-      assert.isNotEmpty(pipelines.incomingData.getMethods())
-      assert.equal(pipelines.incomingData.getMethods().length, 1)
-      assert.isEmpty(pipelines.outgoingData.getMethods())
-      assert.isEmpty(pipelines.startup.getMethods())
-      assert.isEmpty(pipelines.shutdown.getMethods())
+      ccpMiddleware = new CcpMiddleware(services)
     })
 
     it('doesn\'t call next for packets with destination of peer.route', async function () {
-      let endHandler = (data: IlpPrepare) => {
+      const sendIncoming = setPipelineHandler('incoming', ccpMiddleware, () => {
         assert.fail()
         return Promise.resolve({} as IlpReply)
-      }
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-      const reply = await handler(prepareRouteControlPacket)
+      })
+      await sendIncoming(prepareRouteControlPacket)
     })
 
     it('calls next for packets without destination of peer.route', async function (done) {
-      let endHandler = (data: IlpPrepare) => {
+      const sendIncoming = setPipelineHandler('incoming', ccpMiddleware, () => {
         done()
         return Promise.resolve({} as IlpReply)
-      }
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-      const reply = await handler(prepareNormalPacket)
+      })
+      await sendIncoming(prepareNormalPacket)
     })
 
     it('calls handleCcpRouteControl for peer.route.control messages', async function() {
-      const spy = sinon.spy(ccpMiddleware, 'handleCcpRouteControl')
-      let endHandler = (data: IlpPrepare) => {
+      const spy = sinon.spy(services, 'handleCcpRouteControl')
+      const sendIncoming = setPipelineHandler('incoming', ccpMiddleware, () => {
         return Promise.resolve({} as IlpReply)
-      }
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
+      })
 
-      await handler(prepareRouteControlPacket)
-
+      await sendIncoming(prepareRouteControlPacket)
       sinon.assert.calledOnce(spy)
     })
 
-    it('calls handleCcpRouteUpdate fro peer.route.update messages', async function() {
-      const spy = sinon.spy(ccpMiddleware, 'handleCcpRouteUpdate')
-      let endHandler = (data: IlpPrepare) => {
+    it('calls handleCcpRouteUpdate for peer.route.update messages', async function() {
+      const spy = sinon.spy(services, 'handleCcpRouteUpdate')
+      const sendIncoming = setPipelineHandler('incoming', ccpMiddleware, () => {
         return Promise.resolve({} as IlpReply)
-      }
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-
-      await handler(prepareRouteUpdatePacket)
-
+      })
+      await sendIncoming(prepareRouteUpdatePacket)
       sinon.assert.calledOnce(spy)
     })
 })

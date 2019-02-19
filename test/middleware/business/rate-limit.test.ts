@@ -4,19 +4,19 @@ import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { Pipelines } from '../../../src/types/middleware'
 import { IlpPrepare, IlpFulfill, isFulfill, Errors } from 'ilp-packet';
-import { constructPipelines, constructMiddlewarePipeline } from '../../../src/lib/middleware'
-import RateLimitMiddleware from '../../../src/middleware/business/rate-limit'
+import { RateLimitMiddleware, createRateLimitBucketForPeer } from '../../../src/middleware/business/rate-limit'
 import Stats from '../../../src/services/stats';
 import { PeerInfo } from '../../../src/types/peer';
+import TokenBucket from '../../../src/lib/token-bucket';
+import { setPipelineHandler } from '../../../src/types/middleware';
 const { RateLimitedError } = Errors
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('Rate Limit Middleware', function () {
-  let pipelines: Pipelines
   let stats: Stats
+  let bucket: TokenBucket
   let rateLimitMiddleware: RateLimitMiddleware
   let peerInfo: PeerInfo = {
     id: 'harry',
@@ -39,31 +39,21 @@ describe('Rate Limit Middleware', function () {
 
   beforeEach(async function () {
     stats = new Stats()
-    rateLimitMiddleware = new RateLimitMiddleware({ stats, peerInfo })
-    pipelines = await constructPipelines({ 'rate-limit': rateLimitMiddleware })
-  })
-
-  it('adds methods to the correct pipeline', async function () {
-    assert.isNotEmpty(pipelines.incomingData.getMethods())
-    assert.equal(pipelines.incomingData.getMethods().length, 1)
-    assert.isEmpty(pipelines.outgoingData.getMethods())
-    assert.isEmpty(pipelines.startup.getMethods())
-    assert.isEmpty(pipelines.shutdown.getMethods())
+    bucket = createRateLimitBucketForPeer(peerInfo)
+    rateLimitMiddleware = new RateLimitMiddleware({ stats, bucket })
   })
 
   it('rejects when payments arrive too quickly', async function () {
-    let endHandler = async (data: IlpPrepare) => {
-      return Promise.resolve(fulfillPacket)
-    }
-    let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
+    
+    setPipelineHandler('incoming', rateLimitMiddleware, async () => fulfillPacket)
 
     // Empty the token buffer
     for (let i = 0; i < 3; i++) {
-      await handler(preparePacket)
+      await rateLimitMiddleware.incoming.request(preparePacket)
     }
 
     try {
-      const reply = await handler(preparePacket)
+      const reply = await rateLimitMiddleware.incoming.request(preparePacket)
     } catch (err) { 
       if(err instanceof RateLimitedError){
         return
@@ -72,12 +62,8 @@ describe('Rate Limit Middleware', function () {
   })
 
   it('does not reject when payments arrive fine', async function () {
-    let endHandler = async (data: IlpPrepare) => {
-      return Promise.resolve(fulfillPacket)
-    }
-    let handler = constructMiddlewarePipeline(pipelines.incomingData, endHandler)
-
-    const reply = await handler(preparePacket)
+    setPipelineHandler('incoming', rateLimitMiddleware, async () => fulfillPacket)
+    const reply = await rateLimitMiddleware.incoming.request(preparePacket)
     assert.isTrue(isFulfill(reply))
   })
 })
