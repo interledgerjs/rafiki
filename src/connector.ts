@@ -11,6 +11,7 @@ import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcp
 const ownAddress: string = 'test.connie'
 export default class Connector {
   routingTable: RoutingTable = new RoutingTable()
+  // routeManager: RouteManager = new RouteManager(this.routingTable)
   peerControllerMap: Map<string, PeerController> = new Map()
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
   address?: string
@@ -90,15 +91,18 @@ export default class Connector {
 
     return deserializeIlpFulfill(serializeCcpResponse())
   }
+
   private async _handleCcpRouteUpdate (packet: IlpPrepare, peerId: string): Promise<IlpReply> {
     const peerController = this.getPeer(peerId)
 
-    const changedPrefixes = peerController.handleRouteUpdate(deserializeCcpRouteUpdateRequest(serializeIlpPrepare(packet)))
-
-    // Loop over all peerControllers routes and determine who is the best person to send the new routes,
-    // else remove routes from routing table
+    this._handleChangedRoutePrefixes(peerController.handleRouteUpdate(deserializeCcpRouteUpdateRequest(serializeIlpPrepare(packet))))
 
     return deserializeIlpFulfill(serializeCcpResponse())
   }
 
+  private _handleChangedRoutePrefixes (changedPrefixes: any) {
+
+    // Loop over all the peers and determine what to update
+
+  }
 }

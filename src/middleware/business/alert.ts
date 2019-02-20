@@ -21,6 +21,7 @@ export interface AlertMiddlewareServices {
 export class AlertMiddleware extends Middleware {
   constructor ({ createAlert }: AlertMiddlewareServices) {
     super({
+
       processOutgoing: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>) => {
 
         const result = await next(request)
