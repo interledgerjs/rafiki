@@ -11,7 +11,7 @@ import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcp
 const ownAddress: string = 'test.connie'
 export default class Connector {
   routingTable: RoutingTable = new RoutingTable()
-  routeManager: RouteManager = new RouteManager(this.routingTable)
+  // routeManager: RouteManager = new RouteManager(this.routingTable)
   peerControllerMap: Map<string, PeerController> = new Map()
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
 
