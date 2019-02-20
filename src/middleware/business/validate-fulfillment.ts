@@ -7,9 +7,9 @@ export class ValidateFulfillmentMiddleware extends Middleware {
 
   constructor () {
     super({
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         const { executionCondition } = request
-        const reply = await next(request, sendCallback)
+        const reply = await next(request)
         if (isFulfill(reply)) {
           const { fulfillment } = reply
           const calculatedCondition = createHash('sha256').update(fulfillment).digest()

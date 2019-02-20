@@ -63,7 +63,7 @@ describe('Connector', function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
       await connector.addPeer(peerInfo, endpoint, [])
-      const reply = await endpoint.handler(packet)
+      const reply = await endpoint.mockIncomingRequest(packet)
   
       assert.isOk(ILDCPStub.called)
       assert.strictEqual(reply.data.toString(), 'test data')
@@ -86,7 +86,7 @@ describe('Connector', function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
       await connector.addPeer(peerInfo, endpoint, [])
-      const reply = await endpoint.handler(packet)
+      const reply = await endpoint.sendOutgoingRequest(packet)
   
       assert.isOk(handleRouteControlStub.called)
       assert.strictEqual(reply.data.toString(), 'test data')
@@ -100,8 +100,7 @@ describe('Connector', function () {
         return fulfillPacket
       })
       await connector.addPeer(peerInfo, endpoint, [mockMiddleware])
-
-      await endpoint.handler({} as IlpPrepare)
+      await endpoint.mockIncomingRequest({} as IlpPrepare)
 
       assert.isOk(isConnected)
     })
@@ -111,7 +110,7 @@ describe('Connector', function () {
       const sendIlpPacketSpy = sinon.spy(connector, 'sendIlpPacket')
       
       await connector.addPeer(peerInfo, endpoint, [])
-      await endpoint.handler(preparePacket)
+      await endpoint.mockIncomingRequest(preparePacket)
 
       sinon.assert.calledOnce(sendIlpPacketSpy)
     })

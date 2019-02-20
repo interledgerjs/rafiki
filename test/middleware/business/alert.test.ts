@@ -7,7 +7,7 @@ const assert = Object.assign(Chai.assert, sinon.assert)
 import { IlpPrepare, IlpReply, deserializeIlpFulfill, IlpReject, IlpFulfill } from 'ilp-packet';
 import { AlertMiddleware, Alerts } from '../../../src/middleware/business/alert'
 import { PeerInfo } from '../../../src/types/peer';
-import { setPipelineHandler } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware';
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
@@ -47,9 +47,9 @@ describe('Alert Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      setPipelineHandler('incoming', alertMiddleware, async () => replyPacket)
+      const sendOutgoing = setPipelineReader('outgoing', alertMiddleware, async () => replyPacket)
       assert.isEmpty(alerts.getAlerts())
-      await alertMiddleware.incoming.request(preparePacket)
+      const reply = await sendOutgoing(preparePacket)
       assert.isNotEmpty(alerts.getAlerts())
     })
 
@@ -65,9 +65,9 @@ describe('Alert Middleware', function () {
         fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
         data: Buffer.alloc(0)
       }
-      setPipelineHandler('incoming', alertMiddleware, async () => fulfillPacket)
+      const sendOutgoing = setPipelineReader('outgoing', alertMiddleware, async () => fulfillPacket)
       assert.isEmpty(alerts.getAlerts())
-      await alertMiddleware.incoming.request(preparePacket)
+      await sendOutgoing(preparePacket)
       assert.isEmpty(alerts.getAlerts())
     })
 

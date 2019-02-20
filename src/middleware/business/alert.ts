@@ -1,5 +1,5 @@
 import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill } from 'ilp-packet'
-import { RequestHandler } from '../../types/endpoint'
+import { RequestHandler } from '../../types/channel'
 import { Middleware } from '../../types/middleware'
 
 const { T04_INSUFFICIENT_LIQUIDITY } = IlpPacketErrors.codes
@@ -21,9 +21,10 @@ export interface AlertMiddlewareServices {
 export class AlertMiddleware extends Middleware {
   constructor ({ createAlert }: AlertMiddlewareServices) {
     super({
-      processOutgoing: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>, sendCallback: () => void) => {
 
-        const result = await next(request, sendCallback)
+      processOutgoing: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>) => {
+
+        const result = await next(request)
 
         if (isFulfill(result)) return result
 

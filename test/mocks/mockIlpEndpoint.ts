@@ -1,30 +1,37 @@
 import { Endpoint } from '../../src/types/endpoint'
 import { IlpPrepare, IlpReply } from 'ilp-packet'
 import { EventEmitter } from 'events';
+import { RequestHandler } from '../../src/types/channel';
 
-export default class MockIlpEndpoint extends EventEmitter implements Endpoint<IlpPrepare, IlpReply> {
+export default class MockIlpEndpoint implements Endpoint<IlpPrepare, IlpReply> {
 
-  /**
-   * A handler for incoming requests.
-   */
-  handler: (packet: IlpPrepare) => Promise<IlpReply>
+  private _handler: RequestHandler<IlpPrepare, IlpReply>
 
-  /**
-   * A handler for outgoing requests.
-   */
-  outgoingHandler: (packet: IlpPrepare) => Promise<IlpReply>
-
-  constructor(outgoingHandler: (packet: IlpPrepare) => Promise<IlpReply>) {
-    super()
-    this.outgoingHandler = outgoingHandler
-    this.handler = (packet: IlpPrepare) => {
-      throw new Error('There is no handler specified')
+  constructor(outgoingHandler: (request: IlpPrepare, respond: RequestHandler<IlpPrepare, IlpReply>) => Promise<IlpReply>){
+    this.sendOutgoingRequest = (request: IlpPrepare, sentCallback?: () => void) => {
+      if(this.connected) {
+        if(sentCallback) sentCallback()
+        return outgoingHandler(request, this._handler)  
+      } else {
+        throw new Error('not connected')
+      }
     }
   }
 
-  async request (packet: IlpPrepare): Promise<IlpReply> {
-    if(!this.outgoingHandler) throw new Error('A packet handler needs to be set.')
+  sendOutgoingRequest: (request: IlpPrepare, sentCallback?: () => void) => Promise<IlpReply>
 
-    return this.outgoingHandler(packet)
+  setIncomingRequestHandler (handler: RequestHandler<IlpPrepare, IlpReply>): this {
+    this._handler = handler
+    return this
   }
+
+  mockIncomingRequest (request: IlpPrepare): Promise<IlpReply> {
+    return this._handler(request)
+  }
+
+  /**
+   * Set to false to simulate a disconnected endpoint
+   */
+  connected = true
+
 }

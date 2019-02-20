@@ -5,7 +5,7 @@ import * as chaiAsPromised from 'chai-as-promised'
 import { StatsMiddleware } from '../../../src/middleware/business/stats'
 import { IlpPrepare, IlpReply } from 'ilp-packet';
 import Stats from '../../../src/services/stats';
-import { setPipelineHandler } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware';
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
@@ -49,8 +49,8 @@ describe('Stats Middleware', function () {
   })
 
   it('increments stats incomingDataPackets fulfilled when receiving a fulfill', async function () {
-    setPipelineHandler('incoming', statsMiddleware, async () => fulfillPacket)
-    const reply = await statsMiddleware.incoming.request(preparePacket)
+    const sendIncoming = setPipelineReader('incoming', statsMiddleware, async () => fulfillPacket)
+    const reply = await sendIncoming(preparePacket)
 
     assert.strictEqual(stats.getStatus()[0]['values'].length, 1)
     assert.strictEqual(stats.getStatus()[0]['values'][0].labels.result, 'fulfilled')
@@ -58,8 +58,8 @@ describe('Stats Middleware', function () {
   })
 
   it('increments stats outgoingDataPackets fulfilled when receiving a fulfill', async function () {
-    setPipelineHandler('outgoing', statsMiddleware, async () => fulfillPacket)
-    const reply = await statsMiddleware.outgoing.request(preparePacket)
+    const sendOutgoing = setPipelineReader('outgoing', statsMiddleware, async () => fulfillPacket)
+    const reply = await sendOutgoing(preparePacket)
 
     assert.strictEqual(stats.getStatus()[2]['values'].length, 1)
     assert.strictEqual(stats.getStatus()[2]['values'][0].labels.result, 'fulfilled')
@@ -67,8 +67,8 @@ describe('Stats Middleware', function () {
   })
 
   it('increments stats incomingDataPackets rejected when receiving a reject', async function () {
-    setPipelineHandler('incoming', statsMiddleware, async () => rejectPacket)
-    const reply = await statsMiddleware.incoming.request(preparePacket)
+    const sendIncoming = setPipelineReader('incoming', statsMiddleware, async () => rejectPacket)
+    const reply = await sendIncoming(preparePacket)
 
     assert.strictEqual(stats.getStatus()[0]['values'].length, 1)
     assert.strictEqual(stats.getStatus()[0]['values'][0].labels.result, 'rejected')
@@ -76,8 +76,8 @@ describe('Stats Middleware', function () {
   })
 
   it('increments stats outgoingDataPackets rejected when receiving a reject', async function () {
-    setPipelineHandler('outgoing', statsMiddleware, async () => rejectPacket)
-    const reply = await statsMiddleware.outgoing.request(preparePacket)
+    const sendOutgoing = setPipelineReader('outgoing', statsMiddleware, async () => rejectPacket)
+    const reply = await sendOutgoing(preparePacket)
 
     assert.strictEqual(stats.getStatus()[2]['values'].length, 1)
     assert.strictEqual(stats.getStatus()[2]['values'][0].labels.result, 'rejected')
@@ -85,12 +85,12 @@ describe('Stats Middleware', function () {
   })
 
   it('increments stats incomingDataPackets failed when a response fails or error is thrown', async function () {
-    setPipelineHandler('incoming', statsMiddleware, async () => {
+    const sendIncoming = setPipelineReader('incoming', statsMiddleware, async () => {
       throw new Error('test error')
       return rejectPacket
     })
     try{
-      const reply = await statsMiddleware.incoming.request(preparePacket)
+      const reply = await sendIncoming(preparePacket)
     } catch (e) {
       assert.strictEqual(stats.getStatus()[0]['values'].length, 1)
       assert.strictEqual(stats.getStatus()[0]['values'][0].labels.result, 'failed')
@@ -98,12 +98,12 @@ describe('Stats Middleware', function () {
   })
 
   it('increments stats outgoingDataPackets failed when receiving a reject', async function () {
-    setPipelineHandler('outgoing', statsMiddleware, async () => {
+    const sendOutgoing = setPipelineReader('outgoing', statsMiddleware, async () => {
       throw new Error('test error')
       return rejectPacket
     })
     try{
-      const reply = await statsMiddleware.outgoing.request(preparePacket)
+      const reply = await sendOutgoing(preparePacket)
     } catch (e) {
       assert.strictEqual(stats.getStatus()[2]['values'].length, 1)
       assert.strictEqual(stats.getStatus()[2]['values'][0].labels.result, 'failed')
