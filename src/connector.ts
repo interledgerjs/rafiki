@@ -1,4 +1,4 @@
-import { Router as RoutingTable, PeerController } from 'ilp-router'
+import { Router as RoutingTable, RouteManager } from 'ilp-router'
 import { Endpoint, pipeline } from './types/endpoint'
 import { IlpPrepare, IlpReply, IlpFulfill, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet'
 import { Middleware, setPipelineHandler } from './types/middleware'
@@ -10,6 +10,7 @@ import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcp
 const ownAddress: string = 'test.connie'
 export default class Connector {
   routingTable: RoutingTable = new RoutingTable()
+  routeManager: RouteManager = new RouteManager(this.routingTable)
   peerControllerMap: Map<string, PeerController> = new Map()
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
 
@@ -82,6 +83,8 @@ export default class Connector {
   }
 
   private _handleChangedRoutePrefixes (changedPrefixes: any) {
-    console.log(changedPrefixes)
+
+    // Loop over all the peers and determine what to update
+
   }
 }

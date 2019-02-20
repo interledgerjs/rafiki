@@ -1,6 +1,6 @@
 import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill } from 'ilp-packet'
-import { RequestHandler } from '../../types/endpoint';
-import { Middleware } from '../../types/middleware';
+import { RequestHandler } from '../../types/endpoint'
+import { Middleware } from '../../types/middleware'
 
 const { T04_INSUFFICIENT_LIQUIDITY } = IlpPacketErrors.codes
 
@@ -21,21 +21,21 @@ export interface AlertMiddlewareServices {
 export class AlertMiddleware extends Middleware {
   constructor ({ createAlert }: AlertMiddlewareServices) {
     super({
-      processOutgoing: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>, sendCallback: () => void, ) => {
-        
+      processOutgoing: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>, sendCallback: () => void) => {
+
         const result = await next(request, sendCallback)
 
         if (isFulfill(result)) return result
-    
+
         if (result.code !== T04_INSUFFICIENT_LIQUIDITY) return result
-    
+
         // The peer rejected a packet which, according to the local balance, should
         // have succeeded. This can happen when our local connector owes the peer
         // money but restarted before it was settled.
         if (result.message !== 'exceeded maximum balance.') return result
-    
+
         createAlert(result.triggeredBy, result.message)
-    
+
         return result
       }
     })
