@@ -8,7 +8,7 @@ import { IlpPrepare, IlpFulfill, isFulfill, Errors } from 'ilp-packet';
 import { ThroughputMiddleware, createThroughputLimitBucketsForPeer } from '../../../src/middleware/business/throughput'
 import Stats from '../../../src/services/stats';
 import { PeerInfo } from '../../../src/types/peer';
-import { setPipelineHandler } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware';
 const { InsufficientLiquidityError } = Errors
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
@@ -41,7 +41,7 @@ describe('Throughput Middleware', function () {
     })
 
     it('doesn\'t not allow throughput above threshold throughput through', async function () {
-      const sendIncoming = setPipelineHandler('incoming', throughputMiddleware, async () => fulfillPacket)
+      const sendIncoming = setPipelineReader('incoming', throughputMiddleware, async () => fulfillPacket)
   
       // Empty the token buffer
       for (let i = 0; i < 2; i++) {
@@ -57,7 +57,7 @@ describe('Throughput Middleware', function () {
     })
 
     it('allows throughput again after refill period', async function () {
-      const sendIncoming = setPipelineHandler('incoming', throughputMiddleware, async () => fulfillPacket)
+      const sendIncoming = setPipelineReader('incoming', throughputMiddleware, async () => fulfillPacket)
 
       // Empty the token buffer
       for (let i = 0; i < 2; i++) {
@@ -92,7 +92,7 @@ describe('Throughput Middleware', function () {
     })
 
     it('doesn\'t allow throughput above threshold throughput through', async function () {
-      const sendOutgoing = setPipelineHandler('outgoing', throughputMiddleware, async () => fulfillPacket)
+      const sendOutgoing = setPipelineReader('outgoing', throughputMiddleware, async () => fulfillPacket)
 
       // Empty the token buffer
       for (let i = 0; i < 2; i++) {
@@ -108,7 +108,7 @@ describe('Throughput Middleware', function () {
     })
 
     it('allows throughput again after refill period', async function () {
-      const sendOutgoing = setPipelineHandler('outgoing', throughputMiddleware, async () => fulfillPacket)
+      const sendOutgoing = setPipelineReader('outgoing', throughputMiddleware, async () => fulfillPacket)
 
       // Empty the token buffer
       for (let i = 0; i < 2; i++) {
@@ -123,7 +123,7 @@ describe('Throughput Middleware', function () {
       }
       
       await new Promise(resolve => setTimeout(resolve, 100))
-      const reply = await throughputMiddleware.outgoing.request(preparePacket)
+      const reply = await sendOutgoing(preparePacket)
       assert.isTrue(isFulfill(reply))
     })
   })
@@ -142,11 +142,11 @@ describe('Throughput Middleware', function () {
     })
 
     it('does not apply any limits', async function () {
-      const sendOutgoing = setPipelineHandler('outgoing', throughputMiddleware, async () => fulfillPacket)
+      const sendOutgoing = setPipelineReader('outgoing', throughputMiddleware, async () => fulfillPacket)
       for (let i = 0; i < 100; i++) {
         await sendOutgoing(preparePacket)
       }
-      const sendIncoming = setPipelineHandler('incoming', throughputMiddleware, async () => fulfillPacket)
+      const sendIncoming = setPipelineReader('incoming', throughputMiddleware, async () => fulfillPacket)
       for (let i = 0; i < 100; i++) {
         await sendIncoming(preparePacket)
       }

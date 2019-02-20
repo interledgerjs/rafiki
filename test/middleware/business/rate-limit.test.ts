@@ -9,7 +9,7 @@ import { RateLimitMiddleware, createRateLimitBucketForPeer } from '../../../src/
 import Stats from '../../../src/services/stats';
 import { PeerInfo } from '../../../src/types/peer';
 import TokenBucket from '../../../src/lib/token-bucket';
-import { setPipelineHandler } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware';
 const { RateLimitedError } = Errors
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
@@ -45,15 +45,15 @@ describe('Rate Limit Middleware', function () {
 
   it('rejects when payments arrive too quickly', async function () {
     
-    setPipelineHandler('incoming', rateLimitMiddleware, async () => fulfillPacket)
+    const sendIncoming = setPipelineReader('incoming', rateLimitMiddleware, async () => fulfillPacket)
 
     // Empty the token buffer
     for (let i = 0; i < 3; i++) {
-      await rateLimitMiddleware.incoming.request(preparePacket)
+      await sendIncoming(preparePacket)
     }
 
     try {
-      const reply = await rateLimitMiddleware.incoming.request(preparePacket)
+      const reply = await sendIncoming(preparePacket)
     } catch (err) { 
       if(err instanceof RateLimitedError){
         return
@@ -62,8 +62,8 @@ describe('Rate Limit Middleware', function () {
   })
 
   it('does not reject when payments arrive fine', async function () {
-    setPipelineHandler('incoming', rateLimitMiddleware, async () => fulfillPacket)
-    const reply = await rateLimitMiddleware.incoming.request(preparePacket)
+    const sendIncoming = setPipelineReader('incoming', rateLimitMiddleware, async () => fulfillPacket)
+    const reply = await sendIncoming(preparePacket)
     assert.isTrue(isFulfill(reply))
   })
 })

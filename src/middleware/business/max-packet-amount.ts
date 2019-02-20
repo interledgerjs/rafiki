@@ -10,7 +10,7 @@ export interface MaxPacketAmountMiddlewareService {
 export class MaxPacketAmountMiddleware extends Middleware {
   constructor ({ maxPacketAmount }: MaxPacketAmountMiddlewareService) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (maxPacketAmount && isPrepare(request)) {
           const amount = new BigNumber(request.amount)
           if (amount.gt(maxPacketAmount)) {
@@ -20,7 +20,7 @@ export class MaxPacketAmountMiddleware extends Middleware {
             })
           }
         }
-        return next(request, sendCallback)
+        return next(request)
       }
     })
   }

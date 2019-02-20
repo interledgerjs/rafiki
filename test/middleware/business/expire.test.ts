@@ -6,7 +6,7 @@ Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 import { IlpPrepare, IlpFulfill, isFulfill, Errors } from 'ilp-packet';
 import { ExpireMiddleware } from '../../../src/middleware/business/expire'
-import { setPipelineHandler } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware';
 const { TransferTimedOutError } = Errors
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
@@ -37,8 +37,8 @@ describe('Expire Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      setPipelineHandler('outgoing', expireMiddleware, async () => fulfillPacket)
-      let reply = await expireMiddleware.outgoing.request(preparePacket)
+      const sendOutgoing = setPipelineReader('outgoing', expireMiddleware, async () => fulfillPacket)
+      let reply = await sendOutgoing(preparePacket)
       assert.isTrue(isFulfill(reply))
       assert.deepEqual(reply, fulfillPacket)
     })
@@ -57,12 +57,12 @@ describe('Expire Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      setPipelineHandler('outgoing', expireMiddleware, async () => {
+      const sendOutgoing = setPipelineReader('outgoing', expireMiddleware, async () => {
         await sleep(600)
         return Promise.resolve(fulfillPacket)
       })
       try {
-        await expireMiddleware.outgoing.request(preparePacket)
+        await sendOutgoing(preparePacket)
       } catch (err) { 
         if(err instanceof TransferTimedOutError){
           return

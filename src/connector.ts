@@ -1,7 +1,8 @@
 import { Router as RoutingTable, PeerController } from 'ilp-router'
-import { Endpoint, pipeline } from './types/endpoint'
+import { pipeline } from './types/channel'
+import { Endpoint } from './types/endpoint'
 import { IlpPrepare, IlpReply, IlpFulfill, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet'
-import { Middleware, setPipelineHandler } from './types/middleware'
+import { Middleware, setPipelineReader } from './types/middleware'
 import { PeerInfo } from './types/peer'
 import { CcpMiddleware, CcpMiddlewareServices } from './middleware/protocol/ccp'
 import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
@@ -27,10 +28,18 @@ export default class Connector {
     )
 
     const combinedMiddleware = pipeline(...middleware, protocolMiddleware)
-    const sendIncoming = setPipelineHandler('incoming', combinedMiddleware, this.sendIlpPacket.bind(this))
-    const sendOutgoing = setPipelineHandler('outgoing', combinedMiddleware, endpoint.request.bind(endpoint))
-
-    endpoint.handler = sendIncoming
+    const sendIncoming = setPipelineReader('incoming', combinedMiddleware, this.sendIlpPacket.bind(this))
+    const sendOutgoing = setPipelineReader('outgoing', combinedMiddleware, (request: IlpPrepare): Promise<IlpReply> => {
+      try {
+        return endpoint.sendOutgoingRequest(request)
+      } catch (e) {
+        // TODO Handle send error
+        throw e
+      }
+    })
+    endpoint.setIncomingRequestHandler((request: IlpPrepare) => {
+      return sendIncoming(request)
+    })
     this.outgoingIlpPacketHandlerMap.set(peerInfo.id, sendOutgoing)
 
     this.routingTable.addRoute(peerInfo.id, {

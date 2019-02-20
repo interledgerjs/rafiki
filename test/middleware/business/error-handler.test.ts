@@ -7,7 +7,7 @@ const assert = Object.assign(Chai.assert, sinon.assert)
 import { IlpPrepare, isReject, IlpFulfill, isFulfill, IlpReject } from 'ilp-packet';
 import { ErrorHandlerMiddleware } from '../../../src/middleware/business/error-handler'
 import { RateLimitedError } from 'ilp-packet/dist/src/errors';
-import { setPipelineHandler } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware';
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
@@ -28,10 +28,10 @@ describe('Error-handler Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      setPipelineHandler('incoming', errorHandlerMiddleware, async () => {
+      const sendIncoming = setPipelineReader('incoming', errorHandlerMiddleware, async () => {
         throw new RateLimitedError('to many requests, throttling')
       })
-      const reply = await errorHandlerMiddleware.incoming.request(preparePacket)
+      const reply = await sendIncoming(preparePacket)
       assert.isTrue(isReject(reply))
       assert.deepEqual(reply, {
         code: "T05",
@@ -55,10 +55,10 @@ describe('Error-handler Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      setPipelineHandler('incoming', errorHandlerMiddleware, async () => {
+      const sendIncoming = setPipelineReader('incoming', errorHandlerMiddleware, async () => {
         return Promise.resolve(fulfillPacket)
       })
-      const reply = await errorHandlerMiddleware.incoming.request(preparePacket)
+      const reply = await sendIncoming(preparePacket)
       assert.isTrue(isFulfill(reply))
       assert.deepEqual(reply, fulfillPacket)
     })
@@ -79,11 +79,11 @@ describe('Error-handler Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      setPipelineHandler('incoming', errorHandlerMiddleware, async () => {
+      const sendIncoming = setPipelineReader('incoming', errorHandlerMiddleware, async () => {
         return Promise.resolve(rejectPacket)
       })
 
-      const reply = await errorHandlerMiddleware.incoming.request(preparePacket)
+      const reply = await sendIncoming(preparePacket)
       assert.isTrue(isReject(reply))
       assert.deepEqual(reply, rejectPacket)
     })
@@ -97,11 +97,11 @@ describe('Error-handler Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      setPipelineHandler('incoming', errorHandlerMiddleware, async () => {
+      const sendIncoming = setPipelineReader('incoming', errorHandlerMiddleware, async () => {
         return Promise.resolve({} as IlpFulfill)
       })
 
-      const reply = await errorHandlerMiddleware.incoming.request(preparePacket)
+      const reply = await sendIncoming(preparePacket)
       assert.isTrue(isReject(reply))
       assert.deepEqual(reply, {
             code: "F00",

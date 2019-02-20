@@ -12,13 +12,10 @@ export interface IldcpMiddlewareServices {
 export class IldcpMiddleware extends Middleware {
   constructor ({ getPeerInfo, getOwnAddress, getPeerAddress }: IldcpMiddlewareServices) {
     super({
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         const { destination } = request
 
         if (destination === 'peer.config') {
-
-          if (sendCallback) sendCallback()
-
           const { assetCode, assetScale } = getPeerInfo()
           const clientAddress = getPeerAddress()
           // TODO: Remove unnecessary serialization from ILDCP module
@@ -31,10 +28,9 @@ export class IldcpMiddleware extends Middleware {
             }),
             serverAddress: getOwnAddress()
           }))
-
         }
 
-        return next(request, sendCallback)
+        return next(request)
 
       }
     })
