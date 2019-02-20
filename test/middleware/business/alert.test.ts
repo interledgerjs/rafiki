@@ -4,17 +4,16 @@ import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import {Pipelines} from '../../../src/types/middleware'
 import { IlpPrepare, IlpReply, deserializeIlpFulfill, IlpReject, IlpFulfill } from 'ilp-packet';
-import { constructPipelines, constructMiddlewarePipeline } from '../../../src/lib/middleware'
-import AlertMiddleware from '../../../src/middleware/business/alert'
+import { AlertMiddleware, Alerts } from '../../../src/middleware/business/alert'
 import { PeerInfo } from '../../../src/types/peer';
+import { setPipelineHandler } from '../../../src/types/middleware';
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('Alert Middleware', function () {
-    let pipelines: Pipelines
     let alertMiddleware: AlertMiddleware
+    let alerts: Alerts
 
     const peerInfo: PeerInfo = {
       id: 'harry',
@@ -24,16 +23,12 @@ describe('Alert Middleware', function () {
     } 
 
     beforeEach( async function () {
-      alertMiddleware = new AlertMiddleware({peerInfo})
-      pipelines = await constructPipelines({'alert' :alertMiddleware})
-    })
-
-    it('adds methods to the correct pipeline', async function() {
-      assert.isEmpty(pipelines.incomingData.getMethods())
-      assert.isNotEmpty(pipelines.outgoingData.getMethods())
-      assert.equal(pipelines.outgoingData.getMethods().length, 1)
-      assert.isEmpty(pipelines.startup.getMethods())
-      assert.isEmpty(pipelines.shutdown.getMethods())
+      alerts = new Alerts()
+      alertMiddleware = new AlertMiddleware({
+        createAlert: (triggeredBy: string, message: string) => {
+          return alerts.createAlert('harry', triggeredBy, message)
+        }
+      })
     })
 
     it('adds an alert for insufficient liquidity', async function () {
@@ -52,14 +47,10 @@ describe('Alert Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, (data: IlpPrepare) => {
-        return Promise.resolve(replyPacket)
-      })
-      assert.isEmpty(alertMiddleware.getAlerts())
-
-      await handler(preparePacket)
-
-      assert.isEmpty(alertMiddleware.getAlerts())
+      setPipelineHandler('incoming', alertMiddleware, async () => replyPacket)
+      assert.isEmpty(alerts.getAlerts())
+      await alertMiddleware.incoming.request(preparePacket)
+      assert.isNotEmpty(alerts.getAlerts())
     })
 
     it('does not add an alert for normal packet', async function () {
@@ -74,15 +65,10 @@ describe('Alert Middleware', function () {
         fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
         data: Buffer.alloc(0)
       }
-      let handler = constructMiddlewarePipeline(pipelines.incomingData, (data: IlpPrepare) => {
-        return Promise.resolve(fulfillPacket)
-      })
-
-      assert.isEmpty(alertMiddleware.getAlerts())
-
-      await handler(preparePacket)
-
-      assert.isEmpty(alertMiddleware.getAlerts())
+      setPipelineHandler('incoming', alertMiddleware, async () => fulfillPacket)
+      assert.isEmpty(alerts.getAlerts())
+      await alertMiddleware.incoming.request(preparePacket)
+      assert.isEmpty(alerts.getAlerts())
     })
 
 })

@@ -1,5 +1,5 @@
 {
-  "name": "ilp-connector-beta",
+  "name": "wip-connector",
   "version": "0.0.1",
   "description": "Proof of concept for connector architecture redesign",
   "main": "build/index.js",
@@ -24,7 +24,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/donchangfoot/ilp-connector-beta.git"
+    "url": "git+https://github.com/interledgerjs/wip-connector.git"
   },
   "author": "Interledger Team <info@interledger.org>",
   "license": "Apache-2.0",

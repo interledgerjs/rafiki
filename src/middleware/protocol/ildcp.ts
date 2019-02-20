@@ -1,49 +1,41 @@
 import { IlpPrepare, IlpReply, deserializeIlpReply, serializeIlpPrepare } from 'ilp-packet'
 import * as ILDCP from 'ilp-protocol-ildcp'
-import Middleware, { MiddlewareCallback, Pipelines, MiddlewareServices } from '../../types/middleware'
+import { Middleware, IlpRequestHandler } from '../../types/middleware'
 import { PeerInfo } from '../../types/peer'
 
-export interface IldcpMiddlewareServices extends MiddlewareServices {
+export interface IldcpMiddlewareServices {
   getPeerInfo: () => PeerInfo,
   getOwnAddress: () => string,
   getPeerAddress: () => string
 }
 
-export class Ildcp implements Middleware {
-
-  getPeerInfo: () => PeerInfo
-  getOwnAddress: () => string
-  getPeerAddress: () => string
-
+export class IldcpMiddleware extends Middleware {
   constructor ({ getPeerInfo, getOwnAddress, getPeerAddress }: IldcpMiddlewareServices) {
-    this.getPeerInfo = getPeerInfo
-    this.getOwnAddress = getOwnAddress
-    this.getPeerAddress = getPeerAddress
-  }
-
-  async applyToPipelines (pipelines: Pipelines) {
-    pipelines.incomingData.insertLast({
-      name: 'ildcp',
-      method: async (packet: IlpPrepare, next: MiddlewareCallback<IlpPrepare, IlpReply>) => {
-        const { destination } = packet
+    super({
+      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+        const { destination } = request
 
         if (destination === 'peer.config') {
-          const peerInfo = this.getPeerInfo()
-          const peerAddress = this.getPeerAddress()
 
+          if (sendCallback) sendCallback()
+
+          const { assetCode, assetScale } = getPeerInfo()
+          const clientAddress = getPeerAddress()
+          // TODO: Remove unnecessary serialization from ILDCP module
           return deserializeIlpReply(await ILDCP.serve({
-            requestPacket: serializeIlpPrepare(packet),
+            requestPacket: serializeIlpPrepare(request),
             handler: () => Promise.resolve({
-              clientAddress: peerAddress,
-              assetScale: peerInfo.assetScale,
-              assetCode: peerInfo.assetCode
+              clientAddress,
+              assetScale,
+              assetCode
             }),
-            serverAddress: this.getOwnAddress()
+            serverAddress: getOwnAddress()
           }))
 
         }
 
-        return next(packet)
+        return next(request, sendCallback)
+
       }
     })
   }

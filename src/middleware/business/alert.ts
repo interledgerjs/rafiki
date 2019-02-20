@@ -1,8 +1,6 @@
-import { PeerInfo } from '../../types/peer'
-import Middleware, { MiddlewareCallback, Pipelines, MiddlewareServices } from '../../types/middleware'
 import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill } from 'ilp-packet'
-// import { create as createLogger } from '../common/log'
-// const log = createLogger('alert-middleware')
+import { RequestHandler } from '../../types/endpoint';
+import { Middleware } from '../../types/middleware';
 
 const { T04_INSUFFICIENT_LIQUIDITY } = IlpPacketErrors.codes
 
@@ -16,55 +14,52 @@ export interface Alert {
   updatedAt: Date
 }
 
-export interface AlertMiddlewareServices extends MiddlewareServices {
-  peerInfo: PeerInfo
+export interface AlertMiddlewareServices {
+  createAlert: (triggeredBy: string, message: string) => void
 }
 
-export default class AlertMiddleware implements Middleware {
-  private alerts: { [id: number]: Alert } = {}
-  private nextAlertId: number = Date.now()
-  private peerInfo: PeerInfo
+export class AlertMiddleware extends Middleware {
+  constructor ({ createAlert }: AlertMiddlewareServices) {
+    super({
+      processOutgoing: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>, sendCallback: () => void, ) => {
+        
+        const result = await next(request, sendCallback)
 
-  constructor ({ peerInfo }: AlertMiddlewareServices) {
-    this.peerInfo = peerInfo
-  }
-
-  async applyToPipelines (pipelines: Pipelines) {
-    pipelines.outgoingData.insertLast({
-      name: 'alert',
-      method: async (packet: IlpPrepare, next: MiddlewareCallback<IlpPrepare, IlpReply>) => {
-        const result = await next(packet)
         if (isFulfill(result)) return result
-
+    
         if (result.code !== T04_INSUFFICIENT_LIQUIDITY) return result
-
+    
         // The peer rejected a packet which, according to the local balance, should
         // have succeeded. This can happen when our local connector owes the peer
         // money but restarted before it was settled.
         if (result.message !== 'exceeded maximum balance.') return result
-
-        const { triggeredBy } = result
-        // log.warn('generating alert for account=%s triggeredBy=%s message="%s"', this.peerInfo.id, triggeredBy, result.message)
-        this.addAlert(this.peerInfo.id, triggeredBy, result.message)
-
+    
+        createAlert(result.triggeredBy, result.message)
+    
         return result
       }
     })
   }
+}
 
-  getAlerts (): Alert[] {
-    return Object.keys(this.alerts)
-      .map((id) => this.alerts[id])
+export class Alerts {
+
+  private _nextAlertId: number = Date.now()
+  private _alerts: { [id: number]: Alert } = {}
+
+  public getAlerts (): Alert[] {
+    return Object.keys(this._alerts)
+      .map((id) => this._alerts[id])
       .sort((a, b) => a.id - b.id)
   }
 
-  dismissAlert (id: number) {
-    delete this.alerts[id]
+  public dismissAlert (id: number) {
+    delete this._alerts[id]
   }
 
-  private addAlert (peerId: string, triggeredBy: string, message: string) {
-    const alert = Object.keys(this.alerts)
-      .map((alertId) => this.alerts[alertId])
+  public createAlert (peerId: string, triggeredBy: string, message: string) {
+    const alert = Object.keys(this._alerts)
+      .map((alertId) => this._alerts[alertId])
       .find((alert) =>
         alert.peerId === peerId &&
         alert.triggeredBy === triggeredBy &&
@@ -75,9 +70,9 @@ export default class AlertMiddleware implements Middleware {
       return
     }
 
-    const id = this.nextAlertId++
+    const id = this._nextAlertId++
     const now = new Date()
-    this.alerts[id] = {
+    this._alerts[id] = {
       id,
       peerId,
       triggeredBy,

@@ -1,17 +1,11 @@
 import { Router as RoutingTable, PeerController } from 'ilp-router'
-import { Endpoint } from './types/endpoint'
+import { Endpoint, pipeline } from './types/endpoint'
 import { IlpPrepare, IlpReply, IlpFulfill, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet'
-import { constructPipelines, constructMiddlewarePipeline } from '../src/lib/middleware'
-import Middleware from './types/middleware'
+import { Middleware, setPipelineHandler } from './types/middleware'
 import { PeerInfo } from './types/peer'
-import CcpMiddleware, { CcpMiddlewareServices } from './middleware/protocol/ccp'
-import { Ildcp as IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
+import { CcpMiddleware, CcpMiddlewareServices } from './middleware/protocol/ccp'
+import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
 import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcpRouteUpdateRequest } from 'ilp-protocol-ccp'
-
-const fulfillPacket: IlpFulfill = {
-  fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
-  data: Buffer.alloc(0)
-}
 
 const ownAddress: string = 'test.connie'
 export default class Connector {
@@ -19,26 +13,25 @@ export default class Connector {
   peerControllerMap: Map<string, PeerController> = new Map()
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
 
-  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, businessMiddleware: { [key: string]: Middleware }) {
-    const protocolMiddleware = {
-      'ccp': new CcpMiddleware({
+  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[]) {
+    const protocolMiddleware = pipeline(
+      new CcpMiddleware({
         handleCcpRouteControl: async (packet: IlpPrepare) => this._handleCcpRouteControl(packet, peerInfo.id),
         handleCcpRouteUpdate: async (packet: IlpPrepare) => this._handleCcpRouteUpdate(packet, peerInfo.id)
       } as CcpMiddlewareServices),
-      'ildcp': new IldcpMiddleware({
+      new IldcpMiddleware({
         getPeerInfo: () => peerInfo,
         getOwnAddress: () => ownAddress,
         getPeerAddress: () => ownAddress + '.' + peerInfo.id
       } as IldcpMiddlewareServices)
-    }
+    )
 
-    const middleware = Object.assign(businessMiddleware, protocolMiddleware)
-    const pipelines = await constructPipelines(middleware)
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.incomingData, async (packet: IlpPrepare) => fulfillPacket)
-    const outgoingIlpPacketHandler = constructMiddlewarePipeline(pipelines.outgoingData, endpoint.request.bind(endpoint))
+    const combinedMiddleware = pipeline(...middleware, protocolMiddleware)
+    const sendIncoming = setPipelineHandler('incoming', combinedMiddleware, this.sendIlpPacket.bind(this))
+    const sendOutgoing = setPipelineHandler('outgoing', combinedMiddleware, endpoint.request.bind(endpoint))
 
-    endpoint.handler = incomingIlpPacketHandler
-    this.outgoingIlpPacketHandlerMap.set(peerInfo.id, outgoingIlpPacketHandler)
+    endpoint.handler = sendIncoming
+    this.outgoingIlpPacketHandlerMap.set(peerInfo.id, sendOutgoing)
 
     this.routingTable.addRoute(peerInfo.id, {
       prefix: ownAddress + '.' + peerInfo.id,
@@ -47,7 +40,7 @@ export default class Connector {
 
     const opts = {
       peerId: peerInfo.id,
-      sendData: outgoingIlpPacketHandler,
+      sendData: sendOutgoing,
       getPeerRelation: (peerId: string) => peerInfo.relation,
       forwardingRoutingTable: this.routingTable.getForwardingRoutingTable()
     }

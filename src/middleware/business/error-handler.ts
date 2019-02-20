@@ -1,30 +1,25 @@
 // import { create as createLogger } from '../common/log'
-import Middleware, { MiddlewareCallback, MiddlewareServices, Pipelines } from '../../types/middleware'
+import { Middleware, IlpRequestHandler } from '../../types/middleware'
 import { IlpPrepare, IlpReply, errorToIlpReject, isFulfill, isReject } from 'ilp-packet'
 
-export interface ErrorHandlerMiddlewareServices extends MiddlewareServices {
+export interface ErrorHandlerMiddlewareServices {
   getOwnIlpAddress: () => string
 }
 
-export default class ErrorHandlerMiddleware implements Middleware {
+/**
+ * Catch errors that bubble back along the pipeline and convert to an ILP Reject
+ *
+ * Important middleware. It ensures any errors thrown through the middleware pipe is converted to correct ILP
+ * reject that is sent back to sender.
+ */
+export class ErrorHandlerMiddleware extends Middleware {
   private getOwnIlpAddress: () => string
 
   constructor ({ getOwnIlpAddress }: ErrorHandlerMiddlewareServices) {
-    this.getOwnIlpAddress = getOwnIlpAddress
-  }
-
-  async applyToPipelines (pipelines: Pipelines) {
-    // const log = createLogger(`error-handler-middleware[${accountId}]`)
-
-    /**
-     * Important middleware. It ensures any errors thrown through the middleware pipe is converted to correct ILP
-     * reject that is sent back to sender.
-     */
-    pipelines.incomingData.insertLast({
-      name: 'errorHandler',
-      method: async (packet: IlpPrepare, next: MiddlewareCallback<IlpPrepare, IlpReply>) => {
+    super({
+      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
         try {
-          const response = await next(packet)
+          const response = await next(request)
 
           if (!(isFulfill(response) || isReject(response))) {
             throw new Error('handler did not return a value.')
@@ -36,12 +31,11 @@ export default class ErrorHandlerMiddleware implements Middleware {
           if (!err || typeof err !== 'object') {
             err = new Error('Non-object thrown: ' + e)
           }
-
-          // log.debug('error in data handler, creating rejection. ilpErrorCode=%s error=%s', err.ilpErrorCode, err.stack ? err.stack : err)
-
           return errorToIlpReject(this.getOwnIlpAddress(), err)
         }
       }
     })
+    this.getOwnIlpAddress = getOwnIlpAddress
   }
+
 }

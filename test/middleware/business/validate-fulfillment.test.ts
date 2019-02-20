@@ -2,10 +2,9 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
-import { constructPipelines, constructMiddlewarePipeline } from '../../../src/lib/middleware'
-import ValidateFulfillmentMiddleware from '../../../src/middleware/business/validate-fulfillment'
+import { ValidateFulfillmentMiddleware } from '../../../src/middleware/business/validate-fulfillment'
 import { IlpPrepare, IlpFulfill, serializeIlpFulfill } from 'ilp-packet'
-import { Pipelines } from '../../../src/types/middleware'
+import { setPipelineHandler } from '../../../src/types/middleware';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -13,7 +12,6 @@ const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('Validate fulfillment Middlware', function () {
 
-  let pipelines: Pipelines
   let validateFulfillmentMiddleware: ValidateFulfillmentMiddleware
 
   const preparePacket = {
@@ -26,19 +24,6 @@ describe('Validate fulfillment Middlware', function () {
 
   beforeEach(async function () {
     validateFulfillmentMiddleware = new ValidateFulfillmentMiddleware()
-    const middleware = {
-      'ildcp': validateFulfillmentMiddleware
-    }
-    pipelines = await constructPipelines(middleware)
-  })
-
-  it('inserts itself into the outgoing data pipeline', async function () {
-    assert.equal(pipelines.outgoingData.getMethods().length, 1)
-    assert.isEmpty(pipelines.incomingData.getMethods())
-    assert.isEmpty(pipelines.incomingMoney.getMethods())
-    assert.isEmpty(pipelines.outgoingMoney.getMethods())
-    assert.isEmpty(pipelines.startup.getMethods())
-    assert.isEmpty(pipelines.shutdown.getMethods())
   })
 
   it('throws wrong condition error if fulfill has incorrect condition', async function () {
@@ -46,10 +31,9 @@ describe('Validate fulfillment Middlware', function () {
       fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
       data: Buffer.alloc(0)
     }
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.outgoingData, async (packet: IlpPrepare) => fulfillPacket)
-
+    const sendOutgoing = setPipelineHandler('outgoing', validateFulfillmentMiddleware, async () => fulfillPacket)
     try{
-      await incomingIlpPacketHandler(preparePacket)
+      await sendOutgoing(preparePacket)
     } catch (e) {
       return
     }
@@ -61,10 +45,8 @@ describe('Validate fulfillment Middlware', function () {
       fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
       data: Buffer.alloc(0)
     }
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.outgoingData, async (packet: IlpPrepare) => fulfillPacket)
-
-    const reply = await incomingIlpPacketHandler(preparePacket)
-
+    const sendOutgoing = setPipelineHandler('outgoing', validateFulfillmentMiddleware, async () => fulfillPacket)
+    const reply = await sendOutgoing(preparePacket)
     assert.strictEqual(reply, fulfillPacket)
   })
 
@@ -75,9 +57,8 @@ describe('Validate fulfillment Middlware', function () {
       message: 'exceeded maximum balance.',
       data: Buffer.alloc(0)
     }
-    const incomingIlpPacketHandler = constructMiddlewarePipeline(pipelines.outgoingData, async (packet: IlpPrepare) => rejectPacket)
-
-    const reply = await incomingIlpPacketHandler(preparePacket)
+    const sendOutgoing = setPipelineHandler('outgoing', validateFulfillmentMiddleware, async () => rejectPacket)
+    const reply = await sendOutgoing(preparePacket)
 
     assert.strictEqual(reply, rejectPacket)
   })
