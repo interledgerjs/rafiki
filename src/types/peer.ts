@@ -14,5 +14,10 @@ export interface PeerInfo {
     refillPeriod?: number,
     incomingAmount?: string,
     outgoingAmount?: string
+  },
+  maxPacketAmount?: string,
+  deduplicate?: {
+    cleanupInterval?: number,
+    packetLifetime?: number
   }
 }

@@ -12,6 +12,7 @@ export default class Connector {
   routingTable: RoutingTable = new RoutingTable()
   peerControllerMap: Map<string, PeerController> = new Map()
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
+  address?: string
 
   async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[]) {
     const protocolMiddleware = pipeline(
@@ -63,6 +64,14 @@ export default class Connector {
     if (!peerController) throw new Error(`Cannot find peer with id=${id}`)
 
     return peerController
+  }
+
+  setOwnAddress (address: string) {
+    this.address = address
+  }
+
+  getOwnAddress (): string | undefined {
+    return this.address
   }
 
   private async _handleCcpRouteControl (packet: IlpPrepare, peerId: string): Promise<IlpReply> {
