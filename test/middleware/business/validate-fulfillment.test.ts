@@ -4,7 +4,7 @@ import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import { ValidateFulfillmentMiddleware } from '../../../src/middleware/business/validate-fulfillment'
 import { IlpPrepare, IlpFulfill, serializeIlpFulfill } from 'ilp-packet'
-import { setPipelineHandler } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -31,7 +31,7 @@ describe('Validate fulfillment Middlware', function () {
       fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
       data: Buffer.alloc(0)
     }
-    const sendOutgoing = setPipelineHandler('outgoing', validateFulfillmentMiddleware, async () => fulfillPacket)
+    const sendOutgoing = setPipelineReader('outgoing', validateFulfillmentMiddleware, async () => fulfillPacket)
     try{
       await sendOutgoing(preparePacket)
     } catch (e) {
@@ -45,7 +45,7 @@ describe('Validate fulfillment Middlware', function () {
       fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
       data: Buffer.alloc(0)
     }
-    const sendOutgoing = setPipelineHandler('outgoing', validateFulfillmentMiddleware, async () => fulfillPacket)
+    const sendOutgoing = setPipelineReader('outgoing', validateFulfillmentMiddleware, async () => fulfillPacket)
     const reply = await sendOutgoing(preparePacket)
     assert.strictEqual(reply, fulfillPacket)
   })
@@ -57,7 +57,7 @@ describe('Validate fulfillment Middlware', function () {
       message: 'exceeded maximum balance.',
       data: Buffer.alloc(0)
     }
-    const sendOutgoing = setPipelineHandler('outgoing', validateFulfillmentMiddleware, async () => rejectPacket)
+    const sendOutgoing = setPipelineReader('outgoing', validateFulfillmentMiddleware, async () => rejectPacket)
     const reply = await sendOutgoing(preparePacket)
 
     assert.strictEqual(reply, rejectPacket)

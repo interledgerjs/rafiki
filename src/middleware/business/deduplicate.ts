@@ -24,7 +24,7 @@ export class DeduplicateMiddleware extends Middleware {
   constructor ({ cache }: DeduplicateMiddlewareServices) {
 
     super({
-      processOutgoing: (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void) => {
+      processOutgoing: (request: IlpPrepare, next: IlpRequestHandler) => {
 
         const key = cacheKey(request)
         const { amount, expiresAt } = request
@@ -37,7 +37,7 @@ export class DeduplicateMiddleware extends Middleware {
           }
         }
 
-        const promise = (next) ? next(request) : Promise.reject(new Error('No next?')) // TODO - This sucks, need to fix
+        const promise = next(request)
         cache.set(key, {
           amount,
           expiresAt,
@@ -58,39 +58,38 @@ export interface PacketCacheOptions {
 
 export class PacketCache {
 
-  private timer: NodeJS.Timeout
-
-  private packetCache: Map<string, CachedPacket> = new Map()
-  private cleanupInterval: number
-  private packetLifetime: number
+  private _timer: NodeJS.Timeout
+  private _packetCache: Map<string, CachedPacket> = new Map()
+  private _cleanupInterval: number
+  private _packetLifetime: number
 
   constructor ({ cleanupInterval, packetLifetime, packetCache }: PacketCacheOptions) {
-    this.cleanupInterval = cleanupInterval || DEFAULT_CLEANUP_INTERVAL
-    this.packetLifetime = packetLifetime || DEFAULT_PACKET_LIFETIME
-    this.packetCache = packetCache || new Map()
-    this.timer = setInterval(() => this.cleanupCache(this.packetLifetime), this.cleanupInterval)
+    this._cleanupInterval = cleanupInterval || DEFAULT_CLEANUP_INTERVAL
+    this._packetLifetime = packetLifetime || DEFAULT_PACKET_LIFETIME
+    this._packetCache = packetCache || new Map()
+    this._timer = setInterval(() => this.cleanupCache(this._packetLifetime), this._cleanupInterval)
   }
 
   public get (key: string): CachedPacket | undefined {
-    return this.packetCache.get(key)
+    return this._packetCache.get(key)
   }
 
   public set (key: string, packet: CachedPacket) {
-    this.packetCache.set(key, packet)
+    this._packetCache.set(key, packet)
   }
 
   public dispose () {
-    clearInterval(this.timer)
+    clearInterval(this._timer)
   }
 
   private cleanupCache (packetLifetime: number) {
     const now = Date.now()
-    for (const index of this.packetCache.keys()) {
-      const cachedPacket = this.packetCache.get(index)
+    for (const index of this._packetCache.keys()) {
+      const cachedPacket = this._packetCache.get(index)
       if (!cachedPacket) continue
       const packetExpiry = cachedPacket.expiresAt.getTime() + packetLifetime
       if (packetExpiry < now) {
-        this.packetCache.delete(index)
+        this._packetCache.delete(index)
       }
     }
   }

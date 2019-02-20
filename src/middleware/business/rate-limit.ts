@@ -19,13 +19,13 @@ export class RateLimitMiddleware extends Middleware {
 
   constructor ({ bucket, stats }: RateLimitMiddlewareServices) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (!bucket.take()) {
           this.stats.rateLimitedPackets.increment(this.peerInfo, {})
           throw new RateLimitedError('too many requests, throttling.')
         }
 
-        return next(request, sendCallback)
+        return next(request)
       }
     })
   }

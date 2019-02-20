@@ -13,11 +13,10 @@ export interface ErrorHandlerMiddlewareServices {
  * reject that is sent back to sender.
  */
 export class ErrorHandlerMiddleware extends Middleware {
-  private getOwnIlpAddress: () => string
 
   constructor ({ getOwnIlpAddress }: ErrorHandlerMiddlewareServices) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         try {
           const response = await next(request)
 
@@ -31,11 +30,10 @@ export class ErrorHandlerMiddleware extends Middleware {
           if (!err || typeof err !== 'object') {
             err = new Error('Non-object thrown: ' + e)
           }
-          return errorToIlpReject(this.getOwnIlpAddress(), err)
+          return errorToIlpReject(getOwnIlpAddress(), err)
         }
       }
     })
-    this.getOwnIlpAddress = getOwnIlpAddress
   }
 
 }

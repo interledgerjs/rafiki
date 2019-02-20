@@ -6,7 +6,7 @@ export class ExpireMiddleware extends Middleware {
 
   constructor () {
     super({
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (isPrepare(request)) {
           const { expiresAt } = request
 
@@ -28,7 +28,7 @@ export class ExpireMiddleware extends Middleware {
         }
 
         // TODO: probably don't need to check it is is a prepare packet above
-        return next(request, sendCallback)
+        return next(request)
       }
     })
   }

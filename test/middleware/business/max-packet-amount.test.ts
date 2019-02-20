@@ -6,7 +6,7 @@ Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 import { IlpPrepare, IlpFulfill, isFulfill, Errors } from 'ilp-packet';
 import { MaxPacketAmountMiddleware } from '../../../src/middleware/business/max-packet-amount'
-import { setPipelineHandler } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware';
 const { AmountTooLargeError } = Errors
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
@@ -32,8 +32,8 @@ describe('Max Packet Amount Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      setPipelineHandler('incoming', maxPacketAmountMiddleware, async () => fulfillPacket)
-      let reply = await maxPacketAmountMiddleware.incoming.request(preparePacket)
+      const sendIncoming = setPipelineReader('incoming', maxPacketAmountMiddleware, async () => fulfillPacket)
+      let reply = await sendIncoming(preparePacket)
       assert.isTrue(isFulfill(reply))
       assert.deepEqual(reply, fulfillPacket)
     })
@@ -52,9 +52,9 @@ describe('Max Packet Amount Middleware', function () {
         data: Buffer.alloc(0)
       }
 
-      setPipelineHandler('incoming', maxPacketAmountMiddleware, async () => fulfillPacket)
+      const sendIncoming = setPipelineReader('incoming', maxPacketAmountMiddleware, async () => fulfillPacket)
       try {
-        await maxPacketAmountMiddleware.incoming.request(preparePacket)
+        await sendIncoming(preparePacket)
       } catch (err) { 
         return; 
       }

@@ -6,7 +6,7 @@ import { IldcpMiddleware } from '../../../src/middleware/protocol/ildcp'
 import { IlpPrepare, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
 import * as ILDCP from 'ilp-protocol-ildcp'
 import { PeerInfo } from '../../../src/types/peer';
-import { setPipelineHandler } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -52,7 +52,7 @@ describe('ILDCP Middleware', function () {
       data: Buffer.alloc(0)
     }
     let didNextGetCalled: boolean = false
-    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async (packet: IlpPrepare) => {
+    const sendIncoming = setPipelineReader('incoming', ildcpMiddleware, async (packet: IlpPrepare) => {
       didNextGetCalled = true
       return IlpFulfill
     })
@@ -76,17 +76,14 @@ describe('ILDCP Middleware', function () {
       destination: 'peer.config',
       data: Buffer.alloc(0)
     }
-    let didNextGetCalled: boolean = false
-    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async (packet: IlpPrepare) => {
-      didNextGetCalled = true
-      return IlpFulfill
+    const sendIncoming = setPipelineReader('incoming', ildcpMiddleware, async (packet: IlpPrepare) => {
+      throw new Error('shouldn\'t call next')
     })
 
     ildcpStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 
     await sendIncoming(packet)
 
-    assert.isFalse(didNextGetCalled)
     assert.isTrue(ildcpStub.called)
   })
 
@@ -102,7 +99,7 @@ describe('ILDCP Middleware', function () {
       destination: 'peer.config',
       data: Buffer.alloc(0)
     }
-    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async () => IlpFulfill)
+    const sendIncoming = setPipelineReader('incoming', ildcpMiddleware, async () => IlpFulfill)
     const getPeerInfoSpy = sinon.spy(ildcpServices, 'getPeerInfo')
     ildcpStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 
@@ -123,7 +120,7 @@ describe('ILDCP Middleware', function () {
       destination: 'peer.config',
       data: Buffer.alloc(0)
     }
-    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async () => IlpFulfill)
+    const sendIncoming = setPipelineReader('incoming', ildcpMiddleware, async () => IlpFulfill)
     const getPeerAddressSpy = sinon.spy(ildcpServices, 'getPeerAddress')
     ildcpStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 
@@ -144,7 +141,7 @@ describe('ILDCP Middleware', function () {
       destination: 'peer.config',
       data: Buffer.alloc(0)
     }
-    const sendIncoming = setPipelineHandler('incoming', ildcpMiddleware, async () => IlpFulfill)
+    const sendIncoming = setPipelineReader('incoming', ildcpMiddleware, async () => IlpFulfill)
     const getOwnAddressSpy = sinon.spy(ildcpServices, 'getOwnAddress')
     ildcpStub = sinon.stub(ILDCP, 'serve').resolves(serializeIlpFulfill(IlpFulfill))
 

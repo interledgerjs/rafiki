@@ -15,26 +15,26 @@ export class ThroughputMiddleware extends Middleware {
   constructor ({ incomingBucket, outgoingBucket }: ThroughputMiddlewareServices) {
 
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (incomingBucket && isPrepare(request)) {
           // TODO: Do we need a BigNumber-based token bucket?
           if (!incomingBucket.take(Number(request.amount))) {
             throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
           }
-          return next(request, sendCallback)
+          return next(request)
         } else {
-          return next(request, sendCallback)
+          return next(request)
         }
       },
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (outgoingBucket && isPrepare(request)) {
           // TODO: Do we need a BigNumber-based token bucket?
           if (!outgoingBucket.take(Number(request.amount))) {
             throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
           }
-          return next(request, sendCallback)
+          return next(request)
         } else {
-          return next(request, sendCallback)
+          return next(request)
         }
       }
     })

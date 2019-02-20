@@ -11,9 +11,9 @@ export interface StatsMiddlewareServices {
 export class StatsMiddleware extends Middleware {
   constructor ({ stats, peerInfo }: StatsMiddlewareServices) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         try {
-          const reply = await next(request, sendCallback)
+          const reply = await next(request)
           if (isFulfill(reply)) {
             stats.incomingDataPackets.increment(peerInfo, { result: 'fulfilled' })
           } else {
@@ -25,9 +25,9 @@ export class StatsMiddleware extends Middleware {
           throw err
         }
       },
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler, sendCallback?: () => void): Promise<IlpReply> => {
+      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         try {
-          const reply = await next(request, sendCallback)
+          const reply = await next(request)
           if (isFulfill(reply)) {
             stats.outgoingDataPackets.increment(peerInfo, { result: 'fulfilled' })
           } else {
