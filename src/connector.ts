@@ -79,15 +79,16 @@ export default class Connector {
 
     return deserializeIlpFulfill(serializeCcpResponse())
   }
+
   private async _handleCcpRouteUpdate (packet: IlpPrepare, peerId: string): Promise<IlpReply> {
     const peerController = this.getPeer(peerId)
 
-    const changedPrefixes = peerController.handleRouteUpdate(deserializeCcpRouteUpdateRequest(serializeIlpPrepare(packet)))
-
-    // Loop over all peerControllers routes and determine who is the best person to send the new routes,
-    // else remove routes from routing table
+    this._handleChangedRoutePrefixes(peerController.handleRouteUpdate(deserializeCcpRouteUpdateRequest(serializeIlpPrepare(packet))))
 
     return deserializeIlpFulfill(serializeCcpResponse())
   }
 
+  private _handleChangedRoutePrefixes (changedPrefixes: any) {
+    console.log(changedPrefixes)
+  }
 }
