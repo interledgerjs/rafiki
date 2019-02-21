@@ -86,9 +86,9 @@ describe('Connector', function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
       await connector.addPeer(peerInfo, endpoint, [])
-      const reply = await endpoint.sendOutgoingRequest(packet)
+      const reply = await endpoint.mockIncomingRequest(packet)
   
-      assert.isOk(handleRouteControlStub.called)
+      assert.isTrue(handleRouteControlStub.called)
       assert.strictEqual(reply.data.toString(), 'test data')
     })
 
