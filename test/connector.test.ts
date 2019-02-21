@@ -175,18 +175,6 @@ describe('sendIlpPacket', function () {
     })
   })
 
-  describe('getPeer', function () {
-    it('throws error if cannot find specified peer', async function () {
-      try{
-        connector.getPeer('fred')
-      } catch (e) {
-        assert.strictEqual(e.message, "Cannot find peer with id=fred")
-        return
-      }
-      assert.fail('getPeer did not throw error for not finding specified peer')
-    })
-  })
-
   it('throws a peer unreachable error when the endpoint fails to send outgoing packet', async function () {
     const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
     endpoint.connected = false

@@ -12,8 +12,8 @@ export interface PeerInfo {
     settleTo: string
   },
   deduplicate?: {
-    cleanupInterval: number,
-    packetLifetime: number
+    cleanupInterval?: number,
+    packetLifetime?: number
   },
   maxPacketAmount?: string,
   throughput?: {

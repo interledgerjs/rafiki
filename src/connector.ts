@@ -1,4 +1,4 @@
-import { Router as RoutingTable, RouteManager, PeerController } from 'ilp-router'
+import { Router as RoutingTable, RouteManager } from 'ilp-router'
 import { pipeline } from './types/channel'
 import { Endpoint } from './types/endpoint'
 import { IlpPrepare, IlpReply, IlpFulfill, serializeIlpPrepare, deserializeIlpFulfill, Errors } from 'ilp-packet'
@@ -24,8 +24,8 @@ export default class Connector {
     const protocolMiddleware = pipeline(
       new HeartbeatMiddleware({
         endpoint,
-        onSuccessfullHeartbeat: () => this.routingTable.addPeer(peerInfo.id, peerInfo.relation),
-        onFailedHeartbeat: () => this.routingTable.removePeer(peerInfo.id)
+        onSuccessfullHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation),
+        onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id)
       }),
       new CcpMiddleware({
         isSender: peerInfo.sendRoutes,
@@ -80,13 +80,6 @@ export default class Connector {
     return handler(packet)
   }
 
-  getPeer (id: string): PeerController {
-    const peerController = this.routeManager.getPeer(id)
-    if (!peerController) throw new Error(`Cannot find peer with id=${id}`)
-
-    return peerController
-  }
-
   setOwnAddress (address: string) {
     this.address = address
   }
@@ -97,27 +90,6 @@ export default class Connector {
 
   getPeerAddress (id: string): string {
     return this.getOwnAddress() + '.' + id
-  }
-
-  private async _handleCcpRouteControl (packet: IlpPrepare, peerId: string): Promise<IlpReply> {
-    const peerController = this.getPeer(peerId)
-
-    peerController.handleRouteControl(deserializeCcpRouteControlRequest(serializeIlpPrepare(packet)))
-
-    return deserializeIlpFulfill(serializeCcpResponse())
-  }
-
-  private async _handleCcpRouteUpdate (packet: IlpPrepare, peerId: string): Promise<IlpReply> {
-    const peerController = this.getPeer(peerId)
-
-    this._handleChangedRoutePrefixes(peerController.handleRouteUpdate(deserializeCcpRouteUpdateRequest(serializeIlpPrepare(packet))))
-
-    return deserializeIlpFulfill(serializeCcpResponse())
-  }
-
-  private _handleChangedRoutePrefixes (changedPrefixes: any) {
-
-    // Loop over all the peers and determine what to update
   }
 
   getPeerRelation (peerId: string): Relation | undefined {
