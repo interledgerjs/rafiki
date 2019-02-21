@@ -21,7 +21,7 @@ export class CcpMiddleware extends Middleware {
   ccpReceiver: CcpReceiver
 
   constructor ({ isSender, isReceiver, peerId, forwardingRoutingTable, getPeerRelation, getOwnAddress }: CcpMiddlewareServices) {
-    super()
+    super({})
 
     if (isReceiver) {
       this.ccpReceiver = new CcpReceiver({ peerId: peerId, sendData: this.sendData.bind(this) })
@@ -56,16 +56,13 @@ export class CcpMiddleware extends Middleware {
     }
   }
 
-  /**
-   * Startup logic for if it is a cpp sender
-   */
-  start () {
+  protected _startup = async () => {
     if (this.ccpReceiver) {
       this.ccpReceiver.sendRouteControl()
     }
   }
 
-  shutdown () {
+  protected _shutdown = async () => {
     if (this.ccpSender) {
       this.ccpSender.stop()
     }
