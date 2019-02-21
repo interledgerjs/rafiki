@@ -10,6 +10,7 @@ Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 
 describe('App', function () {
+  let app: App
   beforeEach(function () {
     process.env.CONNECTOR_ACCOUNTS = JSON.stringify({
       'usd-ledger': {
@@ -24,6 +25,10 @@ describe('App', function () {
     mock('mock-ilp-endpoint', MockIlpEndpoint)
   })
 
+  afterEach(function () {
+    if(app) app.shutdown()
+  })
+
   describe('constructor', function () {
     it('loads config from options if specified', async function () {  
       const accounts = {
@@ -36,7 +41,7 @@ describe('App', function () {
         }
       }
 
-      const app = new App({
+      app = new App({
         env: "test",
         accounts
       })
@@ -45,13 +50,13 @@ describe('App', function () {
     })
   
     it('loads config from env if no options are passed in', async function () {
-      const app = new App()
+      app = new App()
   
       assert.isOk(app.config.accounts['usd-ledger'])
     })
 
     it('sets connector address if it is specified in the config', async function () {
-      const app = new App({
+      app = new App({
         env: "test",
         accounts: {
           'cad-ledger': {
@@ -74,7 +79,7 @@ describe('App', function () {
   describe('start', function () {
     it('adds default middleware', async function () {
       const expectedMiddleware = ['ExpireMiddleware', 'ErrorHandlerMiddleware', 'RateLimitMiddleware', 'MaxPacketAmountMiddleware', 'ThroughputMiddleware', 'DeduplicateMiddleware', 'ValidateFulfillmentMiddleware', 'StatsMiddleware', 'AlertMiddleware']
-      const app = new App()
+      app = new App()
       const addPeerStub = sinon.stub(app.connector, 'addPeer').resolves()
 
       await app.start()
@@ -87,7 +92,7 @@ describe('App', function () {
 
     it('does not apply disabled middleware', async function () {
       const expectedMiddleware = ['ExpireMiddleware', 'RateLimitMiddleware', 'MaxPacketAmountMiddleware', 'DeduplicateMiddleware', 'ValidateFulfillmentMiddleware', 'StatsMiddleware', 'AlertMiddleware']
-      const app = new App({
+      app = new App({
         env: "test",
         accounts: {
           'cad-ledger': {
@@ -111,7 +116,7 @@ describe('App', function () {
     })
 
     it('creates endpoint to be used by peer', async function () {
-      const app = new App({
+      app = new App({
         env: "test",
         accounts: {
           'cad-ledger': {
@@ -132,6 +137,13 @@ describe('App', function () {
       const endpoint = addPeerStub.args[0][1]
       assert.isOk(endpoint instanceof MockIlpEndpoint)
     })
+
+    it('starts middleware ?')
+  })
+
+  describe('shutdown', function () {
+    it('disposes of packet caches')
+    it('shutsdown middleware ?')
   })
 
 })

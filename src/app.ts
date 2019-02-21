@@ -84,6 +84,14 @@ export default class App {
     }
   }
 
+  async shutdown () {
+    // dispose of packet caches
+    Object.keys(this.config.accounts).map(account => {
+      const cache = this.packetCacheMap.get(account)
+      if (cache) cache.dispose()
+    })
+  }
+
   private _createMiddleware (peerInfo: PeerInfo): Middleware[] {
     const middleware: Middleware[] = []
     const disabledMiddleware = this.config.disableMiddleware ? this.config.disableMiddleware : []

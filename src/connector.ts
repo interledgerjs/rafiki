@@ -15,17 +15,16 @@ export default class Connector {
   routeManager: RouteManager = new RouteManager(this.routingTable)
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
   address?: string
-  heartbeatMap: Map<string, NodeJS.Timeout> = new Map()
 
   async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[]) {
 
-    this.routeManager.addPeer(peerInfo.id, peerInfo.relation)
+    this.routeManager.addPeer(peerInfo.id, peerInfo.relation) // TODO refactor when RouteManager is finished
 
     const protocolMiddleware = pipeline(
       new HeartbeatMiddleware({
         endpoint,
-        onSuccessfullHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation),
-        onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id)
+        onSuccessfullHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
+        onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
       }),
       new CcpMiddleware({
         isSender: peerInfo.sendRoutes,
@@ -48,7 +47,7 @@ export default class Connector {
       try {
         return endpoint.sendOutgoingRequest(request)
       } catch (e) {
-        this.routingTable.removeRoute(this.getPeerAddress(peerInfo.id))
+        this.routingTable.removeRoute(this.getPeerAddress(peerInfo.id)) // TODO refactor when RouteManager is finished
 
         if (!e.ilpErrorCode) {
           e.ilpErrorCode = codes.T01_PEER_UNREACHABLE
@@ -64,7 +63,7 @@ export default class Connector {
     })
     this.outgoingIlpPacketHandlerMap.set(peerInfo.id, sendOutgoing)
 
-    this.routingTable.addRoute(peerInfo.id, {
+    this.routingTable.addRoute(peerInfo.id, { // TODO refactor when RouteManager is finished
       prefix: this.getPeerAddress(peerInfo.id),
       path: []
     })
