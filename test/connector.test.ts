@@ -128,15 +128,6 @@ describe('Connector', function () {
       assert.isOk(isConnected)
     })
 
-    it('adds peer controller into peer controller map', async function () {
-      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
-      const mockMiddleware = new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)
-      await connector.addPeer(peerInfo, endpoint, [mockMiddleware])
-
-      const peerController = connector.getPeer('alice')
-
-      assert.isOk(peerController)
-    })
   })
   
 describe('sendIlpPacket', function () {
@@ -183,18 +174,6 @@ describe('sendIlpPacket', function () {
       }
 
       assert.fail('Did not throw error for not having address in routing table')
-    })
-  })
-
-  describe('getPeer', function () {
-    it('throws error if cannot find specified peer', async function () {
-      try{
-        connector.getPeer('fred')
-      } catch (e) {
-        assert.strictEqual(e.message, "Cannot find peer with id=fred")
-        return
-      }
-      assert.fail('getPeer did not throw error for not finding specified peer')
     })
   })
 })

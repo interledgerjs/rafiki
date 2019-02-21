@@ -4,9 +4,9 @@ import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { IlpPrepare, IlpReply, deserializeIlpFulfill } from 'ilp-packet';
+import { IlpPrepare, IlpReply, deserializeIlpFulfill, deserializeIlpPrepare } from 'ilp-packet';
 import { CcpMiddleware } from '../../../../src/middleware/protocol/ccp'
-import {serializeCcpResponse} from 'ilp-protocol-ccp'
+import {serializeCcpResponse, CcpRouteUpdateRequest, serializeCcpRouteUpdateRequest} from 'ilp-protocol-ccp'
 import { setPipelineReader } from '../../../../src/types/middleware';
 import ForwardingRoutingTable from 'ilp-router/build/ilp-router/forwarding-routing-table';
 import { Relation } from 'ilp-router/build/types/relation';
@@ -24,13 +24,18 @@ describe('CCP Middleware', function () {
       getOwnAddress: () => 'g.barry'
     }
 
-    const prepareRouteControlPacket: IlpPrepare = {
-      amount: '0',
-      executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
-      expiresAt: new Date(START_DATE + 2000),
-      destination: 'peer.route.control',
-      data: Buffer.alloc(0)
-    }
+    const ccpUpdateRequest = {
+      speaker: 'string',
+      routingTableId: '3b069822-a754-4e44-8a60-0f9f7084144d',
+      currentEpochIndex: 5,
+      fromEpochIndex: 0,
+      toEpochIndex: 5,
+      holdDownTime: 45000,
+      newRoutes: [],
+      withdrawnRoutes: new Array<string>(),
+    } as CcpRouteUpdateRequest
+
+    const prepareRouteControlPacket: IlpPrepare = deserializeIlpPrepare(serializeCcpRouteUpdateRequest(ccpUpdateRequest))
 
     const prepareRouteUpdatePacket: IlpPrepare = {
       ...prepareRouteControlPacket,
@@ -99,7 +104,6 @@ describe('CCP Middleware', function () {
     })
 
     
-
     describe('sender', function() {
 
       it('route control message gets handled by ccpSender', function () {
@@ -111,28 +115,4 @@ describe('CCP Middleware', function () {
 
       })
     })
-
-  
-    
-
-    // it('calls handleCcpRouteControl for peer.route.control messages', async function() {
-    //   const spy = sinon.spy(services, 'handleCcpRouteControl')
-    //   ccpMiddleware = new CcpMiddleware(services)
-    //   const sendIncoming = setPipelineReader('incoming', ccpMiddleware, () => {
-    //     return Promise.resolve({} as IlpReply)
-    //   })
-
-    //   await sendIncoming(prepareRouteControlPacket)
-    //   sinon.assert.calledOnce(spy)
-    // })
-
-    // it('calls handleCcpRouteUpdate for peer.route.update messages', async function() {
-    //   const spy = sinon.spy(services, 'handleCcpRouteUpdate')
-    //   ccpMiddleware = new CcpMiddleware(services)
-    //   const sendIncoming = setPipelineReader('incoming', ccpMiddleware, () => {
-    //     return Promise.resolve({} as IlpReply)
-    //   })
-    //   await sendIncoming(prepareRouteUpdatePacket)
-    //   sinon.assert.calledOnce(spy)
-    // })
 })

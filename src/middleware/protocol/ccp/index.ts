@@ -72,6 +72,7 @@ export class CcpMiddleware extends Middleware {
   }
 
   async handleCcpRouteControlMessage (packet: IlpPrepare): Promise<IlpReply> {
+    console.log(packet)
     this.ccpSender.handleRouteControl(deserializeCcpRouteControlRequest(serializeIlpPrepare(packet)))
     return deserializeIlpFulfill(serializeCcpResponse())
   }
