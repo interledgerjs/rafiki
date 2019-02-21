@@ -74,7 +74,7 @@ describe('Heartbeat Middleware', function () {
       onFailedHeartbeat: () => {},
     })
 
-    heartbeatMiddleware.start()    
+    heartbeatMiddleware.startup() 
     this.clock.tick(30000) // one default heartbeat interval
     this.clock.tick(30000) // next heartbeat interval
 
@@ -93,7 +93,7 @@ describe('Heartbeat Middleware', function () {
       onFailedHeartbeat: () => {},
     })
 
-    heartbeatMiddleware.start()    
+    heartbeatMiddleware.startup()    
     this.clock.tick(30000) // one default heartbeat interval
 
     assert.isOk(peerAdded)
@@ -109,7 +109,7 @@ describe('Heartbeat Middleware', function () {
       onFailedHeartbeat: () => {peerRemoved = true},
     })
 
-    heartbeatMiddleware.start()
+    heartbeatMiddleware.startup()
     this.clock.tick(30000) // one default heartbeat interval
 
     assert.isOk(peerRemoved)
@@ -124,7 +124,7 @@ describe('Heartbeat Middleware', function () {
       onFailedHeartbeat: () => {},
     })
 
-    heartbeatMiddleware.start()
+    heartbeatMiddleware.startup()
     heartbeatMiddleware.shutdown()
     this.clock.tick(60000) // two default heartbeat interval
 

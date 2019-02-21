@@ -33,7 +33,25 @@ export class HeartbeatMiddleware extends Middleware {
         }
 
         return next(request)
-      }
+      },
+      startup: async () => {
+        this.heartbeat = setInterval(async () => {
+          try {
+            const reply = await this.endpoint.sendOutgoingRequest({
+              amount: '0',
+              executionCondition: Buffer.alloc(0),
+              destination: 'peer.heartbeat',
+              expiresAt: new Date(Date.now() + 2000),
+              data: Buffer.alloc(0)
+            })
+
+            this.onSuccessfullHeartbeat()
+          } catch (e) {
+            this.onFailedHeartbeat()
+          }
+        }, this.interval)
+      },
+      shutdown: async () => clearInterval(this.heartbeat)
     })
 
     this.interval = options.heartbeatInterval || DEFAULT_HEARTBEAT_INTERVAL
@@ -42,25 +60,4 @@ export class HeartbeatMiddleware extends Middleware {
     this.onFailedHeartbeat = options.onFailedHeartbeat
   }
 
-  start () {
-    this.heartbeat = setInterval(async () => {
-      try {
-        const reply = await this.endpoint.sendOutgoingRequest({
-          amount: '0',
-          executionCondition: Buffer.alloc(0),
-          destination: 'peer.heartbeat',
-          expiresAt: new Date(Date.now() + 2000),
-          data: Buffer.alloc(0)
-        })
-
-        this.onSuccessfullHeartbeat()
-      } catch (e) {
-        this.onFailedHeartbeat()
-      }
-    }, this.interval)
-  }
-
-  shutdown () {
-    clearInterval(this.heartbeat)
-  }
 }
