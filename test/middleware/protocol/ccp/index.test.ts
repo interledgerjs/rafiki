@@ -85,7 +85,6 @@ describe('CCP Middleware', function () {
     describe('receiver', function() {
       it('sends a route control message if start method called and receiver defined', function (done) {
         const receiveOutgoing = setPipelineReader('outgoing', ccpMiddleware, (request: IlpPrepare): Promise<IlpReply> => {
-          console.log(request)
           try {
             assert.equal(request.destination, 'peer.route.control')
             assert.equal(request.amount, '0')
@@ -95,7 +94,7 @@ describe('CCP Middleware', function () {
           }
           return Promise.resolve({} as IlpReply)
         })
-        ccpMiddleware.start()
+        ccpMiddleware.startup()
       })
 
       it('handles a route update message', function () {
@@ -107,8 +106,6 @@ describe('CCP Middleware', function () {
     describe('sender', function() {
 
       it('route control message gets handled by ccpSender', function () {
-
-        console.log(ccpMiddleware.ccpSender)
       })
 
       it('sends CcpRouteUpdate based on the forwardingRoutingTable', function () {
