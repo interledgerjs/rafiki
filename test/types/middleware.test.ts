@@ -4,8 +4,17 @@ import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { IlpPrepare } from 'ilp-packet';
+import { IlpPrepare, IlpReply } from 'ilp-packet';
 import { setPipelineReader, Middleware, IlpRequestHandler } from '../../src/types/middleware';
+
+
+class CustomMiddleware extends Middleware {
+
+  protected _processIncoming = (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+    throw new Error('')
+  }
+
+}
 
 describe('Middleware', function () {
     let counter: number
@@ -23,7 +32,7 @@ describe('Middleware', function () {
           return next(request)
         }
       })
-
+      
     })
 
     it('adds process function to incoming pipeline', async function () {
