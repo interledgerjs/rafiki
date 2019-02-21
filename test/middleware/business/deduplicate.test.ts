@@ -9,13 +9,16 @@ import { setPipelineReader } from '../../../src/types/middleware';
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
-
 describe('Deduplicate Middleware', function () {
 
   let deduplicateMiddleware: DeduplicateMiddleware
   let cache: PacketCache
   const cleanupInterval: number = 30000
-  const packetLifetime:number = 30000
+  const packetLifetime: number = 30000
+  const cacheOptions = {
+    cleanupInterval,
+    packetLifetime,
+  }
   const preparePacket: IlpPrepare = {
     amount: '100',
     executionCondition: Buffer.alloc(32),
@@ -25,23 +28,21 @@ describe('Deduplicate Middleware', function () {
   }
 
   it('sets cleanup up cache to run at specified interval in the startup handler', async function () {
-    this.clock = sinon.useFakeTimers()
-    cache = new PacketCache({
-      cleanupInterval,
-      packetLifetime,
-    })
-    const cleanupCacheSpy = sinon.spy(cache, <any>'cleanupCache')
-    this.clock.tick(cleanupInterval)
-    sinon.assert.calledOnce(cleanupCacheSpy)
-    this.clock.restore()
+    try {
+      this.clock = sinon.useFakeTimers()
+      cache = new PacketCache(cacheOptions)
+      const cleanupCacheSpy = sinon.spy(cache, <any>'cleanupCache')
+      this.clock.tick(cleanupInterval)
+      sinon.assert.calledOnce(cleanupCacheSpy)
+      this.clock.restore()  
+    } finally {
+      cache.dispose()
+    }
   })
 
   it('clears the cleanup interval in the shutdown pipeline', async function () {
     this.clock = sinon.useFakeTimers()
-    cache = new PacketCache({
-      cleanupInterval,
-      packetLifetime,
-    })
+    cache = new PacketCache(cacheOptions)
     const cleanupCacheSpy = sinon.spy(cache, <any>'cleanupCache')
     cache.dispose()
     this.clock.tick(cleanupInterval)
@@ -61,15 +62,16 @@ describe('Deduplicate Middleware', function () {
       fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
       data: Buffer.alloc(0)
     }
-    cache = new PacketCache({
-      cleanupInterval,
-      packetLifetime,
-    })
-    deduplicateMiddleware = new DeduplicateMiddleware({ cache })
-    const sendOutgoing = setPipelineReader('outgoing', deduplicateMiddleware, async () => fulfillPacket)
-    assert.strictEqual(cache['_packetCache'].size, 0)
-    await sendOutgoing(preparePacket)
-    assert.strictEqual(cache['_packetCache'].size, 1)
+    try {
+      cache = new PacketCache(cacheOptions)
+      deduplicateMiddleware = new DeduplicateMiddleware({ cache })
+      const sendOutgoing = setPipelineReader('outgoing', deduplicateMiddleware, async () => fulfillPacket)
+      assert.strictEqual(cache['_packetCache'].size, 0)
+      await sendOutgoing(preparePacket)
+      assert.strictEqual(cache['_packetCache'].size, 1)  
+    } finally {
+      cache.dispose()
+    }
   })
 
   it('duplicate packets response is served from packetCache', async function () {
@@ -84,29 +86,33 @@ describe('Deduplicate Middleware', function () {
       fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
       data: Buffer.alloc(0)
     }
-    cache = new PacketCache({
-      cleanupInterval,
-      packetLifetime,
-    })
-    deduplicateMiddleware = new DeduplicateMiddleware({ cache })
-
-    let didNextGetCalled = false
-    const sendOutgoing = setPipelineReader('outgoing', deduplicateMiddleware, async () => {
-      didNextGetCalled = true
-      return fulfillPacket 
-    })
-    assert.strictEqual(cache['_packetCache'].size, 0)
-    cache.set('wLGdgkJP9a+6RG/9ZfPM7A==',
-    {
-      amount: '49',
-      expiresAt: new Date(START_DATE + 2000),
-      promise: Promise.resolve(fulfillPacket)
-    })
-
-    const reply = await sendOutgoing(preparePacket)
-
-    assert.strictEqual(reply, fulfillPacket)
-    assert.notOk(didNextGetCalled)
+    try {
+      cache = new PacketCache({
+        cleanupInterval,
+        packetLifetime,
+      })
+      deduplicateMiddleware = new DeduplicateMiddleware({ cache })
+  
+      let didNextGetCalled = false
+      const sendOutgoing = setPipelineReader('outgoing', deduplicateMiddleware, async () => {
+        didNextGetCalled = true
+        return fulfillPacket 
+      })
+      assert.strictEqual(cache['_packetCache'].size, 0)
+      cache.set('wLGdgkJP9a+6RG/9ZfPM7A==',
+      {
+        amount: '49',
+        expiresAt: new Date(START_DATE + 2000),
+        promise: Promise.resolve(fulfillPacket)
+      })
+  
+      const reply = await sendOutgoing(preparePacket)
+  
+      assert.strictEqual(reply, fulfillPacket)
+      assert.notOk(didNextGetCalled)
+    } finally {
+      cache.dispose()
+    }
   })
 
 })

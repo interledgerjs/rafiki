@@ -4,6 +4,13 @@ import { IlpPrepare, IlpReply } from 'ilp-packet'
 export type IlpRequestHandler = RequestHandler<IlpPrepare, IlpReply>
 export type MiddlewareRequestHandler = (request: IlpPrepare, next: IlpRequestHandler) => Promise<IlpReply>
 
+export interface MiddlewareFunctions {
+  startup?: () => Promise<void>
+  shutdown?: () => Promise<void>
+  processIncoming?: MiddlewareRequestHandler
+  processOutgoing?: MiddlewareRequestHandler
+}
+
 export class Middleware implements Duplex<IlpPrepare, IlpReply> {
 
   private _incomingReader: IlpRequestHandler = () => {
@@ -14,13 +21,27 @@ export class Middleware implements Duplex<IlpPrepare, IlpReply> {
     throw new Error('handler not set')
   }
 
-  constructor (options?: {processIncoming?: MiddlewareRequestHandler, processOutgoing?: MiddlewareRequestHandler}) {
-    if (options && options.processIncoming) {
-      this._processIncoming = options.processIncoming
+  constructor ({ startup, shutdown, processIncoming, processOutgoing }: MiddlewareFunctions) {
+    if (startup) {
+      this._startup = startup
     }
-    if (options && options.processOutgoing) {
-      this._processOutgoing = options.processOutgoing
+    if (shutdown) {
+      this._shutdown = shutdown
     }
+    if (processIncoming) {
+      this._processIncoming = processIncoming
+    }
+    if (processOutgoing) {
+      this._processOutgoing = processOutgoing
+    }
+  }
+
+  protected _startup: () => Promise<void> = async () => {
+    return
+  }
+
+  protected _shutdown: () => Promise<void> = async () => {
+    return
   }
 
   protected _processIncoming: MiddlewareRequestHandler = async (request: IlpPrepare, next: IlpRequestHandler, sentCallback?: () => void) => {
@@ -29,6 +50,14 @@ export class Middleware implements Duplex<IlpPrepare, IlpReply> {
 
   protected _processOutgoing: MiddlewareRequestHandler = async (request: IlpPrepare, next: IlpRequestHandler, sentCallback?: () => void) => {
     return next(request)
+  }
+
+  public async startup (): Promise<void> {
+    return this._startup()
+  }
+
+  public async shutdown (): Promise<void> {
+    return this._shutdown()
   }
 
   public incoming: Channel<IlpPrepare, IlpReply> = {
