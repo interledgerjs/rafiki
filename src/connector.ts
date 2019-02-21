@@ -1,9 +1,9 @@
-import { Router as RoutingTable, PeerController } from 'ilp-router'
+import { Router as RoutingTable, RouteManager, PeerController } from 'ilp-router'
 import { pipeline } from './types/channel'
 import { Endpoint } from './types/endpoint'
 import { IlpPrepare, IlpReply, IlpFulfill, serializeIlpPrepare, deserializeIlpFulfill, Errors } from 'ilp-packet'
 import { Middleware, setPipelineReader } from './types/middleware'
-import { PeerInfo } from './types/peer'
+import { PeerInfo, Relation } from './types/peer'
 import { CcpMiddleware, CcpMiddlewareServices } from './middleware/protocol/ccp'
 import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
 import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcpRouteUpdateRequest } from 'ilp-protocol-ccp'
@@ -12,13 +12,15 @@ import { HeartbeatMiddleware } from './middleware/business/heartbeat'
 const { codes } = Errors
 export default class Connector {
   routingTable: RoutingTable = new RoutingTable()
-  // routeManager: RouteManager = new RouteManager(this.routingTable)
-  peerControllerMap: Map<string, PeerController> = new Map()
+  routeManager: RouteManager = new RouteManager(this.routingTable)
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
   address?: string
   heartbeatMap: Map<string, NodeJS.Timeout> = new Map()
 
   async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[]) {
+
+    this.routeManager.addPeer(peerInfo.id, peerInfo.relation)
+
     const protocolMiddleware = pipeline(
       new HeartbeatMiddleware({
         endpoint,
@@ -26,8 +28,12 @@ export default class Connector {
         onFailedHeartbeat: () => this.routingTable.removePeer(peerInfo.id)
       }),
       new CcpMiddleware({
-        handleCcpRouteControl: async (packet: IlpPrepare) => this._handleCcpRouteControl(packet, peerInfo.id),
-        handleCcpRouteUpdate: async (packet: IlpPrepare) => this._handleCcpRouteUpdate(packet, peerInfo.id)
+        isSender: peerInfo.sendRoutes,
+        isReceiver: peerInfo.receiveRoutes,
+        peerId: peerInfo.id,
+        forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
+        getPeerRelation: this.getPeerRelation.bind(this),
+        getOwnAddress: () => this.getOwnAddress()
       } as CcpMiddlewareServices),
       new IldcpMiddleware({
         getPeerInfo: () => peerInfo,
@@ -62,15 +68,6 @@ export default class Connector {
       prefix: this.getPeerAddress(peerInfo.id),
       path: []
     })
-
-    const opts = {
-      peerId: peerInfo.id,
-      sendData: sendOutgoing,
-      getPeerRelation: (peerId: string) => peerInfo.relation,
-      forwardingRoutingTable: this.routingTable.getForwardingRoutingTable()
-    }
-    const peerController = new PeerController(opts)
-    this.peerControllerMap.set(peerInfo.id, peerController)
   }
 
   async sendIlpPacket (packet: IlpPrepare): Promise<IlpReply> {
@@ -84,7 +81,7 @@ export default class Connector {
   }
 
   getPeer (id: string): PeerController {
-    const peerController = this.peerControllerMap.get(id)
+    const peerController = this.routeManager.getPeer(id)
     if (!peerController) throw new Error(`Cannot find peer with id=${id}`)
 
     return peerController
@@ -121,6 +118,15 @@ export default class Connector {
   private _handleChangedRoutePrefixes (changedPrefixes: any) {
 
     // Loop over all the peers and determine what to update
+  }
+
+  getPeerRelation (peerId: string): Relation | undefined {
+    const peer = this.routeManager.getPeer(peerId)
+    if (peer) {
+      return peer.getRelation()
+    } else {
+      console.log('peer not found')
+    }
 
   }
 }

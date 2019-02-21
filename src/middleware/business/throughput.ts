@@ -11,6 +11,9 @@ export interface ThroughputMiddlewareServices {
   outgoingBucket?: TokenBucket
 }
 
+/**
+ * The Throughput middleware throttles throughput based on the amount in the packets.
+ */
 export class ThroughputMiddleware extends Middleware {
   constructor ({ incomingBucket, outgoingBucket }: ThroughputMiddlewareServices) {
 

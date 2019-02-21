@@ -6,8 +6,6 @@ Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 import { IlpPrepare, IlpFulfill, isFulfill, Errors } from 'ilp-packet';
 import { ThroughputMiddleware, createThroughputLimitBucketsForPeer } from '../../../src/middleware/business/throughput'
-import Stats from '../../../src/services/stats';
-import { PeerInfo } from '../../../src/types/peer';
 import { setPipelineReader } from '../../../src/types/middleware';
 const { InsufficientLiquidityError } = Errors
 
@@ -40,7 +38,7 @@ describe('Throughput Middleware', function () {
       throughputMiddleware = new ThroughputMiddleware(buckets)
     })
 
-    it('doesn\'t not allow throughput above threshold throughput through', async function () {
+    it('doesn\'t allow throughput above threshold through', async function () {
       const sendIncoming = setPipelineReader('incoming', throughputMiddleware, async () => fulfillPacket)
   
       // Empty the token buffer
@@ -52,8 +50,9 @@ describe('Throughput Middleware', function () {
         await sendIncoming(preparePacket)
       } catch (err) {
         assert.instanceOf(err, InsufficientLiquidityError)
+        return
       }
-      throw new Error("Correct error not thrown")
+      assert.fail("Should have thrown an InsufficientLiquidityError")
     })
 
     it('allows throughput again after refill period', async function () {
@@ -103,8 +102,9 @@ describe('Throughput Middleware', function () {
         await sendOutgoing(preparePacket)
       } catch (err) {
         assert.instanceOf(err, InsufficientLiquidityError)
+        return
       }
-      throw new Error("Correct error not thrown")
+      assert.fail("Should have thrown an InsufficientLiquidityError")
     })
 
     it('allows throughput again after refill period', async function () {

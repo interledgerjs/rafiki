@@ -1,23 +1,33 @@
 export type Relation = 'parent' | 'child' | 'peer' | 'local'
 
 export interface PeerInfo {
-  id: string
-  relation: Relation
-  assetScale: number,
+  relation: 'parent' | 'peer' | 'child',
+  id: string,
   assetCode: string,
-  rateLimit?: {
-    refillPeriod?: number,
-    refillCount?: number,
-    capacity?: number
-  }
+  assetScale: number,
+  balance?: {
+    minimum: string,
+    maximum: string,
+    settleThreshold?: string,
+    settleTo: string
+  },
+  deduplicate?: {
+    cleanupInterval: number,
+    packetLifetime: number
+  },
+  maxPacketAmount?: string,
   throughput?: {
     refillPeriod?: number,
     incomingAmount?: string,
     outgoingAmount?: string
   },
-  maxPacketAmount?: string,
-  deduplicate?: {
-    cleanupInterval?: number,
-    packetLifetime?: number
-  }
+  rateLimit?: {
+    refillPeriod?: number,
+    refillCount?: number,
+    capacity?: number
+  },
+  options?: object,
+  sendRoutes?: boolean,
+  receiveRoutes?: boolean,
+  ilpAddressSegment?: string
 }
