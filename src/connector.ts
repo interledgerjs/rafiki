@@ -1,31 +1,38 @@
 import { Router as RoutingTable, PeerController } from 'ilp-router'
 import { pipeline } from './types/channel'
 import { Endpoint } from './types/endpoint'
-import { IlpPrepare, IlpReply, IlpFulfill, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet'
+import { IlpPrepare, IlpReply, IlpFulfill, serializeIlpPrepare, deserializeIlpFulfill, Errors } from 'ilp-packet'
 import { Middleware, setPipelineReader } from './types/middleware'
 import { PeerInfo } from './types/peer'
 import { CcpMiddleware, CcpMiddlewareServices } from './middleware/protocol/ccp'
 import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
 import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcpRouteUpdateRequest } from 'ilp-protocol-ccp'
+import { HeartbeatMiddleware } from './middleware/business/heartbeat'
 
-const ownAddress: string = 'test.connie'
+const { codes } = Errors
 export default class Connector {
   routingTable: RoutingTable = new RoutingTable()
   // routeManager: RouteManager = new RouteManager(this.routingTable)
   peerControllerMap: Map<string, PeerController> = new Map()
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
   address?: string
+  heartbeatMap: Map<string, NodeJS.Timeout> = new Map()
 
   async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[]) {
     const protocolMiddleware = pipeline(
+      new HeartbeatMiddleware({
+        endpoint,
+        onSuccessfullHeartbeat: () => this.routingTable.addPeer(peerInfo.id, peerInfo.relation),
+        onFailedHeartbeat: () => this.routingTable.removePeer(peerInfo.id)
+      }),
       new CcpMiddleware({
         handleCcpRouteControl: async (packet: IlpPrepare) => this._handleCcpRouteControl(packet, peerInfo.id),
         handleCcpRouteUpdate: async (packet: IlpPrepare) => this._handleCcpRouteUpdate(packet, peerInfo.id)
       } as CcpMiddlewareServices),
       new IldcpMiddleware({
         getPeerInfo: () => peerInfo,
-        getOwnAddress: () => ownAddress,
-        getPeerAddress: () => ownAddress + '.' + peerInfo.id
+        getOwnAddress: this.getOwnAddress.bind(this),
+        getPeerAddress: () => this.getPeerAddress(peerInfo.id)
       } as IldcpMiddlewareServices)
     )
 
@@ -35,7 +42,14 @@ export default class Connector {
       try {
         return endpoint.sendOutgoingRequest(request)
       } catch (e) {
-        // TODO Handle send error
+        this.routingTable.removeRoute(this.getPeerAddress(peerInfo.id))
+
+        if (!e.ilpErrorCode) {
+          e.ilpErrorCode = codes.T01_PEER_UNREACHABLE
+        }
+
+        e.message = 'failed to send packet: ' + e.message
+
         throw e
       }
     })
@@ -45,7 +59,7 @@ export default class Connector {
     this.outgoingIlpPacketHandlerMap.set(peerInfo.id, sendOutgoing)
 
     this.routingTable.addRoute(peerInfo.id, {
-      prefix: ownAddress + '.' + peerInfo.id,
+      prefix: this.getPeerAddress(peerInfo.id),
       path: []
     })
 
@@ -82,6 +96,10 @@ export default class Connector {
 
   getOwnAddress (): string | undefined {
     return this.address
+  }
+
+  getPeerAddress (id: string): string {
+    return this.getOwnAddress() + '.' + id
   }
 
   private async _handleCcpRouteControl (packet: IlpPrepare, peerId: string): Promise<IlpReply> {

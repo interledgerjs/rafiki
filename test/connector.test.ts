@@ -9,10 +9,12 @@ import MockIlpEndpoint from './mocks/mockIlpEndpoint';
 import { IlpPrepare, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
 import * as ILDCP from 'ilp-protocol-ildcp'
 import { MockMiddleware } from './mocks/mockMiddleware';
+import { Errors } from 'ilp-packet'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
+const { codes } = Errors
 
 describe('Connector', function () {
   let connector: Connector
@@ -36,6 +38,7 @@ describe('Connector', function () {
 
   beforeEach(function () {
     connector = new Connector()
+    connector.setOwnAddress('test.connie')
   })
 
   describe('addPeer', function () {
@@ -47,6 +50,21 @@ describe('Connector', function () {
       // TODO - Check that middleware was bound
     })
 
+    it('adds heartbeat middleware', async function () {
+      const packet: IlpPrepare = {
+        amount: '100',
+        executionCondition: Buffer.alloc(32),
+        expiresAt: new Date(),
+        destination: 'peer.heartbeat',
+        data: Buffer.from('testing heartbeat')
+      }
+      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+
+      await connector.addPeer(peerInfo, endpoint, [])
+      const reply = await endpoint.mockIncomingRequest(packet)
+  
+      assert.strictEqual(reply.data.toString(), 'testing heartbeat')
+    })
     it('adds ildcp protocol middleware to pipelines', async function () {
       const IldcpFulfill = {
         fulfillment: Buffer.alloc(32),
@@ -197,4 +215,34 @@ describe('sendIlpPacket', function () {
       assert.fail('getPeer did not throw error for not finding specified peer')
     })
   })
+
+  it('throws a peer unreachable error when the endpoint fails to send outgoing packet', async function () {
+    const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+    endpoint.connected = false
+    await connector.addPeer(peerInfo, endpoint, [])
+
+    try {
+      await endpoint.mockIncomingRequest(preparePacket)
+    } catch (e) {
+      assert.equal(e.ilpErrorCode, codes.T01_PEER_UNREACHABLE)
+      return
+    }
+    assert.fail()
+  })
+
+  it('removes peer from the routing table if endpoint fails to send packet', async function () {
+      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+      endpoint.connected = false
+      await connector.addPeer(peerInfo, endpoint, [])
+      const routingTable = connector.routingTable.getRoutingTable()
+      assert.isOk(routingTable.get('test.connie.alice'))
+
+      try {
+        await endpoint.mockIncomingRequest(preparePacket)
+      } catch (e) {
+        assert.isOk(!routingTable.get('test.connie.alice'))
+        return
+      }
+      assert.fail()
+    })
 })

@@ -114,7 +114,6 @@ export default class Config extends ConfigSchemaTyping {
       const firstError = this._validate.errors && this._validate.errors[0]
         ? this._validate.errors[0]
         : { message: 'unknown validation error', dataPath: '' }
-      console.log('config failed to validate. error=' + firstError.message + ' dataPath=' + firstError.dataPath, this._validate.errors || [])
       throw new InvalidJsonBodyError('config failed to validate. error=' + firstError.message + ' dataPath=' + firstError.dataPath, this._validate.errors || [])
     }
   }

@@ -24,7 +24,7 @@ const schemas = ['Config.json', 'BalanceUpdate.json']
         .replace('accounts: {', 'accounts!: {')
     }
 
-    fs.writeFileSync(resolve(__dirname, '../src/schemas/', schema.split('.')[0] + '.ts'), ts)
+    fs.writeFileSync(resolve(__dirname, '../src/schemas/', schema.split('.')[0] + 'Typing.ts'), ts)
   }
 })()
   .catch(err => console.error(err))
