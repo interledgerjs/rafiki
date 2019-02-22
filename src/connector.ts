@@ -1,12 +1,11 @@
 import { Router as RoutingTable, RouteManager } from 'ilp-router'
 import { pipeline } from './types/channel'
 import { Endpoint } from './types/endpoint'
-import { IlpPrepare, IlpReply, IlpFulfill, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet'
+import { IlpPrepare, IlpReply } from 'ilp-packet'
 import { Middleware, setPipelineReader } from './types/middleware'
 import { PeerInfo, Relation } from './types/peer'
 import { CcpMiddleware, CcpMiddlewareServices } from './middleware/protocol/ccp'
 import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
-import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcpRouteUpdateRequest } from 'ilp-protocol-ccp'
 
 const ownAddress: string = 'test.connie'
 export default class Connector {
