@@ -60,9 +60,9 @@ export default class App {
 
   }
 
-  /*
-  * Loop through configured accounts and instantiate the specified endpoint and middleware. Add this to the connector.
-  */
+  /**
+   * Loop through configured accounts and instantiate the specified endpoint and middleware. Tell the connector to add the peer.
+   */
   async start () {
     this.log.info('starting connector')
     for (let account of Object.keys(this.config.accounts)) {
@@ -84,12 +84,15 @@ export default class App {
     }
   }
 
+  /**
+   * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's middleware.
+   */
   async shutdown () {
+    this.connector.getPeerList().forEach(peer => this.connector.removePeer(peer))
     Array.from(this.packetCacheMap.values()).forEach(cache => cache.dispose())
     this.packetCacheMap.clear()
     this.rateLimitBucketMap.clear()
     this.throughputBucketsMap.clear()
-    this.connector.getPeerList().forEach(peer => this.connector.removePeer(peer))
   }
 
   private _createMiddleware (peerInfo: PeerInfo): Middleware[] {
