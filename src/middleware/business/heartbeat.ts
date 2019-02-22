@@ -8,7 +8,7 @@ const DEFAULT_HEARTBEAT_INTERVAL = 30 * 1000
 
 export interface HeartbeatMiddlewareServices {
   endpoint: Endpoint<IlpPrepare, IlpReply>,
-  onSuccessfullHeartbeat: () => void,
+  onSuccessfulHeartbeat: () => void,
   onFailedHeartbeat: () => void,
   heartbeatInterval?: number
 }
@@ -16,7 +16,7 @@ export class HeartbeatMiddleware extends Middleware {
 
   heartbeat: NodeJS.Timeout
   interval: number
-  onSuccessfullHeartbeat: () => void
+  onSuccessfulHeartbeat: () => void
   onFailedHeartbeat: () => void
   endpoint: Endpoint<IlpPrepare,IlpReply>
   constructor (options: HeartbeatMiddlewareServices) {
@@ -45,7 +45,7 @@ export class HeartbeatMiddleware extends Middleware {
               data: Buffer.alloc(0)
             })
 
-            this.onSuccessfullHeartbeat()
+            this.onSuccessfulHeartbeat()
           } catch (e) {
             this.onFailedHeartbeat()
           }
@@ -56,7 +56,7 @@ export class HeartbeatMiddleware extends Middleware {
 
     this.interval = options.heartbeatInterval || DEFAULT_HEARTBEAT_INTERVAL
     this.endpoint = options.endpoint
-    this.onSuccessfullHeartbeat = options.onSuccessfullHeartbeat
+    this.onSuccessfulHeartbeat = options.onSuccessfulHeartbeat
     this.onFailedHeartbeat = options.onFailedHeartbeat
   }
 

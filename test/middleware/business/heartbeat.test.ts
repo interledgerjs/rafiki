@@ -37,7 +37,7 @@ describe('Heartbeat Middleware', function () {
     const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => rejectPacket)
     const heartbeatMiddleware = new HeartbeatMiddleware({
       endpoint,
-      onSuccessfullHeartbeat: () => {},
+      onSuccessfulHeartbeat: () => {},
       onFailedHeartbeat: () => {},
     })
     let didNotIntercept = false
@@ -55,7 +55,7 @@ describe('Heartbeat Middleware', function () {
     const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => rejectPacket)
     const heartbeatMiddleware = new HeartbeatMiddleware({
       endpoint,
-      onSuccessfullHeartbeat: () => {},
+      onSuccessfulHeartbeat: () => {},
       onFailedHeartbeat: () => {},
     })
     const incomingPipeline = setPipelineReader('incoming', heartbeatMiddleware, async (packet: IlpPrepare) => rejectPacket)
@@ -70,7 +70,7 @@ describe('Heartbeat Middleware', function () {
     const endpointSendSpy = sinon.spy(endpoint, 'sendOutgoingRequest')
     const heartbeatMiddleware = new HeartbeatMiddleware({
       endpoint,
-      onSuccessfullHeartbeat: () => {},
+      onSuccessfulHeartbeat: () => {},
       onFailedHeartbeat: () => {},
     })
 
@@ -89,7 +89,7 @@ describe('Heartbeat Middleware', function () {
     let peerAdded = true
     const heartbeatMiddleware = new HeartbeatMiddleware({
       endpoint,
-      onSuccessfullHeartbeat: () => {peerAdded = true},
+      onSuccessfulHeartbeat: () => {peerAdded = true},
       onFailedHeartbeat: () => {},
     })
 
@@ -105,7 +105,7 @@ describe('Heartbeat Middleware', function () {
     let peerRemoved = false
     const heartbeatMiddleware = new HeartbeatMiddleware({
       endpoint,
-      onSuccessfullHeartbeat: () => {},
+      onSuccessfulHeartbeat: () => {},
       onFailedHeartbeat: () => {peerRemoved = true},
     })
 
@@ -120,7 +120,7 @@ describe('Heartbeat Middleware', function () {
     const endpointSendSpy = sinon.spy(endpoint, 'sendOutgoingRequest')
     const heartbeatMiddleware = new HeartbeatMiddleware({
       endpoint,
-      onSuccessfullHeartbeat: () => {},
+      onSuccessfulHeartbeat: () => {},
       onFailedHeartbeat: () => {},
     })
 

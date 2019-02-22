@@ -23,7 +23,7 @@ export default class Connector {
     const protocolMiddleware = pipeline(
       new HeartbeatMiddleware({
         endpoint,
-        onSuccessfullHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
+        onSuccessfulHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
         onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
       }),
       new CcpMiddleware({
@@ -63,7 +63,8 @@ export default class Connector {
     })
     this.outgoingIlpPacketHandlerMap.set(peerInfo.id, sendOutgoing)
 
-    this.routingTable.addRoute(peerInfo.id, { // TODO refactor when RouteManager is finished
+    this.routeManager.addRoute({
+      peer: peerInfo.id,
       prefix: this.getPeerAddress(peerInfo.id),
       path: []
     })
