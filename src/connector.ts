@@ -32,7 +32,9 @@ export default class Connector {
         peerId: peerInfo.id,
         forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
         getPeerRelation: this.getPeerRelation.bind(this),
-        getOwnAddress: () => this.getOwnAddress()
+        getOwnAddress: () => this.getOwnAddress(),
+        addRoute: this.routeManager.addRoute.bind(this),
+        removeRoute: this.routeManager.removeRoute.bind(this)
       } as CcpMiddlewareServices),
       new IldcpMiddleware({
         getPeerInfo: () => peerInfo,
