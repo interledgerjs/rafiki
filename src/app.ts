@@ -85,11 +85,11 @@ export default class App {
   }
 
   async shutdown () {
-    // dispose of packet caches
-    Object.keys(this.config.accounts).map(account => {
-      const cache = this.packetCacheMap.get(account)
-      if (cache) cache.dispose()
-    })
+    Array.from(this.packetCacheMap.values()).forEach(cache => cache.dispose())
+    this.packetCacheMap.clear()
+    this.rateLimitBucketMap.clear()
+    this.throughputBucketsMap.clear()
+    this.connector.getPeerList().forEach(peer => this.connector.removePeer(peer))
   }
 
   private _createMiddleware (peerInfo: PeerInfo): Middleware[] {

@@ -138,12 +138,49 @@ describe('App', function () {
       assert.isOk(endpoint instanceof MockIlpEndpoint)
     })
 
-    it('starts middleware ?')
   })
 
   describe('shutdown', function () {
-    it('disposes of packet caches')
-    it('shutsdown middleware ?')
+    beforeEach(async function () {
+      app = new App({
+        env: "test",
+        accounts: {
+          'cad-ledger': {
+            relation: 'peer',
+            assetCode: 'CAD',
+            assetScale: 4,
+            endpoint: 'mock-ilp-endpoint',
+            options: {}
+          },
+          'usd-ledger': {
+            relation: 'peer',
+            assetCode: 'USD',
+            assetScale: 4,
+            endpoint: 'mock-ilp-endpoint',
+            options: {}
+          }
+        }
+      })
+
+      await app.start()
+    })
+
+    it('tells connector to remove all peers', async function () {
+      const removePeerSpy = sinon.spy(app.connector, 'removePeer')
+
+      await app.shutdown()
+
+      sinon.assert.calledWith(removePeerSpy, 'cad-ledger')
+      sinon.assert.calledWith(removePeerSpy, 'usd-ledger')
+    })
+
+    it('disposes of packet caches', async function () {
+      const packetCacheSpies = Array.from(app.packetCacheMap.values()).map(cache => sinon.spy(cache, 'dispose'))
+
+      await app.shutdown()
+
+      packetCacheSpies.forEach(spy => sinon.assert.calledOnce(spy))
+    })
   })
 
 })

@@ -1,12 +1,11 @@
 import { Router as RoutingTable, RouteManager } from 'ilp-router'
 import { pipeline } from './types/channel'
 import { Endpoint } from './types/endpoint'
-import { IlpPrepare, IlpReply, IlpFulfill, serializeIlpPrepare, deserializeIlpFulfill, Errors } from 'ilp-packet'
+import { IlpPrepare, IlpReply, Errors } from 'ilp-packet'
 import { Middleware, setPipelineReader } from './types/middleware'
 import { PeerInfo, Relation } from './types/peer'
 import { CcpMiddleware, CcpMiddlewareServices } from './middleware/protocol/ccp'
 import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
-import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcpRouteUpdateRequest } from 'ilp-protocol-ccp'
 import { HeartbeatMiddleware } from './middleware/business/heartbeat'
 
 const { codes } = Errors
@@ -15,12 +14,13 @@ export default class Connector {
   routeManager: RouteManager = new RouteManager(this.routingTable)
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
   address?: string
+  peerMiddleware: Map<string, Middleware[]> = new Map()
 
   async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[]) {
 
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation) // TODO refactor when RouteManager is finished
 
-    const protocolMiddleware = pipeline(
+    const protocolMiddleware = [
       new HeartbeatMiddleware({
         endpoint,
         onSuccessfullHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
@@ -39,9 +39,10 @@ export default class Connector {
         getOwnAddress: this.getOwnAddress.bind(this),
         getPeerAddress: () => this.getPeerAddress(peerInfo.id)
       } as IldcpMiddlewareServices)
-    )
+    ]
 
-    const combinedMiddleware = pipeline(...middleware, protocolMiddleware)
+    this.peerMiddleware.set(peerInfo.id, [...middleware, ...protocolMiddleware])
+    const combinedMiddleware = pipeline(...middleware, ...protocolMiddleware)
     const sendIncoming = setPipelineReader('incoming', combinedMiddleware, this.sendIlpPacket.bind(this))
     const sendOutgoing = setPipelineReader('outgoing', combinedMiddleware, (request: IlpPrepare): Promise<IlpReply> => {
       try {
@@ -63,12 +64,22 @@ export default class Connector {
     })
     this.outgoingIlpPacketHandlerMap.set(peerInfo.id, sendOutgoing)
 
+    middleware.forEach(mw => mw.startup())
+    protocolMiddleware.forEach(mw => mw.startup())
+
     this.routingTable.addRoute(peerInfo.id, { // TODO refactor when RouteManager is finished
       prefix: this.getPeerAddress(peerInfo.id),
       path: []
     })
   }
 
+  async removePeer (id: string): Promise<void> {
+    const peerMiddleware = this.getPeerMiddleware(id)
+    if (peerMiddleware) peerMiddleware.forEach(mw => mw.shutdown())
+    this.peerMiddleware.delete(id)
+    this.outgoingIlpPacketHandlerMap.delete(id)
+    this.routeManager.removePeer(id)
+  }
   async sendIlpPacket (packet: IlpPrepare): Promise<IlpReply> {
     const { destination } = packet
     const nextHop = this.routingTable.nextHop(destination)
@@ -99,5 +110,13 @@ export default class Connector {
       console.log('peer not found')
     }
 
+  }
+
+  getPeerMiddleware (id: string): Middleware[] | undefined {
+    return this.peerMiddleware.get(id)
+  }
+
+  getPeerList () {
+    return Array.from(this.outgoingIlpPacketHandlerMap.keys())
   }
 }
