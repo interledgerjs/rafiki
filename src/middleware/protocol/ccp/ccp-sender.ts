@@ -6,9 +6,9 @@ import {
   serializeCcpRouteUpdateRequest
 } from 'ilp-protocol-ccp'
 import { IlpPrepare, IlpReply, deserializeIlpPrepare } from 'ilp-packet'
-import ForwardingRoutingTable, { RouteUpdate } from 'ilp-router/build/ilp-router/forwarding-routing-table';
-import { Relation } from 'ilp-router/build/types/relation';
-import { BroadcastRoute } from 'ilp-router/build/types/routing';
+import ForwardingRoutingTable, { RouteUpdate } from 'ilp-router/build/ilp-router/forwarding-routing-table'
+import { Relation } from 'ilp-router/build/types/relation'
+import { BroadcastRoute } from 'ilp-router/build/types/routing'
 
 export interface CcpSenderOpts {
   peerId: string
