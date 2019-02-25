@@ -51,6 +51,12 @@ describe('Connector', function () {
       assert.deepEqual(peers, ['self'])
     })
 
+    it('sets up Echo middleware in pipeline', function() {
+      const peerMiddleware = connector.getPeerMiddleware('self')
+
+      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'EchoMiddleware')
+    })
+
   })
 
   describe('addPeer', function () {

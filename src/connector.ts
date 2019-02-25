@@ -7,7 +7,8 @@ import { PeerInfo, Relation } from './types/peer'
 import { CcpMiddleware, CcpMiddlewareServices } from './middleware/protocol/ccp'
 import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
 import { HeartbeatMiddleware } from './middleware/business/heartbeat'
-import { Peer } from 'ilp-router/build/ilp-route-manager/peer'
+import { EchoMiddleware } from './middleware/protocol/echo'
+import { PeerUnreachableError } from 'ilp-packet/dist/src/errors'
 
 const { codes } = Errors
 export default class Connector {
@@ -17,17 +18,10 @@ export default class Connector {
   address?: string
   peerMiddleware: Map<string, Middleware[]> = new Map()
 
-  // Need to add self and globalPrefix to routing
   constructor () {
     this.addSelfPeer()
-    // TODO refactor when RouteManager is finished
-    // const ownAddress = this.accounts.getOwnAddress()
-    // this.localRoutes.set(ownAddress, {
-    //   nextHop: '',
-    //   path: [],
-    //   auth: hmac(this.routingSecret, ownAddress)
-    // })
 
+    // TODO add default route config
     // let defaultRoute = this.config.defaultRoute
     // if (defaultRoute === 'auto') {
     //   defaultRoute = localAccounts.filter(id => this.accounts.getInfo(id).relation === 'parent')[0]
@@ -150,24 +144,16 @@ export default class Connector {
     const selfPeerId = 'self'
     this.routeManager.addPeer(selfPeerId, 'local')
     const protocolMiddleware = [
+      new EchoMiddleware({ getOwnAddress: this.getOwnAddress.bind(this), minMessageWindow: 30000 }) // TODO need to fix the hardcoded value
     ]
 
     this.peerMiddleware.set(selfPeerId, [...protocolMiddleware])
     const combinedMiddleware = pipeline(...protocolMiddleware)
     const sendIncoming = setPipelineReader('incoming', combinedMiddleware, this.sendIlpPacket.bind(this))
     const sendOutgoing = setPipelineReader('outgoing', combinedMiddleware, (request: IlpPrepare): Promise<IlpReply> => {
-      try {
-        return endpoint.sendOutgoingRequest(request)
-      } catch (e) {
 
-        if (!e.ilpErrorCode) {
-          e.ilpErrorCode = codes.T01_PEER_UNREACHABLE
-        }
-
-        e.message = 'failed to send packet: ' + e.message
-
-        throw e
-      }
+      // Should throw an error as you are the intended recipient
+      throw new PeerUnreachableError('cant forward on packet addressed to self')
     })
 
     this.outgoingIlpPacketHandlerMap.set(selfPeerId, sendOutgoing)
