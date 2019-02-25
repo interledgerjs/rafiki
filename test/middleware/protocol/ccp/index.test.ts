@@ -10,8 +10,8 @@ import {serializeCcpResponse, CcpRouteUpdateRequest, serializeCcpRouteUpdateRequ
 import { setPipelineReader } from '../../../../src/types/middleware';
 import ForwardingRoutingTable from 'ilp-router/build/ilp-router/forwarding-routing-table';
 import { Relation } from 'ilp-router/build/types/relation';
+import { IncomingRoute } from 'ilp-router/build/types/routing';
 
-const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('CCP Middleware', function () {
     let ccpMiddleware: CcpMiddleware
@@ -21,7 +21,9 @@ describe('CCP Middleware', function () {
       peerId: 'harry',
       forwardingRoutingTable: new ForwardingRoutingTable(),
       getPeerRelation: (peerId: string) => 'parent' as Relation,
-      getOwnAddress: () => 'g.barry'
+      getOwnAddress: () => 'g.barry',
+      addRoute: (route: IncomingRoute) => {return},
+      removeRoute: (peerId: string, prefix: string) => {return}
     }
 
     const ccpUpdateRequest = {

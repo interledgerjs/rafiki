@@ -5,12 +5,13 @@ import {
   Mode,
   serializeCcpRouteControlRequest
 } from 'ilp-protocol-ccp'
-import PrefixMap from 'ilp-router/build/lib/prefix-map'
 import { IncomingRoute } from 'ilp-router/build/types/routing'
 
 export interface CcpReceiverOpts {
   peerId: string,
-  sendData: (packet: IlpPrepare) => Promise<IlpReply>
+  sendData: (packet: IlpPrepare) => Promise<IlpReply>,
+  addRoute: (route: IncomingRoute) => void,
+  removeRoute: (peerId: string, prefix: string) => void
 }
 
 const ROUTE_CONTROL_RETRY_INTERVAL = 30000
@@ -20,10 +21,10 @@ export class CcpReceiver {
 
   private peerId: string
   private sendData: (packet: IlpPrepare) => Promise<IlpReply>
+  private addRoute: (route: IncomingRoute) => void
+  private removeRoute: (peerId: string, prefix: string) => void
 
-  private routes: PrefixMap<IncomingRoute>
   private expiry: number = 0
-
   /**
    * Current routing table id used by our peer.
    *
@@ -35,26 +36,15 @@ export class CcpReceiver {
    */
   private epoch: number = 0
 
-  constructor ({ peerId, sendData }: CcpReceiverOpts) {
-    this.routes = new PrefixMap()
+  constructor ({ peerId, sendData, addRoute, removeRoute }: CcpReceiverOpts) {
     this.peerId = peerId
     this.sendData = sendData
+    this.addRoute = addRoute
+    this.removeRoute = removeRoute
   }
 
   bump (holdDownTime: number) {
     this.expiry = Math.max(Date.now() + holdDownTime, this.expiry)
-  }
-
-  getPrefixes () {
-    return this.routes.keys()
-  }
-
-  getRoutingTableId () {
-    return this.routingTableId
-  }
-
-  getEpoch () {
-    return this.epoch
   }
 
   getStatus () {
@@ -72,7 +62,7 @@ export class CcpReceiver {
     holdDownTime,
     newRoutes,
     withdrawnRoutes
-  }: CcpRouteUpdateRequest): string[] {
+  }: CcpRouteUpdateRequest) {
     this.bump(holdDownTime)
 
     if (this.routingTableId !== routingTableId) {
@@ -103,31 +93,21 @@ export class CcpReceiver {
     if (withdrawnRoutes.length > 0) {
       // this.log.trace('informed of no longer reachable routes. count=%s routes=%s', withdrawnRoutes.length, withdrawnRoutes)
       for (const prefix of withdrawnRoutes) {
-        if (this.deleteRoute(prefix)) {
-          changedPrefixes.push(prefix)
-        }
+        this.removeRoute(this.peerId, prefix)
       }
     }
 
-    // TODO: removed peerId and auth from incoming routes
     for (const route of newRoutes) {
-      if (this.addRoute({
+      this.addRoute({
+        peer: this.peerId,
         prefix: route.prefix,
         path: route.path
-      })) {
-        changedPrefixes.push(route.prefix)
-      }
+      })
     }
 
     this.epoch = toEpochIndex
 
     // this.log.trace('applied route update. changedPrefixesCount=%s fromEpoch=%s toEpoch=%s', changedPrefixes.length, fromEpochIndex, toEpochIndex)
-
-    return changedPrefixes
-  }
-
-  getPrefix (prefix: string) {
-    return this.routes.get(prefix)
   }
 
   sendRouteControl = () => {
@@ -158,19 +138,5 @@ export class CcpReceiver {
 
         retryTimeout.unref()
       })
-  }
-
-  private addRoute (route: IncomingRoute) {
-    this.routes.insert(route.prefix, route)
-
-    // TODO Check if actually changed
-    return true
-  }
-
-  private deleteRoute (prefix: string) {
-    this.routes.delete(prefix)
-
-    // TODO Check if actually changed
-    return true
   }
 }

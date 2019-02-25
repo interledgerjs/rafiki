@@ -8,7 +8,7 @@ import { RequestHandler, Channel } from './channel'
  *
  * Before calling `sendOutgoingRequest` an endpoint should be connected by calling `connect()`.
  * Connecting is an asynchronous operation. The 'connect' event indicates that it has completed.
- * 
+ *
  */
 export interface Endpoint<Request, Reply> {
 
