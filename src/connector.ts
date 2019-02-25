@@ -140,7 +140,6 @@ export default class Connector {
     const selfPeerId = 'self'
     this.routeManager.addPeer(selfPeerId, 'local')
     const protocolMiddleware = [
-      
     ]
 
     this.peerMiddleware.set(selfPeerId, [...protocolMiddleware])
@@ -160,9 +159,7 @@ export default class Connector {
         throw e
       }
     })
-    endpoint.setIncomingRequestHandler((request: IlpPrepare) => {
-      return sendIncoming(request)
-    })
+
     this.outgoingIlpPacketHandlerMap.set(selfPeerId, sendOutgoing)
 
     protocolMiddleware.forEach(mw => mw.startup())
