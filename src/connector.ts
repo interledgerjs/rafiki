@@ -42,6 +42,16 @@ export default class Connector {
     // }
   }
 
+/**
+ * Connects the business middleware and protocol middleware (for this connector implementation: heartbeat, Ildcp and ccp) into a duplex pipeline.
+ * The write section of the incoming channel is then attached to the endpoint and the read section to sendIlpPacket. The write section of the outgoing
+ * channel is attached to the send function of the endpoint. The outgoing channel is then stored for future use. Should the endpoint be unable to send
+ * a packet, the peer's route is removed from the routing table. The entire middleware stack is started up.
+ *
+ * @param peerInfo Peer information
+ * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
+ * @param middleware The business logic middleware that is to be added to the protocol middleware for the peer
+ */
   async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[]) {
 
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation) // TODO refactor when RouteManager is finished
