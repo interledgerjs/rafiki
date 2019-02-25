@@ -23,7 +23,8 @@ describe('CCP Middleware', function () {
       getPeerRelation: (peerId: string) => 'parent' as Relation,
       getOwnAddress: () => 'g.barry',
       addRoute: (route: IncomingRoute) => {return},
-      removeRoute: (peerId: string, prefix: string) => {return}
+      removeRoute: (peerId: string, prefix: string) => {return},
+      getRouteWeight: (peerId: string) => 100
     }
 
     const ccpUpdateRequest = {

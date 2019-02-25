@@ -11,7 +11,8 @@ export interface CcpReceiverOpts {
   peerId: string,
   sendData: (packet: IlpPrepare) => Promise<IlpReply>,
   addRoute: (route: IncomingRoute) => void,
-  removeRoute: (peerId: string, prefix: string) => void
+  removeRoute: (peerId: string, prefix: string) => void,
+  getRouteWeight: (peerId: string) => number
 }
 
 const ROUTE_CONTROL_RETRY_INTERVAL = 30000
@@ -23,6 +24,7 @@ export class CcpReceiver {
   private sendData: (packet: IlpPrepare) => Promise<IlpReply>
   private addRoute: (route: IncomingRoute) => void
   private removeRoute: (peerId: string, prefix: string) => void
+  private getRouteWeight: (peerId: string) => number
 
   private expiry: number = 0
   /**
@@ -36,11 +38,12 @@ export class CcpReceiver {
    */
   private epoch: number = 0
 
-  constructor ({ peerId, sendData, addRoute, removeRoute }: CcpReceiverOpts) {
+  constructor ({ peerId, sendData, addRoute, removeRoute, getRouteWeight }: CcpReceiverOpts) {
     this.peerId = peerId
     this.sendData = sendData
     this.addRoute = addRoute
     this.removeRoute = removeRoute
+    this.getRouteWeight = getRouteWeight
   }
 
   bump (holdDownTime: number) {
@@ -101,7 +104,8 @@ export class CcpReceiver {
       this.addRoute({
         peer: this.peerId,
         prefix: route.prefix,
-        path: route.path
+        path: route.path,
+        weight: this.getRouteWeight(this.peerId)
       })
     }
 

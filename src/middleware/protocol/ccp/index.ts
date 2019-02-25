@@ -13,6 +13,7 @@ export interface CcpMiddlewareServices {
   peerId: string,
   forwardingRoutingTable: ForwardingRoutingTable,
   getPeerRelation: (peerId: string) => Relation,
+  getRouteWeight: (peerId: string) => number,
   getOwnAddress: () => string,
   addRoute: (route: IncomingRoute) => void,
   removeRoute: (peerId: string, prefix: string) => void
@@ -23,11 +24,11 @@ export class CcpMiddleware extends Middleware {
   ccpSender: CcpSender
   ccpReceiver: CcpReceiver
 
-  constructor ({ isSender, isReceiver, peerId, forwardingRoutingTable, getPeerRelation, getOwnAddress, addRoute, removeRoute }: CcpMiddlewareServices) {
+  constructor ({ isSender, isReceiver, peerId, forwardingRoutingTable, getPeerRelation, getOwnAddress, addRoute, removeRoute, getRouteWeight }: CcpMiddlewareServices) {
     super({})
 
     if (isReceiver) {
-      this.ccpReceiver = new CcpReceiver({ peerId: peerId, sendData: this.sendData.bind(this), addRoute: addRoute, removeRoute: removeRoute })
+      this.ccpReceiver = new CcpReceiver({ peerId: peerId, sendData: this.sendData.bind(this), addRoute: addRoute, removeRoute: removeRoute, getRouteWeight: getRouteWeight })
     }
 
     if (isSender) {
