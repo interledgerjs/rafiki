@@ -33,7 +33,7 @@ export default class Connector {
     const protocolMiddleware = [
       new HeartbeatMiddleware({
         endpoint,
-        onSuccessfullHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
+        onSuccessfulHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
         onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
       }),
       new CcpMiddleware({
@@ -42,7 +42,9 @@ export default class Connector {
         peerId: peerInfo.id,
         forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
         getPeerRelation: this.getPeerRelation.bind(this),
-        getOwnAddress: () => this.getOwnAddress()
+        getOwnAddress: () => this.getOwnAddress(),
+        addRoute: this.routeManager.addRoute.bind(this),
+        removeRoute: this.routeManager.removeRoute.bind(this)
       } as CcpMiddlewareServices),
       new IldcpMiddleware({
         getPeerInfo: () => peerInfo,
@@ -77,7 +79,8 @@ export default class Connector {
     middleware.forEach(mw => mw.startup())
     protocolMiddleware.forEach(mw => mw.startup())
 
-    this.routingTable.addRoute(peerInfo.id, { // TODO refactor when RouteManager is finished
+    this.routeManager.addRoute({
+      peer: peerInfo.id,
       prefix: this.getPeerAddress(peerInfo.id),
       path: []
     })

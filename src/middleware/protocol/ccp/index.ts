@@ -5,6 +5,7 @@ import ForwardingRoutingTable from 'ilp-router/build/ilp-router/forwarding-routi
 import { Relation } from 'ilp-router/build/types/relation'
 import { CcpSender } from './ccp-sender'
 import { CcpReceiver } from './ccp-receiver'
+import { IncomingRoute } from 'ilp-router/build/types/routing'
 
 export interface CcpMiddlewareServices {
   isSender: boolean,
@@ -12,7 +13,9 @@ export interface CcpMiddlewareServices {
   peerId: string,
   forwardingRoutingTable: ForwardingRoutingTable,
   getPeerRelation: (peerId: string) => Relation,
-  getOwnAddress: () => string
+  getOwnAddress: () => string,
+  addRoute: (route: IncomingRoute) => void,
+  removeRoute: (peerId: string, prefix: string) => void
 }
 
 export class CcpMiddleware extends Middleware {
@@ -20,11 +23,11 @@ export class CcpMiddleware extends Middleware {
   ccpSender: CcpSender
   ccpReceiver: CcpReceiver
 
-  constructor ({ isSender, isReceiver, peerId, forwardingRoutingTable, getPeerRelation, getOwnAddress }: CcpMiddlewareServices) {
+  constructor ({ isSender, isReceiver, peerId, forwardingRoutingTable, getPeerRelation, getOwnAddress, addRoute, removeRoute }: CcpMiddlewareServices) {
     super({})
 
     if (isReceiver) {
-      this.ccpReceiver = new CcpReceiver({ peerId: peerId, sendData: this.sendData.bind(this) })
+      this.ccpReceiver = new CcpReceiver({ peerId: peerId, sendData: this.sendData.bind(this), addRoute: addRoute, removeRoute: removeRoute })
     }
 
     if (isSender) {
@@ -69,7 +72,6 @@ export class CcpMiddleware extends Middleware {
   }
 
   async handleCcpRouteControlMessage (packet: IlpPrepare): Promise<IlpReply> {
-    console.log(packet)
     this.ccpSender.handleRouteControl(deserializeCcpRouteControlRequest(serializeIlpPrepare(packet)))
     return deserializeIlpFulfill(serializeCcpResponse())
   }
