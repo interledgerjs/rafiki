@@ -15,6 +15,7 @@ import { AlertMiddleware, Alerts } from './middleware/business/alert'
 import TokenBucket from './lib/token-bucket'
 import Stats from './services/stats'
 import AdminApi from './services/admin-api'
+import { IlpPrepare, IlpReply, IlpFulfill } from 'ilp-packet'
 
 export default class App {
 
@@ -57,7 +58,7 @@ export default class App {
       throw err
     }
 
-    if (this.config.ilpAddress) this.connector.setOwnAddress(this.config.ilpAddress)
+    this.connector.setOwnAddress(this.config.ilpAddress || 'unknown')
 
   }
 
@@ -67,6 +68,15 @@ export default class App {
   async start () {
     this.log.info('starting connector')
     this.adminApi.listen()
+
+    // figure out which peer to inherit from
+    const inheritFrom = this.config.ilpAddressInheritFrom ||
+      Object.keys(this.config.accounts).map(key => { return { id: key, info: this.config.accounts[key] } }).filter((value, key) => value.info.relation === 'parent').map(value => value.id)[0]
+
+    if (this.config.ilpAddress === 'unknown' && !inheritFrom) {
+      throw new Error('ILP address must be specified in configuration when there is no parent.')
+    }
+
     for (let account of Object.keys(this.config.accounts)) {
       const { assetScale, assetCode, relation, deduplicate, maxPacketAmount, throughput, rateLimit, endpoint } = this.config.accounts[account]
       const peerInfo: PeerInfo = {
@@ -81,8 +91,9 @@ export default class App {
       }
       const middleware = this._createMiddleware(peerInfo)
       const endpointDefinition = typeof(endpoint) === 'object' ? endpoint : require(endpoint) // TODO update when implementations of endpoint are released
-      const endpointInstance = typeof(endpoint) === 'object' ? endpoint : new endpointDefinition()
-      await this.connector.addPeer(peerInfo, endpointInstance, middleware)
+      const endpointInstance = typeof(endpoint) === 'object' ? endpoint : new endpointDefinition(async (packet: IlpPrepare): Promise<IlpReply> => { return {} as IlpFulfill }) // TODO update when implementations of endpoint are released. assuming to be mock endpoint for now
+      // TODO: make sure that endpoint is connected before handing it to connector
+      await this.connector.addPeer(peerInfo, endpointInstance, middleware, peerInfo.id === inheritFrom)
     }
   }
 
