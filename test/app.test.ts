@@ -138,6 +138,14 @@ describe('App', function () {
       assert.isOk(endpoint instanceof MockIlpEndpoint)
     })
 
+    it('tells adminApi to start listening', async function () {
+      app = new App()
+      const adminApiListenSpy = sinon.spy(app.adminApi, 'listen')
+
+      await app.start()
+
+      sinon.assert.calledOnce(adminApiListenSpy)
+    })
   })
 
   describe('shutdown', function () {
@@ -180,6 +188,14 @@ describe('App', function () {
       await app.shutdown()
 
       packetCacheSpies.forEach(spy => sinon.assert.calledOnce(spy))
+    })
+
+    it('tells adminApi to shutdown', async function () {
+      const adminApiShutdownSpy = sinon.spy(app.adminApi, 'shutdown')
+
+      await app.shutdown()
+
+      sinon.assert.calledOnce(adminApiShutdownSpy)
     })
   })
 

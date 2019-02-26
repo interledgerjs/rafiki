@@ -1,7 +1,9 @@
+import { log } from '../../winston'
 import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill } from 'ilp-packet'
 import { RequestHandler } from '../../types/channel'
 import { Middleware } from '../../types/middleware'
 
+const logger = log.child({ component: 'alert-middleware' })
 const { T04_INSUFFICIENT_LIQUIDITY } = IlpPacketErrors.codes
 
 export interface Alert {
@@ -55,11 +57,12 @@ export class Alerts {
   }
 
   public dismissAlert (id: number) {
+    logger.debug('dismissed alert', { alert: { id } })
     delete this._alerts[id]
   }
 
   public createAlert (peerId: string, triggeredBy: string, message: string) {
-    const alert = Object.keys(this._alerts)
+    let alert = Object.keys(this._alerts)
       .map((alertId) => this._alerts[alertId])
       .find((alert) =>
         alert.peerId === peerId &&
@@ -68,12 +71,13 @@ export class Alerts {
     if (alert) {
       alert.count++
       alert.updatedAt = new Date()
+      logger.debug('incremented alert count', { alert })
       return
     }
 
     const id = this._nextAlertId++
     const now = new Date()
-    this._alerts[id] = {
+    alert = {
       id,
       peerId,
       triggeredBy,
@@ -82,5 +86,7 @@ export class Alerts {
       createdAt: now,
       updatedAt: now
     }
+    logger.debug('added new alert', { alert })
+    this._alerts[id] = alert
   }
 }

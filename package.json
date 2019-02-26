@@ -42,7 +42,8 @@
     "ilp-protocol-ildcp": "^2.0.1",
     "oer-utils": "^4.0.0",
     "prom-client": "^11.2.1",
-    "supports-color": "^5.5.0"
+    "supports-color": "^5.5.0",
+    "winston": "^3.2.1"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
@@ -50,6 +51,7 @@
     "@types/mocha": "^5.2.5",
     "@types/mock-require": "^2.0.0",
     "@types/sinon": "^5.0.7",
+    "axios": "^0.18.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "codecov": "^3.1.0",
