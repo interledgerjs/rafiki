@@ -1,6 +1,6 @@
 /**
  * Polyfill until https://github.com/winstonjs/winston/pull/1603 is released
- * 
+ *
  * For now use `import { log } from './winston'`
  * In future we'll use `import * as log from 'winston'`
  *

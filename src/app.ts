@@ -88,7 +88,7 @@ export default class App {
    * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's middleware.
    */
   async shutdown () {
-    this.connector.getPeerList().forEach(peer => this.connector.removePeer(peer))
+    this.connector.getPeerList().forEach((peerId: string) => this.connector.removePeer(peerId))
     Array.from(this.packetCacheMap.values()).forEach(cache => cache.dispose())
     this.packetCacheMap.clear()
     this.rateLimitBucketMap.clear()
