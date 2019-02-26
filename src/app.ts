@@ -14,8 +14,7 @@ import { StatsMiddleware } from './middleware/business/stats'
 import { AlertMiddleware, Alerts } from './middleware/business/alert'
 import TokenBucket from './lib/token-bucket'
 import Stats from './services/stats'
-
-const ownAddress = 'test.connie'
+import AdminApi from './services/admin-api'
 
 export default class App {
 
@@ -27,6 +26,7 @@ export default class App {
   packetCacheMap: Map<string, PacketCache>
   rateLimitBucketMap: Map<string, TokenBucket>
   throughputBucketsMap: Map<string, {incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket}>
+  adminApi: AdminApi
 
   constructor (opts?: object) {
 
@@ -38,6 +38,7 @@ export default class App {
     this.packetCacheMap = new Map()
     this.rateLimitBucketMap = new Map()
     this.throughputBucketsMap = new Map()
+    this.adminApi = new AdminApi({ stats: this.stats, alerts: this.alerts, config: this.config })
 
     try {
       if (opts) {
@@ -65,6 +66,7 @@ export default class App {
    */
   async start () {
     this.log.info('starting connector')
+    this.adminApi.listen()
     for (let account of Object.keys(this.config.accounts)) {
       const { assetScale, assetCode, relation, deduplicate, maxPacketAmount, throughput, rateLimit, endpoint } = this.config.accounts[account]
       const peerInfo: PeerInfo = {
@@ -93,6 +95,7 @@ export default class App {
     this.packetCacheMap.clear()
     this.rateLimitBucketMap.clear()
     this.throughputBucketsMap.clear()
+    this.adminApi.shutdown()
   }
 
   private _createMiddleware (peerInfo: PeerInfo): Middleware[] {
@@ -109,7 +112,7 @@ export default class App {
 
     // TODO add balance middleware
     middleware.push(new ExpireMiddleware())
-    if (!disabledMiddleware.includes('errorHandler')) middleware.push(new ErrorHandlerMiddleware({ getOwnIlpAddress: () => ownAddress }))
+    if (!disabledMiddleware.includes('errorHandler')) middleware.push(new ErrorHandlerMiddleware({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' }))
     if (!disabledMiddleware.includes('rateLimit')) middleware.push(new RateLimitMiddleware({ stats: this.stats, bucket: rateLimitBucket }))
     if (!disabledMiddleware.includes('maxPacketAmount')) middleware.push(new MaxPacketAmountMiddleware({ maxPacketAmount: peerInfo.maxPacketAmount }))
     if (!disabledMiddleware.includes('throughput')) middleware.push(new ThroughputMiddleware(throughputBuckets))
