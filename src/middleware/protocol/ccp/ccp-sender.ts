@@ -2,13 +2,13 @@ import {
   CcpRouteControlRequest,
   CcpRouteUpdateRequest,
   Mode,
+  CcpRoute,
   ModeReverseMap,
   serializeCcpRouteUpdateRequest
 } from 'ilp-protocol-ccp'
 import { IlpPrepare, IlpReply, deserializeIlpPrepare } from 'ilp-packet'
 import ForwardingRoutingTable, { RouteUpdate } from 'ilp-router/build/ilp-router/forwarding-routing-table'
-import { Relation } from 'ilp-router/build/types/relation'
-import { BroadcastRoute } from 'ilp-router/build/types/routing'
+import { BroadcastRoute, Relation } from 'ilp-router'
 
 export interface CcpSenderOpts {
   peerId: string
@@ -65,20 +65,8 @@ export class CcpSender {
     }
   }
 
-  getPeerId () {
-    return this.peerId
-  }
-
   getLastUpdate () {
     return this.lastUpdate
-  }
-
-  getLastKnownEpoch () {
-    return this.lastKnownEpoch
-  }
-
-  getMode () {
-    return this.mode
   }
 
   getStatus () {

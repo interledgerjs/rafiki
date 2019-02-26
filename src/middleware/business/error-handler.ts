@@ -1,6 +1,7 @@
-// import { create as createLogger } from '../common/log'
 import { Middleware, IlpRequestHandler } from '../../types/middleware'
 import { IlpPrepare, IlpReply, errorToIlpReject, isFulfill, isReject } from 'ilp-packet'
+import { log } from '../../winston'
+const logger = log.child({ component: 'error-handler-middleware' })
 
 export interface ErrorHandlerMiddlewareServices {
   getOwnIlpAddress: () => string
@@ -30,6 +31,7 @@ export class ErrorHandlerMiddleware extends Middleware {
           if (!err || typeof err !== 'object') {
             err = new Error('Non-object thrown: ' + e)
           }
+          logger.error('Error thrown in incoming pipeline', { err })
           return errorToIlpReject(getOwnIlpAddress(), err)
         }
       }
