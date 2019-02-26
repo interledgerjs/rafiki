@@ -1,5 +1,4 @@
-// tslint:disable: unified-signatures
-import { RequestHandler, Channel } from './channel'
+import { RequestHandler } from './channel'
 
 /**
  * A standardized interface for sending and receiving requests.
@@ -8,7 +7,6 @@ import { RequestHandler, Channel } from './channel'
  *
  * Before calling `sendOutgoingRequest` an endpoint should be connected by calling `connect()`.
  * Connecting is an asynchronous operation. The 'connect' event indicates that it has completed.
- *
  */
 export interface Endpoint<Request, Reply> {
 

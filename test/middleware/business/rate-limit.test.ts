@@ -40,7 +40,7 @@ describe('Rate Limit Middleware', function () {
   beforeEach(async function () {
     stats = new Stats()
     bucket = createRateLimitBucketForPeer(peerInfo)
-    rateLimitMiddleware = new RateLimitMiddleware({ stats, bucket })
+    rateLimitMiddleware = new RateLimitMiddleware({ peerInfo, stats, bucket })
   })
 
   it('rejects when payments arrive too quickly', async function () {

@@ -42,7 +42,8 @@
     "ilp-protocol-ildcp": "^2.0.1",
     "oer-utils": "^4.0.0",
     "prom-client": "^11.2.1",
-    "supports-color": "^5.5.0"
+    "supports-color": "^5.5.0",
+    "winston": "^3.2.1"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",

@@ -1,6 +1,6 @@
+import * as log from 'winston'
 import { Middleware } from './types/middleware'
 import Config from './services/config'
-import createLogger, { Logger } from 'ilp-logger'
 import Connector from './connector'
 import { PeerInfo } from './types/peer'
 import { ErrorHandlerMiddleware } from './middleware/business/error-handler'
@@ -19,7 +19,6 @@ import AdminApi from './services/admin-api'
 export default class App {
 
   config: Config
-  log: Logger
   connector: Connector
   stats: Stats
   alerts: Alerts
@@ -30,7 +29,6 @@ export default class App {
 
   constructor (opts?: object) {
 
-    this.log = createLogger('app')
     this.config = new Config()
     this.connector = new Connector()
     this.stats = new Stats()
@@ -48,9 +46,9 @@ export default class App {
       }
     } catch (err) {
       if (err.name === 'InvalidJsonBodyError') {
-        this.log.warn('config validation error.')
-        err.debugPrint(this.log.warn.bind(this.log))
-        this.log.error('invalid configuration, shutting down.')
+        log.warn('config validation error.')
+        err.debugPrint(log.warn.bind(log))
+        log.error('invalid configuration, shutting down.')
         throw new Error('failed to initialize due to invalid configuration.')
       }
 
@@ -65,7 +63,7 @@ export default class App {
    * Loop through configured accounts and instantiate the specified endpoint and middleware. Tell the connector to add the peer.
    */
   async start () {
-    this.log.info('starting connector')
+    log.info('starting connector')
     this.adminApi.listen()
     for (let account of Object.keys(this.config.accounts)) {
       const { assetScale, assetCode, relation, deduplicate, maxPacketAmount, throughput, rateLimit, endpoint } = this.config.accounts[account]
@@ -113,7 +111,7 @@ export default class App {
     // TODO add balance middleware
     middleware.push(new ExpireMiddleware())
     if (!disabledMiddleware.includes('errorHandler')) middleware.push(new ErrorHandlerMiddleware({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' }))
-    if (!disabledMiddleware.includes('rateLimit')) middleware.push(new RateLimitMiddleware({ stats: this.stats, bucket: rateLimitBucket }))
+    if (!disabledMiddleware.includes('rateLimit')) middleware.push(new RateLimitMiddleware({ peerInfo, stats: this.stats, bucket: rateLimitBucket }))
     if (!disabledMiddleware.includes('maxPacketAmount')) middleware.push(new MaxPacketAmountMiddleware({ maxPacketAmount: peerInfo.maxPacketAmount }))
     if (!disabledMiddleware.includes('throughput')) middleware.push(new ThroughputMiddleware(throughputBuckets))
     if (!disabledMiddleware.includes('deduplicate')) middleware.push(new DeduplicateMiddleware({ cache }))

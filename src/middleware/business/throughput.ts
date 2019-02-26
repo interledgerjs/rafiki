@@ -1,7 +1,9 @@
 import { Middleware, IlpRequestHandler } from '../../types/middleware'
 import { PeerInfo } from '../../types/peer'
 import TokenBucket from '../../lib/token-bucket'
-import { Errors, IlpPrepare, IlpReject, IlpReply, isPrepare } from 'ilp-packet'
+import { Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
+import { log } from '../../winston'
+const logger = log.child({ component: 'throughput-middleware' })
 const { InsufficientLiquidityError } = Errors
 
 const DEFAULT_REFILL_PERIOD = 1000 // 1 second
@@ -22,6 +24,7 @@ export class ThroughputMiddleware extends Middleware {
         if (incomingBucket && isPrepare(request)) {
           // TODO: Do we need a BigNumber-based token bucket?
           if (!incomingBucket.take(Number(request.amount))) {
+            logger.warn('throttling incoming packet due to bandwidth exceeding limit', { request })
             throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
           }
           return next(request)
@@ -33,6 +36,7 @@ export class ThroughputMiddleware extends Middleware {
         if (outgoingBucket && isPrepare(request)) {
           // TODO: Do we need a BigNumber-based token bucket?
           if (!outgoingBucket.take(Number(request.amount))) {
+            logger.warn('throttling outgoing packet due to bandwidth exceeding limit', { request })
             throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
           }
           return next(request)

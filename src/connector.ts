@@ -37,8 +37,8 @@ export default class Connector {
         onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
       }),
       new CcpMiddleware({
-        isSender: peerInfo.sendRoutes,
-        isReceiver: peerInfo.receiveRoutes,
+        // isSender: peerInfo.sendRoutes,
+        // isReceiver: peerInfo.receiveRoutes,
         peerId: peerInfo.id,
         forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
         getPeerRelation: this.getPeerRelation.bind(this),

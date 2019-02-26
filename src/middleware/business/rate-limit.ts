@@ -3,28 +3,29 @@ import { Middleware, IlpRequestHandler } from '../../types/middleware'
 import TokenBucket from '../../lib/token-bucket'
 import { PeerInfo } from '../../types/peer'
 import Stats from '../../services/stats'
+import { log } from '../../winston'
+const logger = log.child({ component: 'rate-limit-middleware' })
+
 const { RateLimitedError } = Errors
 
 const DEFAULT_REFILL_PERIOD = 60 * 1000 // 1 minute
 const DEFAULT_REFILL_COUNT = 10000
 
 export interface RateLimitMiddlewareServices {
+  peerInfo: PeerInfo
   bucket: TokenBucket
   stats: Stats
 }
 
 export class RateLimitMiddleware extends Middleware {
-  private peerInfo: PeerInfo
-  private stats: Stats
-
-  constructor ({ bucket, stats }: RateLimitMiddlewareServices) {
+  constructor ({ peerInfo, bucket, stats }: RateLimitMiddlewareServices) {
     super({
       processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (!bucket.take()) {
-          this.stats.rateLimitedPackets.increment(this.peerInfo, {})
+          logger.warn(`rate limited a packet`, { bucket, request })
+          stats.rateLimitedPackets.increment(peerInfo, {})
           throw new RateLimitedError('too many requests, throttling.')
         }
-
         return next(request)
       }
     })
