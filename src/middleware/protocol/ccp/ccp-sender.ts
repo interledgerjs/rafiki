@@ -2,6 +2,7 @@ import {
   CcpRouteControlRequest,
   CcpRouteUpdateRequest,
   Mode,
+  CcpRoute,
   ModeReverseMap,
   serializeCcpRouteUpdateRequest
 } from 'ilp-protocol-ccp'
@@ -64,20 +65,8 @@ export class CcpSender {
     }
   }
 
-  getPeerId () {
-    return this.peerId
-  }
-
   getLastUpdate () {
     return this.lastUpdate
-  }
-
-  getLastKnownEpoch () {
-    return this.lastKnownEpoch
-  }
-
-  getMode () {
-    return this.mode
   }
 
   getStatus () {

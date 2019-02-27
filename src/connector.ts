@@ -7,6 +7,8 @@ import { PeerInfo, Relation } from './types/peer'
 import { CcpMiddleware, CcpMiddlewareServices } from './middleware/protocol/ccp'
 import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
 import { HeartbeatMiddleware } from './middleware/business/heartbeat'
+import { EchoMiddleware } from './middleware/protocol/echo'
+import { PeerUnreachableError } from 'ilp-packet/dist/src/errors'
 
 const { codes } = Errors
 export default class Connector {
@@ -16,17 +18,36 @@ export default class Connector {
   address?: string
   peerMiddleware: Map<string, Middleware[]> = new Map()
 
+  constructor () {
+    this.addSelfPeer()
+
+    // TODO add default route config
+    // let defaultRoute = this.config.defaultRoute
+    // if (defaultRoute === 'auto') {
+    //   defaultRoute = localAccounts.filter(id => this.accounts.getInfo(id).relation === 'parent')[0]
+    // }
+    // if (defaultRoute) {
+    //   const globalPrefix = this.getGlobalPrefix()
+    //   this.localRoutes.set(globalPrefix, {
+    //     nextHop: defaultRoute,
+    //     path: [],
+    //     auth: hmac(this.routingSecret, globalPrefix)
+    //   })
+    // }
+  }
+
 /**
  * Connects the business middleware and protocol middleware (for this connector implementation: heartbeat, Ildcp and ccp) into a duplex pipeline.
  * The write section of the incoming channel is then attached to the endpoint and the read section to sendIlpPacket. The write section of the outgoing
  * channel is attached to the send function of the endpoint. The outgoing channel is then stored for future use. Should the endpoint be unable to send
- * a packet, the peer's route is removed from the routing table. The entire middleware stack is started up.
+ * a packet, the peer's route is removed from the routing table. The entire middleware stack is started up. It will get the address from the ILDCP
+ * middleware if the inheritAddressFrom input is true.
  *
  * @param peerInfo Peer information
  * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
  * @param middleware The business logic middleware that is to be added to the protocol middleware for the peer
  */
-  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[]) {
+  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[], inheritAddressFrom: boolean = false) {
 
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation) // TODO refactor when RouteManager is finished
 
@@ -49,7 +70,7 @@ export default class Connector {
       new IldcpMiddleware({
         getPeerInfo: () => peerInfo,
         getOwnAddress: this.getOwnAddress.bind(this),
-        getPeerAddress: () => this.getPeerAddress(peerInfo.id)
+        getPeerAddress: () => this.getOwnAddress() + '.' + (peerInfo.ilpAddressSegment || peerInfo.id)
       } as IldcpMiddlewareServices)
     ]
 
@@ -60,7 +81,6 @@ export default class Connector {
       try {
         return endpoint.sendOutgoingRequest(request)
       } catch (e) {
-        this.routingTable.removeRoute(this.getPeerAddress(peerInfo.id)) // TODO refactor when RouteManager is finished
 
         if (!e.ilpErrorCode) {
           e.ilpErrorCode = codes.T01_PEER_UNREACHABLE
@@ -79,11 +99,20 @@ export default class Connector {
     middleware.forEach(mw => mw.startup())
     protocolMiddleware.forEach(mw => mw.startup())
 
-    this.routeManager.addRoute({
-      peer: peerInfo.id,
-      prefix: this.getPeerAddress(peerInfo.id),
-      path: []
-    })
+    if (inheritAddressFrom) {
+      const ildcpMiddleware = protocolMiddleware.find(mw => mw.constructor.name === 'IldcpMiddleware')
+      this.setOwnAddress(await (ildcpMiddleware as IldcpMiddleware).getAddressFrom(endpoint))
+    }
+
+    // only add route for children. The rest are populated from route update.
+    if (peerInfo.relation === 'child') {
+      const address = this.getOwnAddress() + '.' + (peerInfo.ilpAddressSegment || peerInfo.id)
+      this.routeManager.addRoute({
+        peer: peerInfo.id,
+        prefix: address,
+        path: []
+      })
+    }
   }
 
   async removePeer (id: string): Promise<void> {
@@ -105,6 +134,12 @@ export default class Connector {
 
   setOwnAddress (address: string) {
     this.address = address
+    this.routeManager.addRoute({
+      prefix: address,
+      peer: 'self',
+      path: [],
+      weight: 500
+    })
   }
 
   getOwnAddress (): string | undefined {
@@ -115,6 +150,54 @@ export default class Connector {
     return this.getOwnAddress() + '.' + id
   }
 
+  private addSelfPeer () {
+    const selfPeerId = 'self'
+    this.routeManager.addPeer(selfPeerId, 'local')
+    const protocolMiddleware = [
+      new EchoMiddleware({ getOwnAddress: this.getOwnAddress.bind(this), minMessageWindow: 30000 }) // TODO need to fix the hard coded value
+    ]
+
+    this.peerMiddleware.set(selfPeerId, [...protocolMiddleware])
+    const combinedMiddleware = pipeline(...protocolMiddleware)
+    const sendIncoming = setPipelineReader('incoming', combinedMiddleware, this.sendIlpPacket.bind(this))
+    const sendOutgoing = setPipelineReader('outgoing', combinedMiddleware, (request: IlpPrepare): Promise<IlpReply> => {
+
+      // Should throw an error as you are the intended recipient
+      throw new PeerUnreachableError('cant forward on packet addressed to self')
+    })
+
+    this.outgoingIlpPacketHandlerMap.set(selfPeerId, sendOutgoing)
+
+    protocolMiddleware.forEach(mw => mw.startup())
+  }
+
+  /**
+   * Calculates the weighting for a given peer and path length
+   * Relation: Parent:
+   * @param peerId id for peer
+   */
+  calculateRouteWeight (peerId: string): number {
+    let weight: number = 0
+    const peer = this.routeManager.getPeer(peerId)
+    if (peer) {
+      switch (peer.getRelation()) {
+        case('parent'):
+          weight += 400
+          break
+        case('peer'):
+          weight += 300
+          break
+        case('child'):
+          weight += 200
+          break
+        case('local'):
+          weight += 100
+          break
+      }
+    }
+    return weight
+  }
+
   getPeerRelation (peerId: string): Relation | undefined {
     const peer = this.routeManager.getPeer(peerId)
     if (peer) {
@@ -122,7 +205,6 @@ export default class Connector {
     } else {
       console.log('peer not found')
     }
-
   }
 
   getPeerMiddleware (id: string): Middleware[] | undefined {
@@ -130,6 +212,6 @@ export default class Connector {
   }
 
   getPeerList () {
-    return Array.from(this.outgoingIlpPacketHandlerMap.keys())
+    return this.routeManager.getPeerList()
   }
 }

@@ -18,7 +18,7 @@ describe('Connector', function () {
   let connector: Connector
   const peerInfo: PeerInfo = {
     id: 'alice',
-    relation: 'peer',
+    relation: 'child',
     assetScale: 2,
     assetCode: 'USD',
   }
@@ -41,6 +41,22 @@ describe('Connector', function () {
 
   afterEach(function () {
     Array.from(connector.getPeerList()).forEach(peer => connector.removePeer(peer))
+  })
+
+  describe('instantiation', function () {
+
+    it('adds self as a peer', function () {
+      const peers = connector.getPeerList()
+
+      assert.deepEqual(peers, ['self'])
+    })
+
+    it('sets up Echo middleware in pipeline', function() {
+      const peerMiddleware = connector.getPeerMiddleware('self')
+
+      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'EchoMiddleware')
+    })
+
   })
 
   describe('addPeer', function () {
@@ -119,6 +135,23 @@ describe('Connector', function () {
       await connector.addPeer(peerInfo, endpoint, middleware)
       
       sinon.assert.calledOnce(startSpy)
+    })
+
+    it('adds child peer to routing table', async function () {
+      const middleware = [new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)]
+      const addRouteSpy = sinon.spy(connector.routeManager, 'addRoute')
+      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+      const peerInfo: PeerInfo = {
+        id: 'alice',
+        relation: 'child',
+        assetScale: 2,
+        assetCode: 'USD',
+      }
+      connector.setOwnAddress('test.connie')
+
+      await connector.addPeer(peerInfo, endpoint, middleware)
+      
+      sinon.assert.calledWith(addRouteSpy, { path: [], peer: "alice", prefix: "test.connie.alice" })
     })
   })
 
@@ -201,7 +234,7 @@ describe('Connector', function () {
       await connector.addPeer(bobPeerInfo, bobEndpoint, [])
 
       try{
-        await connector.sendIlpPacket(preparePacket) // packet addressed to alice
+        await connector.sendIlpPacket({...preparePacket, destination: 'g.alice'}) // packet addressed to alice
       } catch (e) {
         assert.strictEqual(e.message, "Can't route the request due to no route found for given prefix")
         return
@@ -212,17 +245,27 @@ describe('Connector', function () {
   })
 
   describe('getPeerList', async function () {
+    let conn: Connector
+
+    beforeEach(function () {
+      conn = new Connector()
+    })
+
+    afterEach(function () {
+      Array.from(conn.getPeerList()).forEach(peer => conn.removePeer(peer))
+    })
+
     it('returns array of peer ids', async function () {
       const middleware = [new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)]
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
-      await connector.addPeer(peerInfo, endpoint, middleware)
+      await conn.addPeer(peerInfo, endpoint, middleware)
 
-      assert.deepEqual(connector.getPeerList(), ['alice'])
+      assert.deepEqual(conn.getPeerList(), ['self', 'alice'])
     })
 
-    it('returns empty array if there are no peers', async function () {
-      assert.deepEqual(connector.getPeerList(), [])
+    it('returns only self if not other peers added', async function () {
+      assert.deepEqual(conn.getPeerList(), ['self'])
     })
   })
 
@@ -240,19 +283,9 @@ describe('Connector', function () {
     assert.fail()
   })
 
-  it('removes peer from the routing table if endpoint fails to send packet', async function () {
-      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
-      endpoint.connected = false
-      await connector.addPeer(peerInfo, endpoint, [])
-      const routingTable = connector.routingTable.getRoutingTable()
-      assert.isOk(routingTable.get('test.connie.alice'))
+  it('setOwnAddress adds self to routing table', function () {
+    connector.setOwnAddress('g.harry')
 
-      try {
-        await endpoint.mockIncomingRequest(preparePacket)
-      } catch (e) {
-        assert.isOk(!routingTable.get('test.connie.alice'))
-        return
-      }
-      assert.fail()
+    assert.equal(connector.routingTable.nextHop('g.harry'), 'self')
   })
 })
