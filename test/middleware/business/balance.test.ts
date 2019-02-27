@@ -197,6 +197,5 @@ describe('Balance Middleware', function () {
         assert.equal(balanceMiddleware.getStatus().balance, '-49')
       })
 
-
     })
 })

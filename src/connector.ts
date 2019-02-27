@@ -51,11 +51,11 @@ export default class Connector {
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation) // TODO refactor when RouteManager is finished
 
     const protocolMiddleware = [
-      new HeartbeatMiddleware({
-        endpoint,
-        onSuccessfulHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
-        onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
-      }),
+      // new HeartbeatMiddleware({
+      //   endpoint,
+      //   onSuccessfulHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
+      //   onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
+      // }),
       new CcpMiddleware({
         // isSender: peerInfo.sendRoutes,
         // isReceiver: peerInfo.receiveRoutes,
