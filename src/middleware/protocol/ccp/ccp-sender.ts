@@ -9,7 +9,7 @@ import {
 import { IlpPrepare, IlpReply, deserializeIlpPrepare } from 'ilp-packet'
 import ForwardingRoutingTable, { RouteUpdate } from 'ilp-router/build/ilp-router/forwarding-routing-table'
 import { BroadcastRoute, Relation } from 'ilp-router'
-import { randomBytes } from 'mz/crypto';
+import { randomBytes } from 'mz/crypto'
 
 export interface CcpSenderOpts {
   peerId: string
@@ -201,7 +201,7 @@ export class CcpSender {
     }
 
     // this.log.trace('broadcasting routes to peer. speaker=%s peer=%s fromEpoch=%s toEpoch=%s routeCount=%s unreachableCount=%s', this.getOwnAddress(), this.accountId, this.lastKnownEpoch, toEpoch, newRoutes.length, withdrawnRoutes.length)
-    const auth = await randomBytes(32) //TODO temp for now
+    const auth = await randomBytes(32) // TODO temp for now
     const routeUpdate: CcpRouteUpdateRequest = {
       speaker: this.getOwnAddress(),
       routingTableId: this.forwardingRoutingTable.routingTableId,
