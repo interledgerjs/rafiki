@@ -1,42 +1,37 @@
 import { Endpoint } from '../types/endpoint'
 import { PluginInstance } from './plugin'
 import { RequestHandler } from '../types/channel'
-import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpReply, deserializeIlpPrepare, serializeIlpReply, isFulfill } from 'ilp-packet'
+import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpReply, deserializeIlpPrepare, serializeIlpReply, isFulfill, Errors } from 'ilp-packet'
+import { STATIC_FULFILLMENT, STATIC_CONDITION } from '../constants'
+
+const DEFAULT_SEND_MONEY_EXPIRY = 30000
 
 /**
  * Create an endpoint that wraps a legacy plugin.
  *
  * The plugin is expected to already be connected.
  *
- * Converts sendMoney on the plugin to ILP packets addressed to `peer.config`
+ * Converts sendMoney on the plugin to ILP packets addressed to `peer.settle`
  */
 export class PluginEndpoint implements Endpoint<IlpPrepare, IlpReply> {
 
   private _plugin: PluginInstance
+  private _sendMoneyExpiry: number
 
-  constructor (plugin: PluginInstance) {
+  constructor (plugin: PluginInstance, options?: { sendMoneyExpiry?: number }) {
     this._plugin = plugin
+    this._sendMoneyExpiry = (options && options.sendMoneyExpiry) ? options.sendMoneyExpiry : DEFAULT_SEND_MONEY_EXPIRY
   }
 
   public async sendOutgoingRequest (request: IlpPrepare, sentCallback?: (() => void) | undefined): Promise<IlpReply> {
 
-    if (request.destination === 'peer.settle') {
+    if (request.destination.startsWith('peer.settle')) {
       const replyPromise = this._plugin.sendMoney(request.amount)
       if (sentCallback) sentCallback()
-      try {
-        await replyPromise
-        return {
-          fulfillment: Buffer.alloc(32), // TODO - Use hardcoded fulfillment
-          data: Buffer.alloc(0)
-        }
-      } catch (e) {
-        // TODO - What to do if the plugin threw when sending money?
-        return {
-          code: '',
-          message: '',
-          triggeredBy: 'self',
-          data: Buffer.alloc(0)
-        }
+      await replyPromise
+      return {
+        fulfillment: STATIC_FULFILLMENT,
+        data: Buffer.alloc(0)
       }
     }
 
@@ -48,19 +43,20 @@ export class PluginEndpoint implements Endpoint<IlpPrepare, IlpReply> {
   public setIncomingRequestHandler (handler: RequestHandler<IlpPrepare, IlpReply>): this {
     this._plugin.registerMoneyHandler(async (amount: string) => {
 
-      // TODO: Check logic for converting to sendMoney response from a peer.settle response
       const reply = await handler({
         amount,
         destination: 'peer.settle',
-        executionCondition: Buffer.alloc(32),
-        expiresAt: new Date(Date.now() + 30000),
+        executionCondition: STATIC_CONDITION,
+        expiresAt: new Date(Date.now() + this._sendMoneyExpiry),
         data: Buffer.alloc(0)
       })
+
       if (isFulfill(reply)) {
         return
       } else {
         throw new Error('settlement error')
       }
+
     })
 
     this._plugin.registerDataHandler(async (data: Buffer) => {
