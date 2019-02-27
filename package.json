@@ -17,7 +17,7 @@
     "lint": "tslint --project .",
     "lintFix": "tslint --project . --fix",
     "schema-to-tsd": "node scripts/build_schema_types",
-    "test": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register 'test/{,!(integration)/**}/*.test.ts'",
+    "test": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register --require ./test/logger 'test/{,!(integration)/**}/*.test.ts'",
     "test:integration": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register 'test/integration/**/*.test.ts'",
     "test:all": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register 'test/**/*.test.ts'",
     "doc": "typedoc --options typedoc.js src/index.ts",
