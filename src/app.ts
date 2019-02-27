@@ -76,7 +76,7 @@ export default class App {
     }
 
     for (let account of Object.keys(this.config.accounts)) {
-      const { assetScale, assetCode, relation, deduplicate, maxPacketAmount, throughput, rateLimit, endpoint } = this.config.accounts[account]
+      const { assetScale, assetCode, relation, deduplicate, maxPacketAmount, throughput, rateLimit, endpoint, sendRoutes, receiveRoutes } = this.config.accounts[account]
       const peerInfo: PeerInfo = {
         id: account,
         assetScale,
@@ -85,7 +85,9 @@ export default class App {
         deduplicate,
         maxPacketAmount,
         throughput,
-        rateLimit
+        rateLimit,
+        sendRoutes,
+        receiveRoutes
       }
       const middleware = this._createMiddleware(peerInfo)
       const endpointDefinition = typeof(endpoint) === 'object' ? endpoint : require(endpoint) // TODO update when implementations of endpoint are released

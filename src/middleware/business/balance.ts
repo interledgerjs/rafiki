@@ -158,6 +158,7 @@ export class BalanceMiddleware extends Middleware {
     const { amount, destination } = request
     const { peer, balance } = this
 
+    // TODO: adjust balance on success
     if (destination === 'peer.settle') {
       return next(request)
     }
@@ -235,7 +236,7 @@ export class BalanceMiddleware extends Middleware {
     const settleAmount = bnSettleTo.minus(balance.getValue())
     logger.info('settlement triggered. account.id=%s balance=%s settleAmount=%s', this.peer.id, balance.getValue(), settleAmount)
 
-    // TODO: should send peer.settle
+    // TODO: should send peer.settle and update balance if successful
     await this.sendMoney(settleAmount.toString())
       .catch(e => {
         let err = e

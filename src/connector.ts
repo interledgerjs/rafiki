@@ -1,4 +1,4 @@
-import { Router as RoutingTable, RouteManager } from 'ilp-router'
+import { Router as RoutingTable, RouteManager, IncomingRoute } from 'ilp-router'
 import { pipeline } from './types/channel'
 import { Endpoint } from './types/endpoint'
 import { IlpPrepare, IlpReply, Errors } from 'ilp-packet'
@@ -58,15 +58,16 @@ export default class Connector {
       //   onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
       // }),
       new CcpMiddleware({
-        // isSender: peerInfo.sendRoutes,
-        // isReceiver: peerInfo.receiveRoutes,
+        isSender: peerInfo.sendRoutes as boolean,
+        isReceiver: peerInfo.receiveRoutes as boolean,
         peerId: peerInfo.id,
         forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
         getPeerRelation: this.getPeerRelation.bind(this),
-        getOwnAddress: () => this.getOwnAddress(),
-        addRoute: this.routeManager.addRoute.bind(this),
-        removeRoute: this.routeManager.removeRoute.bind(this)
-      } as CcpMiddlewareServices),
+        getOwnAddress: () => this.getOwnAddress() as string,
+        addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
+        removeRoute: this.routeManager.removeRoute.bind(this),
+        getRouteWeight: this.calculateRouteWeight.bind(this)
+      }),
       new IldcpMiddleware({
         getPeerInfo: () => peerInfo,
         getOwnAddress: this.getOwnAddress.bind(this),
@@ -134,6 +135,7 @@ export default class Connector {
 
   setOwnAddress (address: string) {
     this.address = address
+    this.routingTable.setOwnAddress(address) // Tricky: This needs to be here for now to append to path of forwarding routing table
     this.routeManager.addRoute({
       prefix: address,
       peer: 'self',
