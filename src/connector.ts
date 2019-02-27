@@ -40,13 +40,14 @@ export default class Connector {
  * Connects the business middleware and protocol middleware (for this connector implementation: heartbeat, Ildcp and ccp) into a duplex pipeline.
  * The write section of the incoming channel is then attached to the endpoint and the read section to sendIlpPacket. The write section of the outgoing
  * channel is attached to the send function of the endpoint. The outgoing channel is then stored for future use. Should the endpoint be unable to send
- * a packet, the peer's route is removed from the routing table. The entire middleware stack is started up.
+ * a packet, the peer's route is removed from the routing table. The entire middleware stack is started up. It will get the address from the ILDCP
+ * middleware if the inheritAddressFrom input is true.
  *
  * @param peerInfo Peer information
  * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
  * @param middleware The business logic middleware that is to be added to the protocol middleware for the peer
  */
-  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[]) {
+  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[], inheritAddressFrom: boolean = false) {
 
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation) // TODO refactor when RouteManager is finished
 
@@ -69,7 +70,7 @@ export default class Connector {
       new IldcpMiddleware({
         getPeerInfo: () => peerInfo,
         getOwnAddress: this.getOwnAddress.bind(this),
-        getPeerAddress: () => this.getPeerAddress(peerInfo.id)
+        getPeerAddress: () => this.getOwnAddress() + '.' + (peerInfo.ilpAddressSegment || peerInfo.id)
       } as IldcpMiddlewareServices)
     ]
 
@@ -98,11 +99,20 @@ export default class Connector {
     middleware.forEach(mw => mw.startup())
     protocolMiddleware.forEach(mw => mw.startup())
 
-    this.routeManager.addRoute({
-      peer: peerInfo.id,
-      prefix: this.getPeerAddress(peerInfo.id),
-      path: []
-    })
+    if (inheritAddressFrom) {
+      const ildcpMiddleware = protocolMiddleware.find(mw => mw.constructor.name === 'IldcpMiddleware')
+      this.setOwnAddress(await (ildcpMiddleware as IldcpMiddleware).getAddressFrom(endpoint))
+    }
+
+    // only add route for children. The rest are populated from route update.
+    if (peerInfo.relation === 'child') {
+      const address = this.getOwnAddress() + '.' + (peerInfo.ilpAddressSegment || peerInfo.id)
+      this.routeManager.addRoute({
+        peer: peerInfo.id,
+        prefix: address,
+        path: []
+      })
+    }
   }
 
   async removePeer (id: string): Promise<void> {

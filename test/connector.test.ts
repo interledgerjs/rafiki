@@ -18,7 +18,7 @@ describe('Connector', function () {
   let connector: Connector
   const peerInfo: PeerInfo = {
     id: 'alice',
-    relation: 'peer',
+    relation: 'child',
     assetScale: 2,
     assetCode: 'USD',
   }
@@ -135,6 +135,23 @@ describe('Connector', function () {
       await connector.addPeer(peerInfo, endpoint, middleware)
       
       sinon.assert.calledOnce(startSpy)
+    })
+
+    it('adds child peer to routing table', async function () {
+      const middleware = [new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)]
+      const addRouteSpy = sinon.spy(connector.routeManager, 'addRoute')
+      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
+      const peerInfo: PeerInfo = {
+        id: 'alice',
+        relation: 'child',
+        assetScale: 2,
+        assetCode: 'USD',
+      }
+      connector.setOwnAddress('test.connie')
+
+      await connector.addPeer(peerInfo, endpoint, middleware)
+      
+      sinon.assert.calledWith(addRouteSpy, { path: [], peer: "alice", prefix: "test.connie.alice" })
     })
   })
 
