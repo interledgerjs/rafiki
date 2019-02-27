@@ -40,7 +40,7 @@ export default class Connector {
  * Connects the business middleware and protocol middleware (for this connector implementation: heartbeat, Ildcp and ccp) into a duplex pipeline.
  * The write section of the incoming channel is then attached to the endpoint and the read section to sendIlpPacket. The write section of the outgoing
  * channel is attached to the send function of the endpoint. The outgoing channel is then stored for future use. Should the endpoint be unable to send
- * a packet, the peer's route is removed from the routing table. The entire middleware stack is started up. It will get the address from the ILDCP 
+ * a packet, the peer's route is removed from the routing table. The entire middleware stack is started up. It will get the address from the ILDCP
  * middleware if the inheritAddressFrom input is true.
  *
  * @param peerInfo Peer information

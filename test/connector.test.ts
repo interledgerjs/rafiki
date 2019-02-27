@@ -151,8 +151,7 @@ describe('Connector', function () {
 
       await connector.addPeer(peerInfo, endpoint, middleware)
       
-      sinon.assert.calledOnce(addRouteSpy)
-      assert.equal('test.connie.alice', addRouteSpy.args[0][0].prefix)
+      sinon.assert.calledWith(addRouteSpy, { path: [], peer: "alice", prefix: "test.connie.alice" })
     })
   })
 
