@@ -42,7 +42,7 @@ The NPM package will not contain any TypeScript files (`*.ts`) but will have typ
 ### TODO
 - [ ] Add Logging
 - [ ] Add Auth
-- [ x ] Add weight to lessen the need for relations to be used
+- [x] Add weight to lessen the need for relations to be used
 - [ ] Add Performance Regression
 - [ ] Increase test coverage
 - [ ] Ensure adding and removing routes are deterministic and no race conditions exist
