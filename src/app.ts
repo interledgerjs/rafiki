@@ -16,6 +16,7 @@ import TokenBucket from './lib/token-bucket'
 import Stats from './services/stats'
 import AdminApi from './services/admin-api'
 import { IlpPrepare, IlpReply, IlpFulfill } from 'ilp-packet'
+import { ReduceExpiryMiddleware } from './middleware/protocol/reduce-expiry'
 
 export default class App {
 
@@ -112,7 +113,8 @@ export default class App {
   private _createMiddleware (peerInfo: PeerInfo): Middleware[] {
     const middleware: Middleware[] = []
     const disabledMiddleware = this.config.disableMiddleware ? this.config.disableMiddleware : []
-
+    const globalMinExpirationWindow = this.config.minMessageWindow
+    const globalMaxHoldWindow = this.config.maxHoldTime
     const rateLimitBucket: TokenBucket = createRateLimitBucketForPeer(peerInfo)
     const throughputBuckets = createThroughputLimitBucketsForPeer(peerInfo)
     const cache = new PacketCache(peerInfo.deduplicate || {}) // Could make this a global cache to allow for checking across different peers?
@@ -123,6 +125,8 @@ export default class App {
 
     // TODO add balance middleware
     middleware.push(new ExpireMiddleware())
+    // using half the global min expiration window to mimic old connector. This is because current implementation reduces expiry on both incoming and outgoing pipelines.
+    middleware.push(new ReduceExpiryMiddleware({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow }))
     if (!disabledMiddleware.includes('errorHandler')) middleware.push(new ErrorHandlerMiddleware({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' }))
     if (!disabledMiddleware.includes('rateLimit')) middleware.push(new RateLimitMiddleware({ peerInfo, stats: this.stats, bucket: rateLimitBucket }))
     if (!disabledMiddleware.includes('maxPacketAmount')) middleware.push(new MaxPacketAmountMiddleware({ maxPacketAmount: peerInfo.maxPacketAmount }))

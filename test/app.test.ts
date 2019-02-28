@@ -80,7 +80,7 @@ describe('App', function () {
 
   describe('start', function () {
     it('adds default middleware', async function () {
-      const expectedMiddleware = ['ExpireMiddleware', 'ErrorHandlerMiddleware', 'RateLimitMiddleware', 'MaxPacketAmountMiddleware', 'ThroughputMiddleware', 'DeduplicateMiddleware', 'ValidateFulfillmentMiddleware', 'StatsMiddleware', 'AlertMiddleware']
+      const expectedMiddleware = ['ExpireMiddleware', 'ReduceExpiryMiddleware', 'ErrorHandlerMiddleware', 'RateLimitMiddleware', 'MaxPacketAmountMiddleware', 'ThroughputMiddleware', 'DeduplicateMiddleware', 'ValidateFulfillmentMiddleware', 'StatsMiddleware', 'AlertMiddleware']
       app = new App()
       const addPeerStub = sinon.stub(app.connector, 'addPeer').resolves()
 
@@ -93,7 +93,7 @@ describe('App', function () {
     })
 
     it('does not apply disabled middleware', async function () {
-      const expectedMiddleware = ['ExpireMiddleware', 'RateLimitMiddleware', 'MaxPacketAmountMiddleware', 'DeduplicateMiddleware', 'ValidateFulfillmentMiddleware', 'StatsMiddleware', 'AlertMiddleware']
+      const expectedMiddleware = ['ExpireMiddleware', 'ReduceExpiryMiddleware', 'RateLimitMiddleware', 'MaxPacketAmountMiddleware', 'DeduplicateMiddleware', 'ValidateFulfillmentMiddleware', 'StatsMiddleware', 'AlertMiddleware']
       app = new App({
         env: "test",
         accounts: {

@@ -6,7 +6,7 @@ import BtpPlugin from 'ilp-plugin-btp';
 import { PluginEndpoint } from '../../src/legacy/plugin-endpoint';
 import { PluginInstance } from '../../src/legacy/plugin';
 import App from '../../src/app';
-import { IlpPrepare, serializeIlpFulfill, IlpFulfill, deserializeIlpPacket, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet';
+import { IlpPrepare, serializeIlpFulfill, IlpFulfill, deserializeIlpPacket, serializeIlpPrepare, deserializeIlpFulfill, deserializeIlpPrepare } from 'ilp-packet';
 import { randomBytes, createHash } from 'crypto';
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -14,6 +14,7 @@ const assert = Object.assign(Chai.assert, sinon.assert)
 function sha256 (preimage: Buffer) { return createHash('sha256').update(preimage).digest() }
 const fulfillment = randomBytes(32)
 const condition = sha256(fulfillment)
+const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('Basic Integration', function () {
   let app: App
@@ -73,7 +74,8 @@ describe('Basic Integration', function () {
           options: {}
         }
       },
-      ilpAddress: 'test.connie'
+      ilpAddress: 'test.connie',
+      minMessageWindow: 1000
     })
   })
 
@@ -106,5 +108,31 @@ describe('Basic Integration', function () {
     })
     const result = await bobBtpClient.sendData(serializeIlpPrepare(preparePacket))
     assert.deepEqual(deserializeIlpFulfill(result), fulfillPacket)
+  })
+
+  it("reduces the expirey by minMessageWindow", async function () {
+    this.clock = sinon.useFakeTimers(new Date(START_DATE))
+    await app.start()
+    let packetJohnReceived = {} as IlpPrepare
+    const preparePacket: IlpPrepare = {
+      amount: '49',
+      executionCondition: condition,
+      expiresAt: new Date(START_DATE + 2000),
+      destination: 'test.connie.john-ledger',
+      data: Buffer.alloc(0)
+    }
+    const fulfillPacket: IlpFulfill = {
+      fulfillment: fulfillment,
+      data: Buffer.from('')
+    }
+
+    johnBtpClient.registerDataHandler((data: Buffer) => {
+      packetJohnReceived = deserializeIlpPrepare(data)
+      return Promise.resolve(serializeIlpFulfill(fulfillPacket))
+    })
+    await bobBtpClient.sendData(serializeIlpPrepare(preparePacket))
+
+    assert.deepEqual(packetJohnReceived.expiresAt, new Date(START_DATE + 1000))
+    this.clock.restore()
   })
 })
