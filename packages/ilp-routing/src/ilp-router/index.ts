@@ -180,3 +180,8 @@ export class Router {
     }
   }
 }
+
+export {
+  ForwardingRoutingTable,
+  RouteUpdate
+}
