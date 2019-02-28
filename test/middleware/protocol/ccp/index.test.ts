@@ -8,10 +8,7 @@ import { IlpPrepare, IlpReply, deserializeIlpFulfill, deserializeIlpPrepare } fr
 import { CcpMiddleware } from '../../../../src/middleware/protocol/ccp'
 import {serializeCcpResponse, CcpRouteUpdateRequest, serializeCcpRouteUpdateRequest} from 'ilp-protocol-ccp'
 import { setPipelineReader } from '../../../../src/types/middleware';
-import ForwardingRoutingTable from 'ilp-router/build/ilp-router/forwarding-routing-table';
-import { Relation } from 'ilp-router/build/types/relation';
-import { IncomingRoute } from 'ilp-router/build/types/routing';
-
+import { ForwardingRoutingTable, IncomingRoute, Relation } from 'ilp-routing';
 
 describe('CCP Middleware', function () {
     let ccpMiddleware: CcpMiddleware

@@ -5,7 +5,7 @@ import {
   Mode,
   serializeCcpRouteControlRequest
 } from 'ilp-protocol-ccp'
-import { IncomingRoute } from 'ilp-router/build/types/routing'
+import { IncomingRoute } from 'ilp-routing'
 
 export interface CcpReceiverOpts {
   peerId: string,

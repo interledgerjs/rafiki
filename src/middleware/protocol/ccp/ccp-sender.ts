@@ -7,8 +7,7 @@ import {
   serializeCcpRouteUpdateRequest
 } from 'ilp-protocol-ccp'
 import { IlpPrepare, IlpReply, deserializeIlpPrepare } from 'ilp-packet'
-import ForwardingRoutingTable, { RouteUpdate } from 'ilp-router/build/ilp-router/forwarding-routing-table'
-import { BroadcastRoute, Relation } from 'ilp-router'
+import { BroadcastRoute, Relation, RouteUpdate, ForwardingRoutingTable } from 'ilp-routing'
 import { randomBytes } from 'mz/crypto'
 
 export interface CcpSenderOpts {
