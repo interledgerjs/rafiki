@@ -9,6 +9,7 @@ import { PeerInfo } from '../../../src/types/peer';
 import { BalanceMiddleware } from '../../../src/middleware/business/balance'
 import Stats from '../../../src/services/stats';
 import { setPipelineReader } from '../../../src/types/middleware';
+import { MAX_UINT_64 } from '../../../src/constants';
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
@@ -22,10 +23,10 @@ describe('Balance Middleware', function () {
       assetScale: 9,
       assetCode: 'XRP',
       balance: {
-        minimum: '',
-        maximum: '',
-        settleThreshold: '',
-        settleTo: ''
+        minimum: 0n,
+        maximum: MAX_UINT_64,
+        settleThreshold: MAX_UINT_64,
+        settleTo: 0n
       }
     }
 
@@ -138,10 +139,10 @@ describe('Balance Middleware', function () {
           assetScale: 9,
           assetCode: 'XRP',
           balance: {
-            minimum: '-25',
-            maximum: '25',
-            settleThreshold: '10',
-            settleTo: '0'
+            minimum: -25n,
+            maximum: 25n,
+            settleThreshold: 10n,
+            settleTo: 0n
           }
         }
         balanceMiddleware = new BalanceMiddleware({ peerInfo, stats })

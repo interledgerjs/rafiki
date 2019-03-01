@@ -23,7 +23,7 @@ describe('Rate Limit Middleware', function () {
     relation: 'peer',
     assetScale: 9,
     assetCode: 'XRP',
-    rateLimit: { refillCount: 3, capacity: 3 }
+    rateLimit: { refillCount: 3n, capacity: 3n }
   }
   const preparePacket: IlpPrepare = {
     amount: '49',
