@@ -15,8 +15,8 @@ export class MaxPacketAmountMiddleware extends Middleware {
       processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (maxPacketAmount && isPrepare(request)) {
           const amount = BigInt(request.amount)
-          logger.warn('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount, request })
-          if (amount < maxPacketAmount) {
+          if (amount > maxPacketAmount) {
+            logger.warn('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount, request })
             throw new AmountTooLargeError(`packet size too large. maxAmount=${maxPacketAmount} actualAmount=${request.amount}`, {
               receivedAmount: request.amount,
               maximumAmount: maxPacketAmount.toString()
