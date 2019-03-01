@@ -15,7 +15,7 @@ describe('Max Packet Amount Middleware', function () {
     let maxPacketAmountMiddleware: MaxPacketAmountMiddleware
 
     beforeEach( async function () {
-      maxPacketAmountMiddleware = new MaxPacketAmountMiddleware({maxPacketAmount: '100'})
+      maxPacketAmountMiddleware = new MaxPacketAmountMiddleware({maxPacketAmount: 100n})
     })
 
     it('forwards packet below max packet amount', async function() {

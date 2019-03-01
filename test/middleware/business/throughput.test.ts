@@ -33,7 +33,7 @@ describe('Throughput Middleware', function () {
         relation: 'peer',
         assetScale: 9,
         assetCode: 'XRP',
-        throughput: { refillPeriod: 100, incomingAmount: '100' }
+        throughput: { refillPeriod: 100, incomingAmount: 100n }
       })
       throughputMiddleware = new ThroughputMiddleware(buckets)
     })
@@ -85,7 +85,7 @@ describe('Throughput Middleware', function () {
         relation: 'peer',
         assetScale: 9,
         assetCode: 'XRP',
-        throughput: { refillPeriod: 100, outgoingAmount: '100' }
+        throughput: { refillPeriod: 100, outgoingAmount: 100n }
       })
       throughputMiddleware = new ThroughputMiddleware(buckets)
     })
