@@ -3,7 +3,6 @@ import { log } from '../../winston'
 import { createHash } from 'crypto'
 import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeEnvelope } from 'ilp-packet'
 import { Middleware, IlpRequestHandler } from '../../types/middleware'
-import BigNumber from 'bignumber.js'
 const logger = log.child({ component: 'deduplicate-middleware' })
 
 // Where in the ILP packet does the static data begin (i.e. the data that is not modified hop-to-hop)
@@ -34,7 +33,7 @@ export class DeduplicateMiddleware extends Middleware {
 
         if (cachedPacket) {
             // We have seen this packet before, let's check if previous amount and expiresAt were larger
-          if (new BigNumber(cachedPacket.amount).gte(amount) && cachedPacket.expiresAt >= expiresAt) {
+          if (BigInt(cachedPacket.amount) >= BigInt(amount) && cachedPacket.expiresAt >= expiresAt) {
             return cachedPacket.promise
           }
         }

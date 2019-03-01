@@ -1,5 +1,4 @@
 import { Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
-import BigNumber from 'bignumber.js'
 import { Middleware, IlpRequestHandler } from '../../types/middleware'
 import { log } from '../../winston'
 const logger = log.child({ component: 'expire-middleware' })
@@ -7,7 +6,7 @@ const logger = log.child({ component: 'expire-middleware' })
 const { AmountTooLargeError } = Errors
 
 export interface MaxPacketAmountMiddlewareService {
-  maxPacketAmount?: string,
+  maxPacketAmount?: bigint,
 }
 
 export class MaxPacketAmountMiddleware extends Middleware {
@@ -15,12 +14,12 @@ export class MaxPacketAmountMiddleware extends Middleware {
     super({
       processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (maxPacketAmount && isPrepare(request)) {
-          const amount = new BigNumber(request.amount)
+          const amount = BigInt(request.amount)
           logger.warn('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount, request })
-          if (amount.gt(maxPacketAmount)) {
+          if (amount < maxPacketAmount) {
             throw new AmountTooLargeError(`packet size too large. maxAmount=${maxPacketAmount} actualAmount=${request.amount}`, {
               receivedAmount: request.amount,
-              maximumAmount: maxPacketAmount
+              maximumAmount: maxPacketAmount.toString()
             })
           }
         }

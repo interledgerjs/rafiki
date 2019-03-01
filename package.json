@@ -2,6 +2,9 @@
   "name": "wip-connector",
   "version": "0.0.1",
   "description": "Proof of concept for connector architecture redesign",
+  "engines": {
+    "node": ">=10.13"
+  },
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "files": [

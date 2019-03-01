@@ -22,8 +22,7 @@ export class ThroughputMiddleware extends Middleware {
     super({
       processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (incomingBucket && isPrepare(request)) {
-          // TODO: Do we need a BigNumber-based token bucket?
-          if (!incomingBucket.take(Number(request.amount))) {
+          if (!incomingBucket.take(BigInt(request.amount))) {
             logger.warn('throttling incoming packet due to bandwidth exceeding limit', { request })
             throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
           }
@@ -34,8 +33,7 @@ export class ThroughputMiddleware extends Middleware {
       },
       processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (outgoingBucket && isPrepare(request)) {
-          // TODO: Do we need a BigNumber-based token bucket?
-          if (!outgoingBucket.take(Number(request.amount))) {
+          if (!outgoingBucket.take(BigInt(request.amount))) {
             logger.warn('throttling outgoing packet due to bandwidth exceeding limit', { request })
             throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
           }
@@ -68,12 +66,12 @@ export function createThroughputLimitBucketsForPeer (peerInfo: PeerInfo): { inco
     if (incomingAmount) {
       // TODO: When we add the ability to update middleware, our state will get
       //   reset every update, which may not be desired.
-      buckets.incomingBucket = new TokenBucket({ refillPeriod, refillCount: Number(incomingAmount) })
+      buckets.incomingBucket = new TokenBucket({ refillPeriod, refillCount: BigInt(incomingAmount) })
     }
     if (outgoingAmount) {
       // TODO: When we add the ability to update middleware, our state will get
       //   reset every update, which may not be desired.
-      buckets.outgoingBucket = new TokenBucket({ refillPeriod, refillCount: Number(outgoingAmount) })
+      buckets.outgoingBucket = new TokenBucket({ refillPeriod, refillCount: BigInt(outgoingAmount) })
     }
   }
 
