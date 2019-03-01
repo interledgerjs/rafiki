@@ -2,7 +2,6 @@ import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill, IlpFulfill 
 import { RequestHandler } from '../../types/channel'
 import { Middleware } from '../../types/middleware'
 import { Endpoint } from '../../types/endpoint'
-import { PeerInfo } from '../../types/peer'
 
 const DEFAULT_HEARTBEAT_INTERVAL = 30 * 1000
 

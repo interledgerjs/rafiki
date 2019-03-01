@@ -1,23 +1,23 @@
 export default class TokenBucket {
   private _lastTime: number
-  private _left: number
-  private _capacity: number
-  private _refillRate: number
+  private _left: bigint
+  private _capacity: bigint
+  private _refillRate: bigint
 
-  constructor ({ refillPeriod, refillCount, capacity }: { refillPeriod: number, refillCount: number, capacity?: number }) {
+  constructor ({ refillPeriod, refillCount, capacity }: { refillPeriod: number, refillCount: bigint, capacity?: bigint }) {
     this._lastTime = Date.now()
     this._capacity = (typeof capacity !== 'undefined') ? capacity : refillCount
     this._left = this._capacity
-    this._refillRate = refillCount / refillPeriod
+    this._refillRate = refillCount / BigInt(refillPeriod)
   }
 
-  take (count: number = 1) {
+  take (count: bigint = 1n) {
     const now = Date.now()
     const delta = Math.max(now - this._lastTime, 0)
-    const refillAmount = delta * this._refillRate
+    const refillAmount = BigInt(delta) * this._refillRate
 
     this._lastTime = now
-    this._left = Math.min(this._left + refillAmount, this._capacity)
+    this._left = (this._left + refillAmount < this._capacity) ? this._left + refillAmount : this._capacity
 
     // this debug statement is commented out for performance, uncomment when
     // debugging rate limit middleware

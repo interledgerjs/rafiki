@@ -1,7 +1,7 @@
 import { Middleware, IlpRequestHandler, MiddlewareRequestHandler } from '../../../types/middleware'
 import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet'
 import { deserializeCcpRouteUpdateRequest, serializeCcpResponse, deserializeCcpRouteControlRequest } from 'ilp-protocol-ccp'
-import { ForwardingRoutingTable, Relation, IncomingRoute } from 'ilp-routing'
+import { ForwardingRoutingTable, IncomingRoute, Relation } from 'ilp-routing'
 import { CcpSender } from './ccp-sender'
 import { CcpReceiver } from './ccp-receiver'
 

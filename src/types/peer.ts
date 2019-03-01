@@ -6,25 +6,25 @@ export interface PeerInfo {
   assetCode: string,
   assetScale: number,
   balance?: {
-    minimum: string,
-    maximum: string,
-    settleThreshold?: string,
-    settleTo: string
+    minimum: bigint,
+    maximum: bigint,
+    settleThreshold?: bigint,
+    settleTo: bigint
   },
   deduplicate?: {
     cleanupInterval?: number,
     packetLifetime?: number
   },
-  maxPacketAmount?: string,
+  maxPacketAmount?: bigint,
   throughput?: {
     refillPeriod?: number,
-    incomingAmount?: string,
-    outgoingAmount?: string
+    incomingAmount?: bigint,
+    outgoingAmount?: bigint
   },
   rateLimit?: {
     refillPeriod?: number,
-    refillCount?: number,
-    capacity?: number
+    refillCount?: bigint,
+    capacity?: bigint
   },
   options?: object,
   sendRoutes?: boolean,

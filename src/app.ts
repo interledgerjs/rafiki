@@ -84,9 +84,17 @@ export default class App {
         assetCode,
         relation,
         deduplicate,
-        maxPacketAmount,
-        throughput,
-        rateLimit,
+        maxPacketAmount: BigInt.asUintN(64, BigInt(maxPacketAmount)),
+        throughput: throughput ? {
+          incomingAmount: throughput.incomingAmount ? BigInt.asUintN(64, BigInt(throughput.incomingAmount)) : undefined,
+          outgoingAmount: throughput.outgoingAmount ? BigInt.asUintN(64, BigInt(throughput.outgoingAmount)) : undefined,
+          refillPeriod: throughput.refillPeriod
+        } : undefined,
+        rateLimit: rateLimit ? {
+          capacity: rateLimit.capacity ? BigInt.asUintN(64, BigInt(rateLimit.capacity)) : undefined,
+          refillCount: rateLimit.refillCount ? BigInt.asUintN(64, BigInt(rateLimit.refillCount)) : undefined,
+          refillPeriod: rateLimit.refillPeriod
+        } : undefined,
         sendRoutes,
         receiveRoutes
       }

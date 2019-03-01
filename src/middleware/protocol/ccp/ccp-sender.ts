@@ -7,9 +7,8 @@ import {
   serializeCcpRouteUpdateRequest
 } from 'ilp-protocol-ccp'
 import { IlpPrepare, IlpReply, deserializeIlpPrepare } from 'ilp-packet'
-import { BroadcastRoute, Relation, RouteUpdate, ForwardingRoutingTable } from 'ilp-routing'
-import { randomBytes } from 'mz/crypto'
-
+import { ForwardingRoutingTable, BroadcastRoute, Relation, RouteUpdate } from 'ilp-routing'
+import { randomBytes } from 'crypto'
 export interface CcpSenderOpts {
   peerId: string
   sendData: (packet: IlpPrepare) => Promise<IlpReply>,
@@ -200,7 +199,7 @@ export class CcpSender {
     }
 
     // this.log.trace('broadcasting routes to peer. speaker=%s peer=%s fromEpoch=%s toEpoch=%s routeCount=%s unreachableCount=%s', this.getOwnAddress(), this.accountId, this.lastKnownEpoch, toEpoch, newRoutes.length, withdrawnRoutes.length)
-    const auth = await randomBytes(32) // TODO temp for now
+    const auth = randomBytes(32) // TODO: temp for now
     const routeUpdate: CcpRouteUpdateRequest = {
       speaker: this.getOwnAddress(),
       routingTableId: this.forwardingRoutingTable.routingTableId,
@@ -211,7 +210,7 @@ export class CcpSender {
       newRoutes: newRoutes.map(r => ({
         ...r,
         nextHop: undefined,
-        auth: auth,
+        auth,
         props: []
       })),
       withdrawnRoutes: withdrawnRoutes.map(r => r.prefix)
