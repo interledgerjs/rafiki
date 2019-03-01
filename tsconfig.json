@@ -11,7 +11,8 @@
     "strictNullChecks": true,
     "suppressImplicitAnyIndexErrors": true,
     "outDir": "./build",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "src/**/*"
