@@ -1,30 +1,40 @@
-export type RequestHandler<Request, Reply> = (packet: Request) => Promise<Reply>
+export type RequestHandler<Request, Reply> = (request: Request) => Promise<Reply>
 
 /**
  * Connect a pipeline of channels together and return a new channel that is the combination of the provided channels.
  *
  * @param duplexes an ordered collection of channels to connect together
  */
-export function pipeline<Request, Reply> (...duplexes: Duplex<Request, Reply>[]): Duplex<Request, Reply> {
+export function pipeline<Request, Reply> (...duplexes: BidirectionalDuplexRequestStream<Request, Reply>[]): BidirectionalDuplexRequestStream<Request, Reply> {
   for (let i = 0; i + 1 < duplexes.length; i++) {
-    duplexes[i].incoming.setReader((request) => { return duplexes[i + 1].incoming.write(request) })
-    duplexes[i + 1].outgoing.setReader((request) => { return duplexes[i].outgoing.write(request) })
+    const incomingReadable = duplexes[i].incoming
+    const incomingWritable = duplexes[i + 1].incoming
+    const outgoingReadable = duplexes[i + 1].outgoing
+    const outgoingWritable = duplexes[i].outgoing
+    incomingReadable.pipe(incomingWritable)
+    outgoingReadable.pipe(outgoingWritable)
   }
   return {
     incoming: {
       write: (request) => {
         return duplexes[0].incoming.write(request)
       },
-      setReader: (receiver: RequestHandler<Request, Reply>) => {
-        return duplexes[duplexes.length - 1].incoming.setReader(receiver)
+      pipe: (writable: WritableRequestStream<Request, Reply>) => {
+        return duplexes[duplexes.length - 1].incoming.pipe(writable)
+      },
+      unpipe: () => {
+        return duplexes[duplexes.length - 1].incoming.unpipe()
       }
     },
     outgoing: {
       write: (request) => {
         return duplexes[duplexes.length - 1].outgoing.write(request)
       },
-      setReader: (receiver: RequestHandler<Request, Reply>) => {
-        return duplexes[0].outgoing.setReader(receiver)
+      pipe: (writable: WritableRequestStream<Request, Reply>) => {
+        return duplexes[0].outgoing.pipe(writable)
+      },
+      unpipe: () => {
+        return duplexes[0].outgoing.unpipe()
       }
     }
   }
@@ -35,12 +45,19 @@ export function pipeline<Request, Reply> (...duplexes: Duplex<Request, Reply>[])
  *
  * Multiple pipes can be connected to form a pipeline.
  */
-export interface Duplex<Request, Reply> {
-  incoming: Channel<Request, Reply>
-  outgoing: Channel<Request, Reply>
+export interface BidirectionalDuplexRequestStream<Request, Reply> {
+  incoming: DuplexRequestStream<Request, Reply>
+  outgoing: DuplexRequestStream<Request, Reply>
 }
 
-export interface Channel<Request,Response> {
-  write: RequestHandler<Request, Response>
-  setReader: (receiver: RequestHandler<Request, Response>) => this
+export type DuplexRequestStream<Request,Reply> = ReadableRequestStream<Request, Reply> & WritableRequestStream<Request, Reply>
+
+export interface WritableRequestStream<Request, Reply> {
+  write: RequestHandler<Request, Reply>
+}
+
+export interface ReadableRequestStream<Request, Reply> {
+  pipe: (writable: WritableRequestStream<Request, Reply>) => this
+
+  unpipe: () => this
 }

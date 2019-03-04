@@ -1,4 +1,4 @@
-import { Duplex, RequestHandler, Channel } from './channel'
+import { BidirectionalDuplexRequestStream, RequestHandler, DuplexRequestStream, WritableRequestStream } from './channel'
 import { IlpPrepare, IlpReply } from 'ilp-packet'
 
 export type IlpRequestHandler = RequestHandler<IlpPrepare, IlpReply>
@@ -11,15 +11,16 @@ export interface MiddlewareFunctions {
   processOutgoing?: MiddlewareRequestHandler
 }
 
-export class Middleware implements Duplex<IlpPrepare, IlpReply> {
-
-  private _incomingReader: IlpRequestHandler = () => {
+const deadEndWritable: WritableRequestStream<IlpPrepare, IlpReply> = {
+  write (): Promise<IlpReply> {
     throw new Error('handler not set')
   }
+}
 
-  private _outgoingReader: IlpRequestHandler = () => {
-    throw new Error('handler not set')
-  }
+export class Middleware implements BidirectionalDuplexRequestStream<IlpPrepare, IlpReply> {
+
+  private _incomingWritable: WritableRequestStream<IlpPrepare, IlpReply> = deadEndWritable
+  private _outgoingWritable: WritableRequestStream<IlpPrepare, IlpReply> = deadEndWritable
 
   constructor ({ startup, shutdown, processIncoming, processOutgoing }: MiddlewareFunctions) {
     if (startup) {
@@ -60,35 +61,47 @@ export class Middleware implements Duplex<IlpPrepare, IlpReply> {
     return this._shutdown()
   }
 
-  public incoming: Channel<IlpPrepare, IlpReply> = {
+  public incoming: DuplexRequestStream<IlpPrepare, IlpReply> = {
     write: (request: IlpPrepare): Promise<IlpReply> => {
-      return this._processIncoming(request, this._incomingReader)
+      return this._processIncoming(request, (nextRequest: IlpPrepare) => {
+        return this._incomingWritable.write(nextRequest)
+      })
     },
-    setReader: (reader: IlpRequestHandler) => {
-      this._incomingReader = reader
+    pipe: (writable: WritableRequestStream<IlpPrepare, IlpReply>) => {
+      this._incomingWritable = writable
+      return this.incoming
+    },
+    unpipe: () => {
+      this._incomingWritable = deadEndWritable
       return this.incoming
     }
   }
 
-  public outgoing: Channel<IlpPrepare, IlpReply> = {
+  public outgoing: DuplexRequestStream<IlpPrepare, IlpReply> = {
     write: (request: IlpPrepare): Promise<IlpReply> => {
-      return this._processOutgoing(request, this._outgoingReader)
+      return this._processOutgoing(request, (nextRequest: IlpPrepare) => {
+        return this._outgoingWritable.write(nextRequest)
+      })
     },
-    setReader: (reader: IlpRequestHandler) => {
-      this._outgoingReader = reader
+    pipe: (writable: WritableRequestStream<IlpPrepare, IlpReply>) => {
+      this._outgoingWritable = writable
+      return this.outgoing
+    },
+    unpipe: () => {
+      this._outgoingWritable = deadEndWritable
       return this.outgoing
     }
   }
 }
 
 /**
- * Sets the reader at the end of either the incoming or outgoing pipelines on a `Duplex<IlpPrepare, IlpReply>` and returns the entry-point to that pipeline (write function).
+ * Sets the handler at the end of either the incoming or outgoing pipelines on a `BidirectionalDuplexRequestStream<IlpPrepare, IlpReply>` and returns the entry-point to that pipeline (write function).
  *
  * @param pipeline `incoming` or `outgoing` to indicate which pipeline to attach the handler to
- * @param duplex the duplex pipelines to attach to
- * @param reader the handler to attach
+ * @param bidirectionalPipeline the bidirectional pipelines to attach to
+ * @param write the handler that accepts the writes at the end of the pipeline
  */
-export function setPipelineReader (pipeline: 'incoming' | 'outgoing', duplex: Duplex<IlpPrepare, IlpReply>, reader: IlpRequestHandler): IlpRequestHandler {
-  duplex[pipeline].setReader(reader)
-  return (request) => { return duplex[pipeline].write(request) }
+export function setPipelineReader (pipeline: 'incoming' | 'outgoing', bidirectionalPipeline: BidirectionalDuplexRequestStream<IlpPrepare, IlpReply>, write: IlpRequestHandler): IlpRequestHandler {
+  bidirectionalPipeline[pipeline].pipe({ write })
+  return (request) => { return bidirectionalPipeline[pipeline].write(request) }
 }
