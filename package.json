@@ -48,6 +48,7 @@
     "ilp-protocol-ildcp": "^2.0.1",
     "ilp-routing": "^20.0.1-beta.0",
     "ioredis": "^4.6.2",
+    "ioredis-mock": "^4.8.2",
     "oer-utils": "^4.0.0",
     "prom-client": "^11.2.1",
     "supports-color": "^5.5.0",
