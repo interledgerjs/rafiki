@@ -5,7 +5,7 @@ import * as chaiAsPromised from 'chai-as-promised'
 import BtpPlugin from 'ilp-plugin-btp';
 import { PluginEndpoint } from '../../src/legacy/plugin-endpoint';
 import { PluginInstance } from '../../src/legacy/plugin';
-import App from '../../src/app';
+import App from '../../src/legacy/app';
 import { IlpPrepare, serializeIlpFulfill, IlpFulfill, deserializeIlpPacket, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet';
 import { randomBytes, createHash } from 'crypto';
 Chai.use(chaiAsPromised)

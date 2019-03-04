@@ -2,9 +2,9 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
-import App from '../src/app'
+import App from '../../src/legacy/app'
 import mock = require('mock-require')
-import MockIlpEndpoint from './mocks/mockIlpEndpoint'
+import MockIlpEndpoint from '../mocks/mockIlpEndpoint'
 import * as ILDCP from "ilp-protocol-ildcp"
 Chai.use(chaiAsPromised)
 

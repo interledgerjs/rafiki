@@ -5,7 +5,7 @@ import * as chaiAsPromised from 'chai-as-promised'
 import BtpPlugin from 'ilp-plugin-btp';
 import { PluginEndpoint } from '../../src/legacy/plugin-endpoint'
 import { PluginInstance } from '../../src/legacy/plugin'
-import App from '../../src/app'
+import App from '../../src/legacy/app'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 
