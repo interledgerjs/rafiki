@@ -6,8 +6,8 @@ import App from '../src/app'
 import mock = require('mock-require')
 import MockIlpEndpoint from './mocks/mockIlpEndpoint'
 import * as ILDCP from "ilp-protocol-ildcp"
-
 Chai.use(chaiAsPromised)
+
 const assert = Object.assign(Chai.assert, sinon.assert)
 
 describe('App', function () {
