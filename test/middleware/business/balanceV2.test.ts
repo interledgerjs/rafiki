@@ -10,6 +10,7 @@ import { BalanceV2Middleware } from '../../../src/middleware/business/balanceV2'
 import Stats from '../../../src/services/stats';
 import { setPipelineReader } from '../../../src/types/middleware';
 import * as RedisIo from 'ioredis';
+import { InsufficientLiquidityError } from 'ilp-packet/dist/src/errors';
 const Redis = require('ioredis-mock');
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
@@ -33,7 +34,11 @@ describe('BalanceV2 Middleware', function () {
     }
 
     beforeEach( async function () {
-      redis =  new Redis()
+      redis =  new Redis({
+        data: {
+          'harry': true
+        }
+      })
       balanceMiddleware = new BalanceV2Middleware({ peerInfo, redisInstance: redis})
     })
     
@@ -113,6 +118,37 @@ describe('BalanceV2 Middleware', function () {
           })
         })
       })
+
+      it('throws insufficient liquidity error if middleware disabled on packets coming in', async function () {
+        redis = new Redis({
+          data: {
+            'harry': false
+          }
+        })
+        balanceMiddleware = new BalanceV2Middleware({ peerInfo, redisInstance: redis})
+
+        const preparePacket: IlpPrepare = {
+          amount: '49',
+          executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
+          expiresAt: new Date(START_DATE + 2000),
+          destination: 'mock.test1',
+          data: Buffer.alloc(0)
+        }
+        const fulfillPacket: IlpFulfill = {
+          fulfillment: Buffer.from(''),
+          data: Buffer.from('')
+        }
+        
+        const sendIncoming = setPipelineReader('incoming', balanceMiddleware, async () => fulfillPacket )
+
+        try {
+          await sendIncoming(preparePacket)
+        } catch(error) {
+          assert.instanceOf(error, InsufficientLiquidityError)
+          return
+        }
+        assert.fail()
+    })
 
       it('reject packet sends reject event to stream', async function () {
         const preparePacket: IlpPrepare = {
@@ -231,8 +267,8 @@ describe('BalanceV2 Middleware', function () {
           data: Buffer.from(''),
           message: 'failed',
           triggeredBy: 'test.harry'
-        }      
-        const sendOutgoing = setPipelineReader('incoming', balanceMiddleware, async () => rejectPacket )
+        }
+        const sendOutgoing = setPipelineReader('outgoing', balanceMiddleware, async () => rejectPacket )
   
         await sendOutgoing(preparePacket)
   
@@ -244,7 +280,7 @@ describe('BalanceV2 Middleware', function () {
             peerId: 'harry',
             type: 'reject',
             amount: '49',
-            pipeline: 'incoming'
+            pipeline: 'outgoing'
           })
         })
       })

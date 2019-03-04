@@ -3,6 +3,7 @@ import { PeerInfo } from '../../types/peer'
 import { IlpPrepare, isFulfill } from 'ilp-packet'
 import { log } from '../../winston'
 import * as Redis from 'ioredis'
+import { InsufficientLiquidityError } from 'ilp-packet/dist/src/errors';
 const logger = log.child({ component: 'balance-middleware' })
 
 export interface BalanceV2MiddlewareServices {
@@ -22,8 +23,6 @@ export class BalanceV2Middleware extends Middleware {
 
   protected _startup = async () => {
     // await this.redis.connect()
-    console.log(this.redis)
-
     return
   }
 
@@ -33,6 +32,13 @@ export class BalanceV2Middleware extends Middleware {
     // Ignore zero amount packets
     if (amount === '0') {
       return next(request)
+    }
+
+    const isEnabled = await this.redis.get(this.peer.id)
+
+    console.log(isEnabled)
+    if (!isEnabled) {
+      throw new InsufficientLiquidityError('')
     }
 
     // Increase balance on prepare
