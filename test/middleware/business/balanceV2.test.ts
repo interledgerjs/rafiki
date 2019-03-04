@@ -4,13 +4,12 @@ import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { IlpPrepare, IlpReject, IlpFulfill } from 'ilp-packet';
+import { IlpPrepare, IlpReject, IlpFulfill } from 'ilp-packet'
 import { PeerInfo } from '../../../src/types/peer';
 import { BalanceV2Middleware } from '../../../src/middleware/business/balanceV2'
-import Stats from '../../../src/services/stats';
-import { setPipelineReader } from '../../../src/types/middleware';
+import { setPipelineReader } from '../../../src/types/middleware'
 import * as RedisIo from 'ioredis';
-import { InsufficientLiquidityError } from 'ilp-packet/dist/src/errors';
+import { InsufficientLiquidityError } from 'ilp-packet/dist/src/errors'
 const Redis = require('ioredis-mock');
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
@@ -36,7 +35,7 @@ describe('BalanceV2 Middleware', function () {
     beforeEach( async function () {
       redis =  new Redis({
         data: {
-          'harry': true
+          'harry:balance:enabled': true
         }
       })
       balanceMiddleware = new BalanceV2Middleware({ peerInfo, redisInstance: redis})
@@ -122,7 +121,7 @@ describe('BalanceV2 Middleware', function () {
       it('throws insufficient liquidity error if middleware disabled on packets coming in', async function () {
         redis = new Redis({
           data: {
-            'harry': false
+            'harry:balance:enabled': false
           }
         })
         balanceMiddleware = new BalanceV2Middleware({ peerInfo, redisInstance: redis})
