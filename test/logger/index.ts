@@ -5,34 +5,38 @@
 import * as winston from 'winston'
 import { PassThrough, Writable, Transform } from 'stream';
 
+const format = winston.format.json({
+  replacer: (key: string, value: any) => {
+    return typeof value === 'bigint'
+      ? value.toString()
+      : value
+  }
+})
+
 // Async so that we let Mocha load before these are executed
 setTimeout(() => {
-  let buffer: Transform
+  let stream: Transform
 
   beforeEach(function () {
-    buffer = new PassThrough()
-    buffer.pause()
+    stream = new PassThrough()
+    stream.pause()
 
     // TODO: Clears all transports - we should try to do this in a reversible way
-    winston.clear()
-    winston.add( new winston.transports.Stream({ 
-      stream: buffer,
-      format: winston.format.combine(
-        winston.format.prettyPrint()
-        // winston.format.simple()
-      )
-    }))  
+    winston.configure({
+      format,
+      transports: new winston.transports.Stream({ stream, format })
+    })
   })
   
   afterEach(function () {
     if(this && this.currentTest 
         && this.currentTest.state !== 'passed'
-        && buffer.readableLength > 0) {
+        && stream.readableLength > 0) {
       
         process.stderr.write("==== LOGS: start ====\r\n")
-        buffer.pipe(process.stderr, { end: false })
-        buffer.write("<==== LOGS: end ====\r\n")
-        buffer.end()
+        stream.pipe(process.stderr, { end: false })
+        stream.write("<==== LOGS: end ====\r\n")
+        stream.end()
     }
   })
 })

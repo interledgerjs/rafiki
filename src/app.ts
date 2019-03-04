@@ -84,7 +84,7 @@ export default class App {
         assetCode,
         relation,
         deduplicate,
-        maxPacketAmount: BigInt.asUintN(64, BigInt(maxPacketAmount)),
+        maxPacketAmount: maxPacketAmount ? BigInt.asUintN(64, BigInt(maxPacketAmount)) : undefined,
         throughput: throughput ? {
           incomingAmount: throughput.incomingAmount ? BigInt.asUintN(64, BigInt(throughput.incomingAmount)) : undefined,
           outgoingAmount: throughput.outgoingAmount ? BigInt.asUintN(64, BigInt(throughput.outgoingAmount)) : undefined,
