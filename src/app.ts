@@ -13,13 +13,18 @@ import { StatsMiddleware } from './middleware/business/stats'
 import { AlertMiddleware, Alerts } from './middleware/business/alert'
 import TokenBucket from './lib/token-bucket'
 import Stats from './services/stats'
-import { IlpPrepare, IlpReply, IlpFulfill } from 'ilp-packet'
 import { ReduceExpiryMiddleware } from './middleware/protocol/reduce-expiry'
 import { Http2Server, createServer } from 'http2'
+import { Http2Endpoint } from './endpoints/http2-endpoint'
 
 export interface AppOptions {
   ilpAddress: string
   port: number,
+}
+
+export interface EndpointInfo {
+  type: string,
+  url: string
 }
 
 export default class App {
@@ -33,6 +38,7 @@ export default class App {
 
   server: Http2Server
   port: number
+  endpointsMap: Map<string, Http2Endpoint>
 
   constructor (opts: AppOptions) {
 
@@ -42,63 +48,67 @@ export default class App {
     this.packetCacheMap = new Map()
     this.rateLimitBucketMap = new Map()
     this.throughputBucketsMap = new Map()
-
-    this.port = opts.port
+    this.endpointsMap = new Map()
 
     this.connector.setOwnAddress(opts.ilpAddress)
 
+    this.port = opts.port
     this.server = createServer()
 
-    this.server.on('stream', (stream, headers, flags) => {
+    // Could possible bind on the incoming sessions (TCP connection) rather than streams
+    // TODO Cleanup
+    this.server.on('stream', async (stream, headers, flags) => {
       const method = headers[':method']
       const path = headers[':path']
 
-      stream.respond({
-        'content-type': 'text/html',
-        ':status': 200
-      })
-      stream.on('error', (error) => console.error(error))
-      stream.end('<h1>Hello World</h1>')
+      // TODO better path matching
+      if (path) {
+        // Get the incoming data
+        let chunks: Array<Buffer> = []
+        stream.on('data', (chunk: Buffer) => {
+          chunks.push(chunk)
+        })
+        stream.on('end', async () => {
+          let packet = Buffer.concat(chunks)
+          let response = await this.handleIncomingPacket(path, packet)
+          stream.end(response)
+        })
+        stream.on('error', (error) => log.error('stream error', { error }))
+      }
     })
   }
 
-  /**
-   * Loop through configured accounts and instantiate the specified endpoint and middleware. Tell the connector to add the peer.
-   */
   async start () {
     log.info('starting connector')
     this.server.listen(this.port)
   }
 
-  private handleIncomingPacket (path: string, data: Buffer) {
+  // Find endpoint and drop packet onto it if found
+  private async handleIncomingPacket (path: string, data: Buffer) {
+    const endpoint = this.endpointsMap.get('alice')
+    if (endpoint) {
+      return endpoint.handlePacket(data)
+    }
+    // TODO fail if no endpoint found
   }
 
-  async addPeer (peerInfo: PeerInfo) {
-    // const peerInfo: PeerInfo = {
-    //   id: account,
-    //   assetScale,
-    //   assetCode,
-    //   relation,
-    //   deduplicate,
-    //   maxPacketAmount: maxPacketAmount ? BigInt.asUintN(64, BigInt(maxPacketAmount)) : undefined,
-    //   throughput: throughput ? {
-    //     incomingAmount: throughput.incomingAmount ? BigInt.asUintN(64, BigInt(throughput.incomingAmount)) : undefined,
-    //     outgoingAmount: throughput.outgoingAmount ? BigInt.asUintN(64, BigInt(throughput.outgoingAmount)) : undefined,
-    //     refillPeriod: throughput.refillPeriod
-    //   } : undefined,
-    //   rateLimit: rateLimit ? {
-    //     capacity: rateLimit.capacity ? BigInt.asUintN(64, BigInt(rateLimit.capacity)) : undefined,
-    //     refillCount: rateLimit.refillCount ? BigInt.asUintN(64, BigInt(rateLimit.refillCount)) : undefined,
-    //     refillPeriod: rateLimit.refillPeriod
-    //   } : undefined,
-    //   sendRoutes,
-    //   receiveRoutes
-    // }
-    // const middleware = this._createMiddleware(peerInfo)
-    // const endpointDefinition = typeof (endpoint) === 'object' ? endpoint : require(endpoint) // TODO update when implementations of endpoint are released
-    // const endpointInstance = typeof (endpoint) === 'object' ? endpoint : new endpointDefinition(async (packet: IlpPrepare): Promise<IlpReply> => { return {} as IlpFulfill }) // TODO update when implementations of endpoint are released. assuming to be mock endpoint for now
-    // // TODO: make sure that endpoint is connected before handing it to connector
-    // await this.connector.addPeer(peerInfo, endpointInstance, middleware, peerInfo.id === inheritFrom)
+  async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
+    console.log('adding peer')
+    const endpoint = this.createEndpoint(endpointInfo)
+    this.endpointsMap.set(peerInfo.id, endpoint)
+    const middleware = this._createMiddleware(peerInfo)
+    // TODO need to resolve some stuff here
+    await this.connector.addPeer(peerInfo, endpoint, middleware, false)
+    console.log('peer added')
+  }
+
+  async removePeer (peerId: string) {
+    const endpoint = this.endpointsMap.get(peerId)
+    if (endpoint) {
+      endpoint.close()
+    }
+    await this.connector.removePeer(peerId)
+    // TODO need to resolve some stuff here
   }
 
   /**
@@ -111,13 +121,27 @@ export default class App {
     this.rateLimitBucketMap.clear()
     this.throughputBucketsMap.clear()
     this.server.close()
+    this.endpointsMap.clear()
+  }
+
+  private createEndpoint (endpointInfo: EndpointInfo) {
+    const { type, url } = endpointInfo
+    switch (type) {
+      case ('http'):
+        return new Http2Endpoint({ url })
+      default:
+        throw new Error('Endpoint type not supported')
+    }
   }
 
   private _createMiddleware (peerInfo: PeerInfo): Middleware[] {
     const middleware: Middleware[] = []
-    const disabledMiddleware = this.config.disableMiddleware ? this.config.disableMiddleware : []
-    const globalMinExpirationWindow = this.config.minMessageWindow
-    const globalMaxHoldWindow = this.config.maxHoldTime
+
+    // Global/Config might be needed
+    const disabledMiddleware: string[] = []
+    const globalMinExpirationWindow = 35000
+    const globalMaxHoldWindow = 35000
+
     const rateLimitBucket: TokenBucket = createRateLimitBucketForPeer(peerInfo)
     const throughputBuckets = createThroughputLimitBucketsForPeer(peerInfo)
     const cache = new PacketCache(peerInfo.deduplicate || {}) // Could make this a global cache to allow for checking across different peers?
@@ -126,18 +150,19 @@ export default class App {
     this.throughputBucketsMap.set(peerInfo.id, throughputBuckets)
     this.rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
 
-    // TODO add balance middleware
-    middleware.push(new ExpireMiddleware())
-    // using half the global min expiration window to mimic old connector. This is because current implementation reduces expiry on both incoming and outgoing pipelines.
-    middleware.push(new ReduceExpiryMiddleware({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow }))
     if (!disabledMiddleware.includes('errorHandler')) middleware.push(new ErrorHandlerMiddleware({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' }))
     if (!disabledMiddleware.includes('rateLimit')) middleware.push(new RateLimitMiddleware({ peerInfo, stats: this.stats, bucket: rateLimitBucket }))
     if (!disabledMiddleware.includes('maxPacketAmount')) middleware.push(new MaxPacketAmountMiddleware({ maxPacketAmount: peerInfo.maxPacketAmount }))
     if (!disabledMiddleware.includes('throughput')) middleware.push(new ThroughputMiddleware(throughputBuckets))
     if (!disabledMiddleware.includes('deduplicate')) middleware.push(new DeduplicateMiddleware({ cache }))
-    if (!disabledMiddleware.includes('validateFulfillment')) middleware.push(new ValidateFulfillmentMiddleware())
+    // if (!disabledMiddleware.includes('validateFulfillment')) middleware.push(new ValidateFulfillmentMiddleware())
     if (!disabledMiddleware.includes('stats')) middleware.push(new StatsMiddleware({ stats: this.stats, peerInfo }))
     if (!disabledMiddleware.includes('alert')) middleware.push(new AlertMiddleware({ createAlert: (triggeredBy: string, message: string) => this.alerts.createAlert(peerInfo.id, triggeredBy, message) }))
+
+    // TODO add balance middleware
+    // middleware.push(new ExpireMiddleware())
+    // using half the global min expiration window to mimic old connector. This is because current implementation reduces expiry on both incoming and outgoing pipelines.
+    // middleware.push(new ReduceExpiryMiddleware({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow }))
 
     return middleware
   }

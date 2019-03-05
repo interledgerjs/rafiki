@@ -10,7 +10,7 @@ Chai.use(chaiAsPromised)
 
 const assert = Object.assign(Chai.assert, sinon.assert)
 
-describe('App', function () {
+describe('Legacy App', function () {
   let app: App
   beforeEach(function () {
     process.env.CONNECTOR_ACCOUNTS = JSON.stringify({
