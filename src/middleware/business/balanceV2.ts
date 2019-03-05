@@ -103,7 +103,7 @@ export class BalanceV2Middleware extends Middleware {
 
   protected _shutdown = async () => {
     // Disconnect from Redis
-    await this.redis.disconnect()
+    this.redis.disconnect()
 
     return
   }
