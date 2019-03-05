@@ -25,6 +25,19 @@ describe("Settlement Engine", function () {
     await settlementEngine.shutdown()
   })
 
+  describe('start', function () {
+    it('sets up polling to listen for messages on stream', async function () {
+      settlementEngine.setBalance('bob', 1000n)
+      await settlementEngine.start()
+
+      await new Promise(resolve => setTimeout(() => resolve(), 300))
+      await redis.xadd(streamKey, '*', 'peerId', 'bob', 'type', 'prepare', 'pipeline', 'incoming', 'amount', '100')
+      await new Promise(resolve => setTimeout(() => resolve(), 300))
+
+      assert.equal(settlementEngine.getBalance('bob').toString(), '1100')
+    })
+  })
+
   describe("setBalance", function () {
     it("can set balance for peer if engine hasn't been started", async function () {
       settlementEngine.setBalance('bob', 1000n)
