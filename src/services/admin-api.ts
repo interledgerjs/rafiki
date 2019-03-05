@@ -2,11 +2,18 @@ import { Server, IncomingMessage, ServerResponse } from 'http'
 import Stats from './stats'
 import Config from './config'
 import { Alerts } from '../middleware/business/alert'
+import SettlementEngine from './settlement-engine'
+import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
+import InvalidJsonBodyError from '../errors/invalid-json-body-error'
+import Ajv = require('ajv')
+const ajv = new Ajv()
+const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
 
 export interface AdminApiDeps {
   stats: Stats,
   config: Config,
-  alerts: Alerts
+  alerts: Alerts,
+  settlementEngine: SettlementEngine
 }
 
 interface Route {
@@ -21,16 +28,20 @@ export default class AdminApi {
   private config: Config
   private routes: Route[]
   private alerts: Alerts
+  private settlementEngine: SettlementEngine
 
-  constructor ({ stats, config, alerts }: AdminApiDeps) {
+  constructor ({ stats, config, alerts, settlementEngine }: AdminApiDeps) {
     this.stats = stats
     this.config = config
     this.alerts = alerts
+    this.settlementEngine = settlementEngine
 
     this.routes = [
       { method: 'GET', match: '/health$', fn: async () => 'Status: ok' },
       { method: 'GET', match: '/stats$', fn: this.getStats },
-      { method: 'GET', match: '/alerts$', fn: this.getAlerts }
+      { method: 'GET', match: '/alerts$', fn: this.getAlerts },
+      { method: 'GET', match: '/balance$', fn: this.getBalances },
+      { method: 'POST', match: '/balance$', fn: this.updateBalance }
     ]
   }
 
@@ -109,6 +120,30 @@ export default class AdminApi {
   private async getAlerts () {
     return {
       alerts: this.alerts.getAlerts()
+    }
+  }
+
+  private async getBalances () {
+    return this.settlementEngine.getStatus()
+  }
+
+  private async updateBalance (url: string, _data: object) {
+    try {
+      await validateBalanceUpdate(_data)
+    } catch (err) {
+      const firstError = (err.errors &&
+        err.errors[0]) ||
+        { message: 'unknown validation error', dataPath: '' }
+      throw new InvalidJsonBodyError('invalid balance update: error=' + firstError.message + ' dataPath=' + firstError.dataPath, err.errors || [])
+    }
+    const { peerId, amountDiff } = _data as BalanceUpdate
+    const limit = this.settlementEngine.getBalanceLimits(peerId)
+    this.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
+
+    return {
+      'balance': this.settlementEngine.getBalance(peerId).toString(),
+      'minimum': limit.min.toString(),
+      'maximum': limit.max.toString()
     }
   }
 }

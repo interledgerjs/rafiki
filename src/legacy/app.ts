@@ -27,7 +27,6 @@ export default class App {
   packetCacheMap: Map<string, PacketCache>
   rateLimitBucketMap: Map<string, TokenBucket>
   throughputBucketsMap: Map<string, {incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket}>
-  adminApi: AdminApi
 
   constructor (opts?: object) {
 
@@ -38,7 +37,6 @@ export default class App {
     this.packetCacheMap = new Map()
     this.rateLimitBucketMap = new Map()
     this.throughputBucketsMap = new Map()
-    this.adminApi = new AdminApi({ stats: this.stats, alerts: this.alerts, config: this.config })
 
     try {
       if (opts) {
@@ -66,7 +64,6 @@ export default class App {
    */
   async start () {
     log.info('starting connector')
-    this.adminApi.listen()
 
     // figure out which peer to inherit from
     const inheritFrom = this.config.ilpAddressInheritFrom ||
@@ -115,7 +112,6 @@ export default class App {
     this.packetCacheMap.clear()
     this.rateLimitBucketMap.clear()
     this.throughputBucketsMap.clear()
-    this.adminApi.shutdown()
   }
 
   private _createMiddleware (peerInfo: PeerInfo): Middleware[] {

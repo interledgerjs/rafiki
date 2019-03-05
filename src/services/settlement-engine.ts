@@ -165,4 +165,18 @@ export default class SettlementEngine {
       }
     }
   }
+
+  getStatus () {
+    const peers = Array.from(this.peerBalances.keys())
+    let status = {}
+    peers.forEach(peer => {
+      const limit = this.getBalanceLimits(peer)
+      status[peer] = {
+        'balance': this.getBalance(peer).toString(),
+        'minimum': limit.min.toString(),
+        'maximum': limit.max.toString()
+      }
+    })
+    return status
+  }
 }
