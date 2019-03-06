@@ -96,7 +96,7 @@ describe('Throughput Middleware', function () {
           {
             name: 'throughput',
             refillPeriod: 100, 
-            incomingAmount: 100n
+            outgoingAmount: 100n
           }
         ],
         protocols: []

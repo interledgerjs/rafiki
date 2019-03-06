@@ -57,7 +57,6 @@ export function createThroughputLimitBucketsForPeer (peerInfo: PeerInfo): { inco
   }
 
   const throughput = peerInfo.rules.filter(rule => rule.name === 'throughput')[0]
-
   if (throughput) {
     const {
       refillPeriod = DEFAULT_REFILL_PERIOD,

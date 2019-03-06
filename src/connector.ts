@@ -63,8 +63,8 @@ export default class Connector {
 
     const ccpProtocol = peerInfo.protocols.filter(protocol => protocol.name === 'ccp')[0]
     protocolMiddleware.push(new CcpMiddleware({
-      isSender: ccpProtocol.sendRoutes as boolean,
-      isReceiver: ccpProtocol.receiveRoutes as boolean,
+      isSender: ccpProtocol ? ccpProtocol.sendRoutes as boolean : false,
+      isReceiver: ccpProtocol ? ccpProtocol.receiveRoutes as boolean : false,
       peerId: peerInfo.id,
       forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
       getPeerRelation: this.getPeerRelation.bind(this),
@@ -78,7 +78,7 @@ export default class Connector {
     protocolMiddleware.push(new IldcpMiddleware({
       getPeerInfo: () => peerInfo,
       getOwnAddress: this.getOwnAddress.bind(this),
-      getPeerAddress: () => this.getOwnAddress() + '.' + (ildcpProtocol.ilpAddressSegment || peerInfo.id)
+      getPeerAddress: () => this.getOwnAddress() + '.' + (ildcpProtocol && ildcpProtocol.ilpAddressSegment || peerInfo.id)
     } as IldcpMiddlewareServices))
 
     this.peerMiddleware.set(peerInfo.id, [...middleware, ...protocolMiddleware])
@@ -113,7 +113,7 @@ export default class Connector {
 
     // only add route for children. The rest are populated from route update.
     if (peerInfo.relation === 'child') {
-      const address = this.getOwnAddress() + '.' + (ildcpProtocol.ilpAddressSegment || peerInfo.id)
+      const address = this.getOwnAddress() + '.' + (ildcpProtocol && ildcpProtocol.ilpAddressSegment || peerInfo.id)
       this.routeManager.addRoute({
         peer: peerInfo.id,
         prefix: address,
