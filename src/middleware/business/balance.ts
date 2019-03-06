@@ -21,7 +21,7 @@ class Balance {
   private balance: bigint
   private minimum: bigint
   private maximum: bigint
-  constructor({
+  constructor ({
     initialBalance = 0n,
     minimum = 0n,
     maximum = BigInt(MAX_UINT_64)
@@ -31,7 +31,7 @@ class Balance {
     this.maximum = maximum
   }
 
-  add(amount: bigint) {
+  add (amount: bigint) {
     const newBalance = this.balance + amount
     if (newBalance > this.maximum) {
       logger.error('rejected balance update. oldBalance=%s newBalance=%s amount=%s', this.balance, newBalance, amount)
@@ -41,7 +41,7 @@ class Balance {
     this.balance = newBalance
   }
 
-  subtract(amount: bigint) {
+  subtract (amount: bigint) {
     const newBalance = this.balance - amount
     if (newBalance < this.minimum) {
       logger.error('rejected balance update. oldBalance=%s newBalance=%s amount=%s', this.balance, newBalance, amount)
@@ -51,11 +51,11 @@ class Balance {
     this.balance = newBalance
   }
 
-  getValue() {
+  getValue () {
     return this.balance
   }
 
-  toJSON() {
+  toJSON () {
     return {
       balance: this.balance.toString(),
       minimum: this.minimum.toString(),
@@ -217,11 +217,11 @@ export class BalanceMiddleware extends Middleware {
     return
   }
 
-  getStatus() {
+  getStatus () {
     return this.balance.toJSON()
   }
 
-  private _getBalance(): Balance {
+  private _getBalance (): Balance {
     const balance = this.balance
     if (!balance) {
       throw new Error('account not found. account.id=' + this.peer.id)
@@ -229,7 +229,7 @@ export class BalanceMiddleware extends Middleware {
     return balance
   }
 
-  modifyBalance(amountDiff: bigint): bigint {
+  modifyBalance (amountDiff: bigint): bigint {
     const balance = this.balance
     logger.info('modifying balance account.id=%s amount=%s', this.peer.id, amountDiff.toString())
     if (amountDiff < 0) {
@@ -243,8 +243,8 @@ export class BalanceMiddleware extends Middleware {
     return balance.getValue()
   }
 
-  private async maybeSettle(): Promise<void> {
-    const { settleThreshold, settleTo = '0' } = this.opts!
+  private async maybeSettle (): Promise<void> {
+    const { settleThreshold, settleTo = '0' } = this.opts
     const bnSettleThreshold = settleThreshold ? BigInt(settleThreshold) : undefined
     const bnSettleTo = BigInt(settleTo)
     const balance = this._getBalance()
@@ -266,7 +266,7 @@ export class BalanceMiddleware extends Middleware {
       })
   }
 
-  private async sendMoney(amount: string) {
+  private async sendMoney (amount: string) {
     const settlePacket: IlpPrepare = {
       destination: 'peer.settle',
       amount: amount,
