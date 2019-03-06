@@ -14,11 +14,12 @@ export class IldcpMiddleware extends Middleware {
     super({
       processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (request.destination === 'peer.config') {
-          const { assetCode, assetScale, ilpAddressSegment, id, relation } = getPeerInfo()
+          const { assetCode, assetScale, protocols, id, relation } = getPeerInfo()
+          const ildcpProtocol = protocols.filter(protocol => protocol.name === 'ildcp')[0]
           if (relation !== 'child') {
             throw new Error('Can\'t generate address for a peer that isn\t a child.')
           }
-          const clientAddress = getOwnAddress() + '.' + (ilpAddressSegment || id)
+          const clientAddress = getOwnAddress() + '.' + (ildcpProtocol.ilpAddressSegment || id)
           // TODO: Remove unnecessary serialization from ILDCP module
           return deserializeIlpReply(await ILDCP.serve({
             requestPacket: serializeIlpPrepare(request),

@@ -35,16 +35,19 @@ describe('Test App', function () {
   let client: ClientHttp2Session
   let aliceServer: Http2Server
   let app: App
+  const peerInfo: PeerInfo = {
+    id: 'alice',
+    assetCode: 'XRP',
+    assetScale: 9,
+    relation: 'child',
+    rules: [],
+    protocols: [],
+  }
 
   beforeEach(async () => {
     app = new App({ilpAddress: 'test.harry', port: 8083}, { redisClient: new RedisMock() })
     await app.start()
-    await app.addPeer({
-      id: 'alice',
-      assetCode: 'XRP',
-      assetScale: 9,
-      relation: 'child'
-    } as PeerInfo, {
+    await app.addPeer(peerInfo, {
       type: 'http',
       url: 'http://localhost:8084'
     } as EndpointInfo, ['errorHandler'])

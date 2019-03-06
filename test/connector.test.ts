@@ -21,6 +21,8 @@ describe('Connector', function () {
     relation: 'child',
     assetScale: 2,
     assetCode: 'USD',
+    rules: [],
+    protocols: []
   }
   const preparePacket = {
     amount: '52',
@@ -146,6 +148,8 @@ describe('Connector', function () {
         relation: 'child',
         assetScale: 2,
         assetCode: 'USD',
+        rules: [],
+        protocols: []
       }
       connector.setOwnAddress('test.connie')
 
@@ -204,6 +208,8 @@ describe('Connector', function () {
         relation: 'peer',
         assetScale: 2,
         assetCode: 'USD',
+        rules: [],
+        protocols: []
       }
       const bobFulfillPacket = {
         fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
@@ -229,6 +235,8 @@ describe('Connector', function () {
         relation: 'peer',
         assetScale: 2,
         assetCode: 'USD',
+        rules: [],
+        protocols: []
       }
       const bobEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
       await connector.addPeer(bobPeerInfo, bobEndpoint, [])

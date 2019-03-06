@@ -22,12 +22,16 @@ describe('Balance Middleware', function () {
       relation: 'peer',
       assetScale: 9,
       assetCode: 'XRP',
-      balance: {
-        minimum: 0n,
-        maximum: MAX_UINT_64,
-        settleThreshold: MAX_UINT_64,
-        settleTo: 0n
-      }
+      rules: [
+        {
+          name: 'balance',
+          minimum: 0n,
+          maximum: MAX_UINT_64,
+          settleThreshold: MAX_UINT_64,
+          settleTo: 0n
+        }
+      ],
+      protocols: []
     }
 
     beforeEach( async function () {
@@ -138,12 +142,16 @@ describe('Balance Middleware', function () {
           relation: 'peer',
           assetScale: 9,
           assetCode: 'XRP',
-          balance: {
-            minimum: -25n,
-            maximum: 25n,
-            settleThreshold: 10n,
-            settleTo: 0n
-          }
+          rules: [
+            {
+              name: 'balance',
+              minimum: -25n,
+              maximum: 25n,
+              settleThreshold: 10n,
+              settleTo: 0n
+            }
+          ],
+          protocols: []
         }
         balanceMiddleware = new BalanceMiddleware({ peerInfo, stats })
 

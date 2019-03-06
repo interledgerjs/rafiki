@@ -21,7 +21,7 @@ class Balance {
   private balance: bigint
   private minimum: bigint
   private maximum: bigint
-  constructor ({
+  constructor({
     initialBalance = 0n,
     minimum = 0n,
     maximum = BigInt(MAX_UINT_64)
@@ -31,7 +31,7 @@ class Balance {
     this.maximum = maximum
   }
 
-  add (amount: bigint) {
+  add(amount: bigint) {
     const newBalance = this.balance + amount
     if (newBalance > this.maximum) {
       logger.error('rejected balance update. oldBalance=%s newBalance=%s amount=%s', this.balance, newBalance, amount)
@@ -41,7 +41,7 @@ class Balance {
     this.balance = newBalance
   }
 
-  subtract (amount: bigint) {
+  subtract(amount: bigint) {
     const newBalance = this.balance - amount
     if (newBalance < this.minimum) {
       logger.error('rejected balance update. oldBalance=%s newBalance=%s amount=%s', this.balance, newBalance, amount)
@@ -51,11 +51,11 @@ class Balance {
     this.balance = newBalance
   }
 
-  getValue () {
+  getValue() {
     return this.balance
   }
 
-  toJSON () {
+  toJSON() {
     return {
       balance: this.balance.toString(),
       minimum: this.minimum.toString(),
@@ -73,15 +73,29 @@ export class BalanceMiddleware extends Middleware {
   private stats: Stats
   private balance: Balance
   private peer: PeerInfo
+  private opts: {
+    minimum: bigint,
+    maximum: bigint,
+    settleThreshold?: bigint,
+    settleTo: bigint
+  }
 
   constructor ({ peerInfo, stats }: BalanceMiddlewareServices) {
     super({})
     this.peer = peerInfo
     this.stats = stats
 
-    if (peerInfo.balance) {
-      let minimum = peerInfo.balance.minimum ? BigInt(peerInfo.balance.minimum) : MIN_INT_64
-      let maximum = BigInt(peerInfo.balance.maximum)
+    const balance = peerInfo.rules.filter(rule => rule.name === 'balance')[0]
+    this.opts = {
+      minimum: balance.minimum,
+      maximum: balance.maximum,
+      settleThreshold: balance.settleThreshold,
+      settleTo: balance.settleTo
+    }
+
+    if (balance) {
+      let minimum = balance.minimum ? BigInt(balance.minimum) : MIN_INT_64
+      let maximum = BigInt(balance.maximum)
 
       this.balance = new Balance({
         minimum,
@@ -138,13 +152,13 @@ export class BalanceMiddleware extends Middleware {
       logger.info('incoming packet refunded due to error. account.id=%s amount=%s newBalance=%s', this.peer.id, amount, this.balance.getValue())
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
-      this.stats.incomingDataPacketValue.increment(this.peer, { result : 'failed' }, + amount)
+      this.stats.incomingDataPacketValue.increment(this.peer, { result: 'failed' }, + amount)
       throw err
     }
 
     if (isFulfill(result)) {
       this.maybeSettle().catch(logger.error)
-      this.stats.incomingDataPacketValue.increment(this.peer, { result : 'fulfilled' }, + amount)
+      this.stats.incomingDataPacketValue.increment(this.peer, { result: 'fulfilled' }, + amount)
     } else {
       // Refund on reject
       this.balance.subtract(BigInt(amount))
@@ -152,7 +166,7 @@ export class BalanceMiddleware extends Middleware {
 
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
-      this.stats.incomingDataPacketValue.increment(this.peer, { result : 'rejected' }, + amount)
+      this.stats.incomingDataPacketValue.increment(this.peer, { result: 'rejected' }, + amount)
     }
 
     return result
@@ -179,7 +193,7 @@ export class BalanceMiddleware extends Middleware {
       result = await next(request)
     } catch (err) {
       logger.error('outgoing packet not applied due to error. account.id=%s amount=%s newBalance=%s', peer.id, amount, balance.getValue())
-      this.stats.outgoingDataPacketValue.increment(peer, { result : 'failed' }, + amount)
+      this.stats.outgoingDataPacketValue.increment(peer, { result: 'failed' }, + amount)
       throw err
     }
 
@@ -190,10 +204,10 @@ export class BalanceMiddleware extends Middleware {
       logger.info('balance decreased due to outgoing ilp fulfill. account.id=%s amount=%s newBalance=%s', peer.id, amount, balance.getValue())
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(peer, {}, balance.getValue().toNumber())
-      this.stats.outgoingDataPacketValue.increment(peer, { result : 'fulfilled' }, + amount)
+      this.stats.outgoingDataPacketValue.increment(peer, { result: 'fulfilled' }, + amount)
     } else {
       logger.info('outgoing packet not applied due to ilp reject. account.id=%s amount=%s newBalance=%s', peer.id, amount, balance.getValue())
-      this.stats.outgoingDataPacketValue.increment(peer, { result : 'rejected' }, + amount)
+      this.stats.outgoingDataPacketValue.increment(peer, { result: 'rejected' }, + amount)
     }
 
     return result
@@ -203,11 +217,11 @@ export class BalanceMiddleware extends Middleware {
     return
   }
 
-  getStatus () {
+  getStatus() {
     return this.balance.toJSON()
   }
 
-  private _getBalance (): Balance {
+  private _getBalance(): Balance {
     const balance = this.balance
     if (!balance) {
       throw new Error('account not found. account.id=' + this.peer.id)
@@ -215,7 +229,7 @@ export class BalanceMiddleware extends Middleware {
     return balance
   }
 
-  modifyBalance (amountDiff: bigint): bigint {
+  modifyBalance(amountDiff: bigint): bigint {
     const balance = this.balance
     logger.info('modifying balance account.id=%s amount=%s', this.peer.id, amountDiff.toString())
     if (amountDiff < 0) {
@@ -229,8 +243,8 @@ export class BalanceMiddleware extends Middleware {
     return balance.getValue()
   }
 
-  private async maybeSettle (): Promise<void> {
-    const { settleThreshold, settleTo = '0' } = this.peer.balance!
+  private async maybeSettle(): Promise<void> {
+    const { settleThreshold, settleTo = '0' } = this.opts!
     const bnSettleThreshold = settleThreshold ? BigInt(settleThreshold) : undefined
     const bnSettleTo = BigInt(settleTo)
     const balance = this._getBalance()
@@ -252,7 +266,7 @@ export class BalanceMiddleware extends Middleware {
       })
   }
 
-  private async sendMoney (amount: string) {
+  private async sendMoney(amount: string) {
     const settlePacket: IlpPrepare = {
       destination: 'peer.settle',
       amount: amount,

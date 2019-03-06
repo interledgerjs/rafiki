@@ -39,10 +39,12 @@ describe('Stats Middleware', function () {
     stats = new Stats()
     statsMiddleware = new StatsMiddleware({
       peerInfo: {
-        'id': 'alice',
-        'relation': 'peer',
-        'assetScale': 2,
-        'assetCode': 'TEST'
+        id: 'alice',
+        relation: 'peer',
+        assetScale: 2,
+        assetCode: 'TEST',
+        rules: [],
+        protocols: []
       },
       stats
     })
