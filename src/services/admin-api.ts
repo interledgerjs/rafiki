@@ -122,7 +122,7 @@ export default class AdminApi {
 
   private async updateBalance (url: string, _data: object) {
     try {
-      await validateBalanceUpdate(_data)
+      validateBalanceUpdate(_data)
     } catch (err) {
       const firstError = (err.errors &&
         err.errors[0]) ||
@@ -131,7 +131,7 @@ export default class AdminApi {
     }
     const { peerId, amountDiff } = _data as BalanceUpdate
     const limit = this.app.settlementEngine.getBalanceLimits(peerId)
-    this.app.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
+    await this.app.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
 
     return {
       'balance': this.app.settlementEngine.getBalance(peerId).toString(),
