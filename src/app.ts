@@ -16,6 +16,7 @@ import Stats from './services/stats'
 import { ReduceExpiryMiddleware } from './middleware/protocol/reduce-expiry'
 import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2-endpoint'
+import { serializeIlpReject } from 'ilp-packet'
 
 export interface AppOptions {
   ilpAddress: string
@@ -61,6 +62,8 @@ export default class App {
       const method = headers[':method']
       const path = headers[':path']
 
+      // log.info('received stream', { path })
+
       // TODO better path matching
       if (path) {
         // Get the incoming data
@@ -79,7 +82,7 @@ export default class App {
   }
 
   async start () {
-    log.info('starting connector')
+    log.info('starting connector on port ' + this.port)
     this.server.listen(this.port)
   }
 
@@ -88,8 +91,14 @@ export default class App {
     const endpoint = this.endpointsMap.get('alice')
     if (endpoint) {
       return endpoint.handlePacket(data)
+    } else {
+      return serializeIlpReject({
+        code: 'T01',
+        data: Buffer.from(''),
+        message: 'Peer not found',
+        triggeredBy: this.connector.getOwnAddress() || ''
+      })
     }
-    // TODO fail if no endpoint found
   }
 
   async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo, middlewares: string[]) {

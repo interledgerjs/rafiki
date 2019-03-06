@@ -46,7 +46,7 @@ const start = async () => {
 
   const app = new App({
     ilpAddress: 'test',
-    port: 8081
+    port: 8443
   })
   await app.start()
 
