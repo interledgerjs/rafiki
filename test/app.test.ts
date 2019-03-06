@@ -60,6 +60,8 @@ describe('Test App', function () {
       response.end(serializeIlpFulfill(responsePacket))
     })
     aliceServer.listen(8084)
+
+    await new Promise(resolve => setTimeout(() => resolve(), 100)) // give servers chance to start listening
   })
 
   afterEach(() => {
@@ -83,6 +85,28 @@ describe('Test App', function () {
       data: Buffer.from(''),
       fulfillment: Buffer.alloc(32)
     })
+  })
+
+  describe('shutdown', function () {
+    it('tells connector to remove all peers', async function () {
+      const removePeerSpy = sinon.spy(app.connector, 'removePeer')
+
+      await app.shutdown()
+
+      sinon.assert.calledWith(removePeerSpy, 'alice')
+    })
+
+    it('disposes of packet caches', async function () {
+      const packetCacheSpies = Array.from(app.packetCacheMap.values()).map(cache => sinon.spy(cache, 'dispose'))
+
+      await app.shutdown()
+
+      packetCacheSpies.forEach(spy => sinon.assert.calledOnce(spy))
+    })
+  })
+
+  describe('addPeer', async function () {
+    
   })
 
 })

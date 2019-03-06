@@ -188,12 +188,14 @@ describe('Admin Api', function () {
 
   describe('addPeer', function () {
     it('returns 204 on successful addition of peer', async function () {
-      const addPeerSpy = sinon.spy(app.addPeer)
+      const addPeerSpy = sinon.spy(app, 'addPeer')
       const peerInfo: PeerInfo = {
         id: 'alice',
         assetCode: 'USD',
         assetScale: 2,
-        relation: 'peer'
+        relation: 'peer',
+        rules: [],
+        protocols: []
       }
       const endpointInfo: EndpointInfo = {
         type: 'http',
@@ -203,9 +205,7 @@ describe('Admin Api', function () {
       const response = await axios.post('http://127.0.0.1:7780/peer', { peerInfo, endpointInfo })
 
       assert.equal(response.status, 204)
-      sinon.assert.calledWith(addPeerSpy, sinon.match(function (value) {
-        console.log('value', value)
-      }))
+      sinon.assert.calledWith(addPeerSpy, peerInfo, endpointInfo)
     })
   })
 })
