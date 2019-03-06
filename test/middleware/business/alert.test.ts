@@ -19,7 +19,9 @@ describe('Alert Middleware', function () {
       id: 'harry',
       relation: 'peer',
       assetScale: 9,
-      assetCode: 'XRP'
+      assetCode: 'XRP',
+      rules: [],
+      protocols: []
     } 
 
     beforeEach( async function () {

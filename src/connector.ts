@@ -51,29 +51,35 @@ export default class Connector {
 
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation) // TODO refactor when RouteManager is finished
 
-    const protocolMiddleware = [
-      // new HeartbeatMiddleware({
-      //   endpoint,
-      //   onSuccessfulHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
-      //   onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
-      // }),
-      new CcpMiddleware({
-        isSender: peerInfo.sendRoutes as boolean,
-        isReceiver: peerInfo.receiveRoutes as boolean,
-        peerId: peerInfo.id,
-        forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
-        getPeerRelation: this.getPeerRelation.bind(this),
-        getOwnAddress: () => this.getOwnAddress() as string,
-        addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
-        removeRoute: this.routeManager.removeRoute.bind(this),
-        getRouteWeight: this.calculateRouteWeight.bind(this)
-      }),
-      new IldcpMiddleware({
-        getPeerInfo: () => peerInfo,
-        getOwnAddress: this.getOwnAddress.bind(this),
-        getPeerAddress: () => this.getOwnAddress() + '.' + (peerInfo.ilpAddressSegment || peerInfo.id)
-      } as IldcpMiddlewareServices)
-    ]
+    const protocolMiddleware = []
+    // const protocolMiddleware = [
+    //   // new HeartbeatMiddleware({
+    //   //   endpoint,
+    //   //   onSuccessfulHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
+    //   //   onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
+    //   // }),
+    //   ,
+    // ]
+
+    const ccpProtocol = peerInfo.protocols.filter(protocol => protocol.name === 'ccp')[0]
+    protocolMiddleware.push(new CcpMiddleware({
+      isSender: ccpProtocol.sendRoutes as boolean,
+      isReceiver: ccpProtocol.receiveRoutes as boolean,
+      peerId: peerInfo.id,
+      forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
+      getPeerRelation: this.getPeerRelation.bind(this),
+      getOwnAddress: () => this.getOwnAddress() as string,
+      addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
+      removeRoute: this.routeManager.removeRoute.bind(this),
+      getRouteWeight: this.calculateRouteWeight.bind(this)
+    }))
+
+    const ildcpProtocol = peerInfo.protocols.filter(protocol => protocol.name === 'ildcp')[0]
+    protocolMiddleware.push(new IldcpMiddleware({
+      getPeerInfo: () => peerInfo,
+      getOwnAddress: this.getOwnAddress.bind(this),
+      getPeerAddress: () => this.getOwnAddress() + '.' + (ildcpProtocol.ilpAddressSegment || peerInfo.id)
+    } as IldcpMiddlewareServices))
 
     this.peerMiddleware.set(peerInfo.id, [...middleware, ...protocolMiddleware])
     const combinedMiddleware = pipeline(...middleware, ...protocolMiddleware)
@@ -107,7 +113,7 @@ export default class Connector {
 
     // only add route for children. The rest are populated from route update.
     if (peerInfo.relation === 'child') {
-      const address = this.getOwnAddress() + '.' + (peerInfo.ilpAddressSegment || peerInfo.id)
+      const address = this.getOwnAddress() + '.' + (ildcpProtocol.ilpAddressSegment || peerInfo.id)
       this.routeManager.addRoute({
         peer: peerInfo.id,
         prefix: address,

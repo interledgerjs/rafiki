@@ -6,7 +6,7 @@ import { ErrorHandlerMiddleware } from './middleware/business/error-handler'
 import { RateLimitMiddleware, createRateLimitBucketForPeer } from './middleware/business/rate-limit'
 import { MaxPacketAmountMiddleware } from './middleware/business/max-packet-amount'
 import { ThroughputMiddleware, createThroughputLimitBucketsForPeer } from './middleware/business/throughput'
-import { DeduplicateMiddleware, PacketCache } from './middleware/business/deduplicate'
+import { DeduplicateMiddleware, PacketCache, PacketCacheOptions } from './middleware/business/deduplicate'
 import { ExpireMiddleware } from './middleware/business/expire'
 import { ValidateFulfillmentMiddleware } from './middleware/business/validate-fulfillment'
 import { StatsMiddleware } from './middleware/business/stats'
@@ -136,14 +136,6 @@ export default class App {
     const globalMinExpirationWindow = 35000
     const globalMaxHoldWindow = 35000
 
-    const rateLimitBucket: TokenBucket = createRateLimitBucketForPeer(peerInfo)
-    const throughputBuckets = createThroughputLimitBucketsForPeer(peerInfo)
-    const cache = new PacketCache(peerInfo.deduplicate || {}) // Could make this a global cache to allow for checking across different peers?
-
-    this.packetCacheMap.set(peerInfo.id, cache)
-    this.throughputBucketsMap.set(peerInfo.id, throughputBuckets)
-    this.rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
-
     const instantiateMiddleware = (identifier: string): Middleware => {
       switch (identifier) {
         case('errorHandler'):
@@ -153,12 +145,20 @@ export default class App {
         case('reduceExpiry'):
           return new ReduceExpiryMiddleware({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow })
         case('rateLimit'):
+          const rateLimitBucket: TokenBucket = createRateLimitBucketForPeer(peerInfo)
+          this.rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
           return new RateLimitMiddleware({ peerInfo, stats: this.stats, bucket: rateLimitBucket })
         case('maxPacketAmount'):
-          return new MaxPacketAmountMiddleware({ maxPacketAmount: peerInfo.maxPacketAmount })
+          const rule = peerInfo.rules.filter((rule) => rule.name === 'maxPacketAmount')[0]
+          return new MaxPacketAmountMiddleware({ maxPacketAmount: rule.maxPacketAmount })
         case('throughput'):
+          const throughputBuckets = createThroughputLimitBucketsForPeer(peerInfo)
+          this.throughputBucketsMap.set(peerInfo.id, throughputBuckets)
           return new ThroughputMiddleware(throughputBuckets)
         case('deduplicate'):
+          const deduplicate = peerInfo.rules.filter((rule) => rule.name === 'deduplicate')[0]
+          const cache = new PacketCache(deduplicate as PacketCacheOptions || {}) // Could make this a global cache to allow for checking across different peers?
+          this.packetCacheMap.set(peerInfo.id, cache)
           return new DeduplicateMiddleware({ cache })
         case('validateFulfillment'):
           return new ValidateFulfillmentMiddleware()

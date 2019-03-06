@@ -56,12 +56,14 @@ export function createThroughputLimitBucketsForPeer (peerInfo: PeerInfo): { inco
     outgoingBucket?: TokenBucket
   }
 
-  if (peerInfo.throughput) {
+  const throughput = peerInfo.rules.filter(rule => rule.name === 'throughput')[0]
+
+  if (throughput) {
     const {
       refillPeriod = DEFAULT_REFILL_PERIOD,
       incomingAmount = false,
       outgoingAmount = false
-    } = peerInfo.throughput || {}
+    } = throughput || {}
 
     if (incomingAmount) {
       // TODO: When we add the ability to update middleware, our state will get
