@@ -1,16 +1,13 @@
 import { Server, IncomingMessage, ServerResponse } from 'http'
-import Config from './config'
 import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
 import InvalidJsonBodyError from '../errors/invalid-json-body-error'
 import Ajv = require('ajv')
-import { PeerInfo } from '../types/peer'
-import App, { EndpointInfo } from '../app'
+import App from '../app'
 const ajv = new Ajv()
 const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
 
 export interface AdminApiDeps {
-  app: App,
-  config: Config
+  app: App
 }
 
 interface Route {
@@ -22,12 +19,10 @@ interface Route {
 export default class AdminApi {
   private app: App
   private server?: Server
-  private config: Config
   private routes: Route[]
 
-  constructor ({ app, config }: AdminApiDeps) {
+  constructor ({ app }: AdminApiDeps) {
     this.app = app
-    this.config = config
     this.routes = [
       { method: 'GET', match: '/health$', fn: async () => 'Status: ok' },
       { method: 'GET', match: '/stats$', fn: this.getStats },
@@ -43,32 +38,28 @@ export default class AdminApi {
   }
 
   listen () {
-    const {
-      adminApi = false,
-      adminApiHost = '127.0.0.1',
-      adminApiPort = 7780
-    } = this.config
+    
+    const adminApiHost = '127.0.0.1' //hardcoded for now
+    const adminApiPort = 7780
 
-    if (adminApi) {
-      // TODO: add logging
-      // log.info('admin api listening. host=%s port=%s', adminApiHost, adminApiPort)
-      this.server = new Server()
-      this.server.listen(adminApiPort, adminApiHost)
-      this.server.on('request', (req, res) => {
-        this.handleRequest(req, res).catch((e) => {
-          let err = e
-          if (!e || typeof e !== 'object') {
-            err = new Error('non-object thrown. error=' + e)
-          }
+    // TODO: add logging
+    // log.info('admin api listening. host=%s port=%s', adminApiHost, adminApiPort)
+    this.server = new Server()
+    this.server.listen(adminApiPort, adminApiHost)
+    this.server.on('request', (req, res) => {
+      this.handleRequest(req, res).catch((e) => {
+        let err = e
+        if (!e || typeof e !== 'object') {
+          err = new Error('non-object thrown. error=' + e)
+        }
 
-          // TODO: add logging
-          // log.warn('error in admin api request handler. error=%s', err.stack ? err.stack : err)
-          res.statusCode = e.httpErrorCode || 500
-          res.setHeader('Content-Type', 'text/plain')
-          res.end(String(err))
-        })
+        // TODO: add logging
+        // log.warn('error in admin api request handler. error=%s', err.stack ? err.stack : err)
+        res.statusCode = e.httpErrorCode || 500
+        res.setHeader('Content-Type', 'text/plain')
+        res.end(String(err))
       })
-    }
+    })
   }
 
   private async handleRequest (req: IncomingMessage, res: ServerResponse) {

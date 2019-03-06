@@ -2,7 +2,6 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
-import Config from '../../src/services/config'
 import AdminApi from '../../src/services/admin-api'
 import axios from 'axios'
 import { PeerInfo } from '../../src/types/peer'
@@ -15,26 +14,10 @@ describe('Admin Api', function () {
 
   let app: App
   let adminApi: AdminApi
-  let config: Config
 
   beforeEach(function () {
     app = new App({ ilpAddress: 'unknown', port: 8083 }, { redisClient: new RedisMock() })
-    config = new Config()
-
-    config.loadFromOpts({
-      env: "test",
-      accounts: {
-        'cad-ledger': {
-          relation: 'peer',
-          assetCode: 'CAD',
-          assetScale: 4,
-          endpoint: 'mock-ilp-endpoint',
-          options: {}
-        }
-      },
-      adminApi: true
-    })
-    adminApi = new AdminApi({ app, config })
+    adminApi = new AdminApi({ app })
     adminApi.listen()
   })
 
