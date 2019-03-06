@@ -104,6 +104,10 @@ export default class App {
     if (endpoint) {
       endpoint.close()
     }
+    this.packetCacheMap.delete(peerId)
+    this.rateLimitBucketMap.delete(peerId)
+    this.throughputBucketsMap.delete(peerId)
+    this.endpointsMap.delete(peerId)
     await this.connector.removePeer(peerId)
     // TODO need to resolve some stuff here
   }
@@ -112,7 +116,7 @@ export default class App {
    * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's middleware.
    */
   async shutdown () {
-    this.connector.getPeerList().forEach((peerId: string) => this.connector.removePeer(peerId))
+    this.connector.getPeerList().forEach((peerId: string) => this.removePeer(peerId))
     Array.from(this.packetCacheMap.values()).forEach(cache => cache.dispose())
     this.packetCacheMap.clear()
     this.rateLimitBucketMap.clear()
