@@ -146,6 +146,6 @@ export default class AdminApi {
 
     // TODO use ajv to validate _data
     if (!peerInfo || !endpointInfo) throw new Error('invalid arguments. need peerInfo and endpointInfo')
-    await this.app.addPeer(peerInfo, endpointInfo, [])
+    await this.app.addPeer(peerInfo, endpointInfo)
   }
 }

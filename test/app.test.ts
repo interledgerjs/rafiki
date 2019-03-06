@@ -11,6 +11,8 @@ const RedisMock = require('ioredis-mock')
 import { connect, ClientHttp2Session, constants, createServer, Http2Server, Http2ServerRequest, Http2ServerResponse } from  'http2'
 import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
 import { PeerInfo } from '../src/types/peer';
+import { Http2Endpoint } from '../src/endpoints/http2-endpoint';
+import { ErrorHandlerMiddleware } from '../src/middleware/business/error-handler';
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -40,7 +42,9 @@ describe('Test App', function () {
     assetCode: 'XRP',
     assetScale: 9,
     relation: 'child',
-    rules: [],
+    rules: [{
+      name: 'errorHandler'
+    }],
     protocols: [],
   }
 
@@ -50,7 +54,7 @@ describe('Test App', function () {
     await app.addPeer(peerInfo, {
       type: 'http',
       url: 'http://localhost:8084'
-    } as EndpointInfo, ['errorHandler'])
+    } as EndpointInfo)
     client = connect('http://localhost:8083')
     aliceServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
       const responsePacket = {
@@ -106,7 +110,52 @@ describe('Test App', function () {
   })
 
   describe('addPeer', async function () {
-    
+    it('creates endpoint to be used by connector to add peer', async function () {
+      const addPeerStub = sinon.stub(app.connector, 'addPeer').resolves()
+      const peerInfo: PeerInfo = {
+        id: 'bob',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'child',
+        rules: [{
+          name: 'errorHandler'
+        }],
+        protocols: [],
+      }
+      const endpointInfo: EndpointInfo = {
+        type: 'http',
+        'url': 'http://localhost:1234'
+      }
+
+      await app.addPeer(peerInfo, endpointInfo)
+
+      const endpoint = addPeerStub.args[0][1]
+      assert.isTrue(endpoint instanceof Http2Endpoint)
+    })
+
+    it('creates middleware instances to be used by connector to add peer', async function () {
+      const addPeerStub = sinon.stub(app.connector, 'addPeer').resolves()
+      const peerInfo: PeerInfo = {
+        id: 'bob',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'child',
+        rules: [{
+          name: 'errorHandler'
+        }],
+        protocols: [],
+      }
+      const endpointInfo: EndpointInfo = {
+        type: 'http',
+        'url': 'http://localhost:1234'
+      }
+
+      await app.addPeer(peerInfo, endpointInfo)
+
+      const middlewareArray = addPeerStub.args[0][2]
+      assert.equal(middlewareArray.length, 1)
+      assert.isTrue(middlewareArray[0] instanceof ErrorHandlerMiddleware)
+    })
   })
 
 })
