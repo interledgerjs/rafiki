@@ -1,12 +1,16 @@
 import { Server, IncomingMessage, ServerResponse } from 'http'
-import Stats from './stats'
 import Config from './config'
-import { Alerts } from '../middleware/business/alert'
+import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
+import InvalidJsonBodyError from '../errors/invalid-json-body-error'
+import Ajv = require('ajv')
+import { PeerInfo } from '../types/peer'
+import App, { EndpointInfo } from '../app'
+const ajv = new Ajv()
+const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
 
 export interface AdminApiDeps {
-  stats: Stats,
-  config: Config,
-  alerts: Alerts
+  app: App,
+  config: Config
 }
 
 interface Route {
@@ -16,21 +20,21 @@ interface Route {
   responseType?: string
 }
 export default class AdminApi {
+  private app: App
   private server?: Server
-  private stats: Stats
   private config: Config
   private routes: Route[]
-  private alerts: Alerts
 
-  constructor ({ stats, config, alerts }: AdminApiDeps) {
-    this.stats = stats
+  constructor ({ app, config }: AdminApiDeps) {
+    this.app = app
     this.config = config
-    this.alerts = alerts
-
     this.routes = [
       { method: 'GET', match: '/health$', fn: async () => 'Status: ok' },
       { method: 'GET', match: '/stats$', fn: this.getStats },
-      { method: 'GET', match: '/alerts$', fn: this.getAlerts }
+      { method: 'GET', match: '/alerts$', fn: this.getAlerts },
+      { method: 'GET', match: '/balance$', fn: this.getBalances },
+      { method: 'POST', match: '/balance$', fn: this.updateBalance },
+      { method: 'POST', match: '/peer$', fn: this.addPeer }
     ]
   }
 
@@ -103,12 +107,45 @@ export default class AdminApi {
   }
 
   private async getStats () {
-    return this.stats.getStatus()
+    return this.app.stats.getStatus()
   }
 
   private async getAlerts () {
     return {
-      alerts: this.alerts.getAlerts()
+      alerts: this.app.alerts.getAlerts()
     }
+  }
+
+  private async getBalances () {
+    return this.app.settlementEngine.getStatus()
+  }
+
+  private async updateBalance (url: string, _data: object) {
+    try {
+      validateBalanceUpdate(_data)
+    } catch (err) {
+      const firstError = (err.errors &&
+        err.errors[0]) ||
+        { message: 'unknown validation error', dataPath: '' }
+      throw new InvalidJsonBodyError('invalid balance update: error=' + firstError.message + ' dataPath=' + firstError.dataPath, err.errors || [])
+    }
+    const { peerId, amountDiff } = _data as BalanceUpdate
+    const limit = this.app.settlementEngine.getBalanceLimits(peerId)
+    await this.app.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
+
+    return {
+      'balance': this.app.settlementEngine.getBalance(peerId).toString(),
+      'minimum': limit.min.toString(),
+      'maximum': limit.max.toString()
+    }
+  }
+
+  private async addPeer (url: string, _data: object) {
+    const peerInfo = _data['peerInfo']
+    const endpointInfo = _data['endpointInfo']
+
+    // TODO use ajv to validate _data
+    if (!peerInfo || !endpointInfo) throw new Error('invalid arguments. need peerInfo and endpointInfo')
+    await this.app.addPeer(peerInfo, endpointInfo)
   }
 }

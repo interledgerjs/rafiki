@@ -1,7 +1,7 @@
 import * as log from 'winston'
 import { Middleware } from './types/middleware'
 import Connector from './connector'
-import { PeerInfo } from './types/peer'
+import { PeerInfo, Rule } from './types/peer'
 import { ErrorHandlerMiddleware } from './middleware/business/error-handler'
 import { RateLimitMiddleware, createRateLimitBucketForPeer } from './middleware/business/rate-limit'
 import { MaxPacketAmountMiddleware } from './middleware/business/max-packet-amount'
@@ -17,10 +17,18 @@ import { ReduceExpiryMiddleware } from './middleware/protocol/reduce-expiry'
 import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2-endpoint'
 import { serializeIlpReject } from 'ilp-packet'
+import SettlementEngine from './services/settlement-engine'
+import * as Redis from 'ioredis'
+
+const REDIS_BALANCE_STREAM_KEY = 'balance'
 
 export interface AppOptions {
   ilpAddress: string
   port: number,
+}
+
+export interface AppDeps {
+  redisClient: Redis.Redis
 }
 
 export interface EndpointInfo {
@@ -36,12 +44,12 @@ export default class App {
   packetCacheMap: Map<string, PacketCache>
   rateLimitBucketMap: Map<string, TokenBucket>
   throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
-
+  settlementEngine: SettlementEngine
   server: Http2Server
   port: number
   endpointsMap: Map<string, Http2Endpoint>
 
-  constructor (opts: AppOptions) {
+  constructor (opts: AppOptions, deps?: AppDeps) {
 
     this.connector = new Connector()
     this.stats = new Stats()
@@ -50,6 +58,7 @@ export default class App {
     this.rateLimitBucketMap = new Map()
     this.throughputBucketsMap = new Map()
     this.endpointsMap = new Map()
+    this.settlementEngine = new SettlementEngine({ streamKey: REDIS_BALANCE_STREAM_KEY, redisClient: deps ? deps.redisClient : new Redis() })
 
     this.connector.setOwnAddress(opts.ilpAddress)
 
@@ -101,11 +110,11 @@ export default class App {
     }
   }
 
-  async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo, middlewares: string[]) {
+  async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
     const endpoint = this.createEndpoint(endpointInfo)
     this.endpointsMap.set(peerInfo.id, endpoint)
     // TODO need to resolve some stuff here
-    await this.connector.addPeer(peerInfo, endpoint, this._createMiddleware(middlewares, peerInfo), false)
+    await this.connector.addPeer(peerInfo, endpoint, this._createMiddleware(peerInfo), false)
   }
 
   async removePeer (peerId: string) {
@@ -144,13 +153,13 @@ export default class App {
     }
   }
 
-  private _createMiddleware (middleware: string[], peerInfo: PeerInfo): Middleware[] {
+  private _createMiddleware (peerInfo: PeerInfo): Middleware[] {
     // Global/Config might be needed
     const globalMinExpirationWindow = 35000
     const globalMaxHoldWindow = 35000
 
-    const instantiateMiddleware = (identifier: string): Middleware => {
-      switch (identifier) {
+    const instantiateMiddleware = (rule: Rule): Middleware => {
+      switch (rule.name) {
         case('errorHandler'):
           return new ErrorHandlerMiddleware({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' })
         case('expire'):
@@ -162,15 +171,13 @@ export default class App {
           this.rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
           return new RateLimitMiddleware({ peerInfo, stats: this.stats, bucket: rateLimitBucket })
         case('maxPacketAmount'):
-          const rule = peerInfo.rules.filter((rule) => rule.name === 'maxPacketAmount')[0]
           return new MaxPacketAmountMiddleware({ maxPacketAmount: rule.maxPacketAmount })
         case('throughput'):
           const throughputBuckets = createThroughputLimitBucketsForPeer(peerInfo)
           this.throughputBucketsMap.set(peerInfo.id, throughputBuckets)
           return new ThroughputMiddleware(throughputBuckets)
         case('deduplicate'):
-          const deduplicate = peerInfo.rules.filter((rule) => rule.name === 'deduplicate')[0]
-          const cache = new PacketCache(deduplicate as PacketCacheOptions || {}) // Could make this a global cache to allow for checking across different peers?
+          const cache = new PacketCache(rule as PacketCacheOptions || {}) // Could make this a global cache to allow for checking across different peers?
           this.packetCacheMap.set(peerInfo.id, cache)
           return new DeduplicateMiddleware({ cache })
         case('validateFulfillment'):
@@ -184,7 +191,7 @@ export default class App {
       }
     }
 
-    return middleware.map(instantiateMiddleware)
+    return peerInfo.rules.map(instantiateMiddleware)
   }
 
 }

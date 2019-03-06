@@ -32,7 +32,7 @@ export default class SettlementEngine {
     this.started = true
     // TODO: Handle case where redis status isn't connected
 
-    this.startPolling()
+    await this.startPolling()
   }
 
   private startPolling = async (): Promise<void> => {
@@ -71,15 +71,15 @@ export default class SettlementEngine {
     return prevbalance
   }
 
-  updateBalance (peerId: string, delta: bigint) {
+  async updateBalance (peerId: string, delta: bigint) {
     const prevbalance = this.getBalance(peerId)
     const newBalance = prevbalance + delta
     const limits = this.getBalanceLimits(peerId)
     const isNewBalanceOutsideLimits = newBalance < limits.min || newBalance > limits.max
     const prevBalanceOutsideLimits = prevbalance < limits.min || prevbalance > limits.max
 
-    if (isNewBalanceOutsideLimits) this.redis.set(`${peerId}:balance:enabled`, false)
-    if (prevBalanceOutsideLimits && !isNewBalanceOutsideLimits) this.redis.set(`${peerId}:balance:enabled`, true)
+    if (isNewBalanceOutsideLimits) await this.redis.set(`${peerId}:balance:enabled`, false)
+    if (prevBalanceOutsideLimits && !isNewBalanceOutsideLimits) await this.redis.set(`${peerId}:balance:enabled`, true)
 
     this.peerBalances.set(peerId, newBalance)
   }
@@ -91,8 +91,8 @@ export default class SettlementEngine {
     if (data[0][1].length > 0) {
       this.lastMessageId = data[0][1][0][0]
       const message = this.parseMessageIntoObject(data[0][1][0][1])
-      if (message.pipeline === 'incoming') this.handleIncomingPipelineMessage(message)
-      else this.handleOutgoingPipelineMessage(message)
+      if (message.pipeline === 'incoming') await this.handleIncomingPipelineMessage(message)
+      else await this.handleOutgoingPipelineMessage(message)
     }
   }
 
@@ -109,13 +109,13 @@ export default class SettlementEngine {
     return object
   }
 
-  handleIncomingPipelineMessage (message: BalanceMiddlewareMessage) {
+  async handleIncomingPipelineMessage (message: BalanceMiddlewareMessage) {
     const { peerId, amount } = message
 
     switch (message.type) {
 
       case 'prepare': {
-        this.updateBalance(peerId, amount)
+        await this.updateBalance(peerId, amount)
         break
       }
 
@@ -124,12 +124,12 @@ export default class SettlementEngine {
       }
 
       case 'reject': {
-        this.updateBalance(peerId, -amount)
+        await this.updateBalance(peerId, -amount)
         break
       }
 
       case 'failed': {
-        this.updateBalance(peerId, -amount)
+        await this.updateBalance(peerId, -amount)
         break
       }
 
@@ -139,7 +139,7 @@ export default class SettlementEngine {
     }
   }
 
-  handleOutgoingPipelineMessage (message: BalanceMiddlewareMessage) {
+  async handleOutgoingPipelineMessage (message: BalanceMiddlewareMessage) {
     const { peerId, amount } = message
     switch (message.type) {
 
@@ -148,7 +148,7 @@ export default class SettlementEngine {
       }
 
       case 'fulfill': {
-        this.updateBalance(peerId, -amount)
+        await this.updateBalance(peerId, -amount)
         break
       }
 
@@ -164,5 +164,19 @@ export default class SettlementEngine {
         throw new Error('Unidentified message type.')
       }
     }
+  }
+
+  getStatus () {
+    const peers = Array.from(this.peerBalances.keys())
+    let status = {}
+    peers.forEach(peer => {
+      const limit = this.getBalanceLimits(peer)
+      status[peer] = {
+        'balance': this.getBalance(peer).toString(),
+        'minimum': limit.min.toString(),
+        'maximum': limit.max.toString()
+      }
+    })
+    return status
   }
 }
