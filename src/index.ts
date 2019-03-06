@@ -1,5 +1,6 @@
 import * as winston from 'winston'
 import App from './app'
+import AdminApi from './services/admin-api'
 
 // Logging
 const formatter = winston.format.printf(({ service, level, message, component, timestamp }) => {
@@ -35,6 +36,7 @@ const start = async () => {
       // Graceful shutdown
       winston.debug('shutting down.')
       await app.shutdown()
+      adminApi.shutdown()
       winston.debug('completed graceful shutdown.')
       process.exit(0)
     } catch (err) {
@@ -48,8 +50,9 @@ const start = async () => {
     ilpAddress: 'test',
     port: 8443
   })
+  const adminApi = new AdminApi({ app })
   await app.start()
-
+  adminApi.listen()
 }
 
 start().catch(e => {

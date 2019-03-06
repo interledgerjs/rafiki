@@ -38,8 +38,7 @@ export default class AdminApi {
   }
 
   listen () {
-    
-    const adminApiHost = '127.0.0.1' //hardcoded for now
+    const adminApiHost = '127.0.0.1' // hardcoded for now
     const adminApiPort = 7780
 
     // TODO: add logging
