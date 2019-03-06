@@ -1,4 +1,4 @@
-FROM node:8-slim
+FROM node:lts-slim
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -14,5 +14,7 @@ RUN npm install
 
 # Bundle app source
 COPY . .
+
+RUN npm run build
 
 CMD [ "node", "build/index.js" ]
