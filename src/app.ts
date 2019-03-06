@@ -101,14 +101,11 @@ export default class App {
     // TODO fail if no endpoint found
   }
 
-  async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
-    console.log('adding peer')
+  async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo, middlewares: string[]) {
     const endpoint = this.createEndpoint(endpointInfo)
     this.endpointsMap.set(peerInfo.id, endpoint)
-    const middleware = this._createMiddleware(peerInfo)
     // TODO need to resolve some stuff here
-    await this.connector.addPeer(peerInfo, endpoint, middleware, false)
-    console.log('peer added')
+    await this.connector.addPeer(peerInfo, endpoint, this._createMiddleware(middlewares, peerInfo), false)
   }
 
   async removePeer (peerId: string) {
@@ -143,11 +140,8 @@ export default class App {
     }
   }
 
-  private _createMiddleware (peerInfo: PeerInfo): Middleware[] {
-    const middleware: Middleware[] = []
-
+  private _createMiddleware (middleware: string[], peerInfo: PeerInfo): Middleware[] {
     // Global/Config might be needed
-    const disabledMiddleware: string[] = []
     const globalMinExpirationWindow = 35000
     const globalMaxHoldWindow = 35000
 
@@ -159,21 +153,34 @@ export default class App {
     this.throughputBucketsMap.set(peerInfo.id, throughputBuckets)
     this.rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
 
-    if (!disabledMiddleware.includes('errorHandler')) middleware.push(new ErrorHandlerMiddleware({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' }))
-    if (!disabledMiddleware.includes('rateLimit')) middleware.push(new RateLimitMiddleware({ peerInfo, stats: this.stats, bucket: rateLimitBucket }))
-    if (!disabledMiddleware.includes('maxPacketAmount')) middleware.push(new MaxPacketAmountMiddleware({ maxPacketAmount: peerInfo.maxPacketAmount }))
-    if (!disabledMiddleware.includes('throughput')) middleware.push(new ThroughputMiddleware(throughputBuckets))
-    if (!disabledMiddleware.includes('deduplicate')) middleware.push(new DeduplicateMiddleware({ cache }))
-    // if (!disabledMiddleware.includes('validateFulfillment')) middleware.push(new ValidateFulfillmentMiddleware())
-    if (!disabledMiddleware.includes('stats')) middleware.push(new StatsMiddleware({ stats: this.stats, peerInfo }))
-    if (!disabledMiddleware.includes('alert')) middleware.push(new AlertMiddleware({ createAlert: (triggeredBy: string, message: string) => this.alerts.createAlert(peerInfo.id, triggeredBy, message) }))
+    const instantiateMiddleware = (identifier: string): Middleware => {
+      switch (identifier) {
+        case('errorHandler'):
+          return new ErrorHandlerMiddleware({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' })
+        case('expire'):
+          return new ExpireMiddleware()
+        case('reduceExpiry'):
+          return new ReduceExpiryMiddleware({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow })
+        case('rateLimit'):
+          return new RateLimitMiddleware({ peerInfo, stats: this.stats, bucket: rateLimitBucket })
+        case('maxPacketAmount'):
+          return new MaxPacketAmountMiddleware({ maxPacketAmount: peerInfo.maxPacketAmount })
+        case('throughput'):
+          return new ThroughputMiddleware(throughputBuckets)
+        case('deduplicate'):
+          return new DeduplicateMiddleware({ cache })
+        case('validateFulfillment'):
+          return new ValidateFulfillmentMiddleware()
+        case('stats'):
+          return new StatsMiddleware({ stats: this.stats, peerInfo })
+        case('alert'):
+          return new AlertMiddleware({ createAlert: (triggeredBy: string, message: string) => this.alerts.createAlert(peerInfo.id, triggeredBy, message) })
+        default:
+          throw new Error('Middleware identifier undefined')
+      }
+    }
 
-    // TODO add balance middleware
-    // middleware.push(new ExpireMiddleware())
-    // using half the global min expiration window to mimic old connector. This is because current implementation reduces expiry on both incoming and outgoing pipelines.
-    // middleware.push(new ReduceExpiryMiddleware({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow }))
-
-    return middleware
+    return middleware.map(instantiateMiddleware)
   }
 
 }

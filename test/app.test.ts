@@ -47,7 +47,7 @@ describe('Test App', function () {
     } as PeerInfo, {
       type: 'http',
       url: 'http://localhost:8084'
-    } as EndpointInfo)
+    } as EndpointInfo, ['errorHandler'])
     client = connect('http://localhost:8083')
     aliceServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
       const responsePacket = {
