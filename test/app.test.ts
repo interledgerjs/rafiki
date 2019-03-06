@@ -6,6 +6,7 @@ import App, { EndpointInfo } from '../src/app'
 import mock = require('mock-require')
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
+const RedisMock = require('ioredis-mock')
 
 import { connect, ClientHttp2Session, constants, createServer, Http2Server, Http2ServerRequest, Http2ServerResponse } from  'http2'
 import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
@@ -36,7 +37,7 @@ describe('Test App', function () {
   let app: App
 
   beforeEach(async () => {
-    app = new App({ilpAddress: 'test.harry', port: 8083})
+    app = new App({ilpAddress: 'test.harry', port: 8083}, { redisClient: new RedisMock() })
     await app.start()
     await app.addPeer({
       id: 'alice',

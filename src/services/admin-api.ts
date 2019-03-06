@@ -1,19 +1,16 @@
 import { Server, IncomingMessage, ServerResponse } from 'http'
-import Stats from './stats'
 import Config from './config'
-import { Alerts } from '../middleware/business/alert'
-import SettlementEngine from './settlement-engine'
 import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
 import InvalidJsonBodyError from '../errors/invalid-json-body-error'
 import Ajv = require('ajv')
+import { PeerInfo } from '../types/peer'
+import App, { EndpointInfo } from '../app'
 const ajv = new Ajv()
 const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
 
 export interface AdminApiDeps {
-  stats: Stats,
-  config: Config,
-  alerts: Alerts,
-  settlementEngine: SettlementEngine
+  app: App,
+  config: Config
 }
 
 interface Route {
@@ -23,25 +20,21 @@ interface Route {
   responseType?: string
 }
 export default class AdminApi {
+  private app: App
   private server?: Server
-  private stats: Stats
   private config: Config
   private routes: Route[]
-  private alerts: Alerts
-  private settlementEngine: SettlementEngine
 
-  constructor ({ stats, config, alerts, settlementEngine }: AdminApiDeps) {
-    this.stats = stats
+  constructor ({ app, config }: AdminApiDeps) {
+    this.app = app
     this.config = config
-    this.alerts = alerts
-    this.settlementEngine = settlementEngine
-
     this.routes = [
       { method: 'GET', match: '/health$', fn: async () => 'Status: ok' },
       { method: 'GET', match: '/stats$', fn: this.getStats },
       { method: 'GET', match: '/alerts$', fn: this.getAlerts },
       { method: 'GET', match: '/balance$', fn: this.getBalances },
-      { method: 'POST', match: '/balance$', fn: this.updateBalance }
+      { method: 'POST', match: '/balance$', fn: this.updateBalance },
+      { method: 'POST', match: '/peer$', fn: this.addPeer }
     ]
   }
 
@@ -114,17 +107,17 @@ export default class AdminApi {
   }
 
   private async getStats () {
-    return this.stats.getStatus()
+    return this.app.stats.getStatus()
   }
 
   private async getAlerts () {
     return {
-      alerts: this.alerts.getAlerts()
+      alerts: this.app.alerts.getAlerts()
     }
   }
 
   private async getBalances () {
-    return this.settlementEngine.getStatus()
+    return this.app.settlementEngine.getStatus()
   }
 
   private async updateBalance (url: string, _data: object) {
@@ -137,13 +130,26 @@ export default class AdminApi {
       throw new InvalidJsonBodyError('invalid balance update: error=' + firstError.message + ' dataPath=' + firstError.dataPath, err.errors || [])
     }
     const { peerId, amountDiff } = _data as BalanceUpdate
-    const limit = this.settlementEngine.getBalanceLimits(peerId)
-    this.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
+    const limit = this.app.settlementEngine.getBalanceLimits(peerId)
+    this.app.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
 
     return {
-      'balance': this.settlementEngine.getBalance(peerId).toString(),
+      'balance': this.app.settlementEngine.getBalance(peerId).toString(),
       'minimum': limit.min.toString(),
       'maximum': limit.max.toString()
+    }
+  }
+
+  private async addPeer (url: string, _data: object) {
+    const peerInfo = _data['peerInfo']
+    const endpointInfo = _data['endpointInfo']
+
+    // TODO use ajv to validate _data
+    if (!peerInfo || !endpointInfo) throw new Error('invalid arguments. need peerInfo and endpointInfo')
+    try {
+      await this.app.addPeer(peerInfo, endpointInfo)
+    } catch (e) {
+      console.log('exception caught', e.message)
     }
   }
 }
