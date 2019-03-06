@@ -29,7 +29,8 @@ export default class AdminApi {
       { method: 'GET', match: '/alerts$', fn: this.getAlerts },
       { method: 'GET', match: '/balance$', fn: this.getBalances },
       { method: 'POST', match: '/balance$', fn: this.updateBalance },
-      { method: 'POST', match: '/peer$', fn: this.addPeer }
+      { method: 'POST', match: '/peer$', fn: this.addPeer },
+      { method: 'GET', match: '/peer$', fn: this.getPeer }
     ]
   }
 
@@ -137,5 +138,9 @@ export default class AdminApi {
     // TODO use ajv to validate _data
     if (!peerInfo || !endpointInfo) throw new Error('invalid arguments. need peerInfo and endpointInfo')
     await this.app.addPeer(peerInfo, endpointInfo)
+  }
+
+  private async getPeer () {
+    return this.app.connector.getPeerList()
   }
 }
