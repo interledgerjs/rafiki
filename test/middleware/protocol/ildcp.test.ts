@@ -28,16 +28,22 @@ describe('ILDCP Middleware', function () {
     destination: 'peer.config',
     data: Buffer.alloc(0)
   }
+  const peerInfo: PeerInfo = {
+    id: 'alice',
+    relation: 'child',
+    assetScale: 2,
+    assetCode: 'TEST',
+    rules: [],
+    protocols: [
+      {
+        'name': 'ildcp',
+      }
+    ]
+  }
   beforeEach(async function () {
     ildcpServices = {
-      getPeerInfo: () => {
-        return {
-          'id': 'alice',
-          'relation': 'child',
-          'assetScale': 2,
-          'assetCode': 'TEST'
-        } as PeerInfo
-      },
+      getPeerInfo: () => peerInfo
+      ,
       getOwnAddress: () => 'test.connie'
     }
   })
@@ -99,15 +105,9 @@ describe('ILDCP Middleware', function () {
   })
 
   it('throws error if peer relation is not a child', async function () {
+    let peer: PeerInfo = {...peerInfo, relation: "peer"}
     const ildcpMiddleware = new IldcpMiddleware({
-      getPeerInfo: () => {
-        return {
-          'id': 'alice',
-          'relation': 'peer',
-          'assetScale': 2,
-          'assetCode': 'TEST'
-        } as PeerInfo
-      },
+      getPeerInfo: () => peer,
       getOwnAddress: () => 'test.connie'
     })
     const sendIncoming = setPipelineReader('incoming', ildcpMiddleware, async () => IlpFulfill)
