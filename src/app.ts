@@ -18,6 +18,7 @@ import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2-endpoint'
 import { serializeIlpReject } from 'ilp-packet'
 import SettlementEngine from './services/settlement-engine'
+import * as pathToRegexp from 'path-to-regexp'
 import * as Redis from 'ioredis'
 
 const REDIS_BALANCE_STREAM_KEY = 'balance'
@@ -58,7 +59,7 @@ export default class App {
     this.rateLimitBucketMap = new Map()
     this.throughputBucketsMap = new Map()
     this.endpointsMap = new Map()
-    this.settlementEngine = new SettlementEngine({ streamKey: REDIS_BALANCE_STREAM_KEY, redisClient: deps ? deps.redisClient : new Redis() })
+    this.settlementEngine = new SettlementEngine({ streamKey: REDIS_BALANCE_STREAM_KEY, redisClient: deps ? deps.redisClient : new Redis({ host: 'redis' }) })
 
     this.connector.setOwnAddress(opts.ilpAddress)
 
@@ -71,10 +72,9 @@ export default class App {
       const method = headers[':method']
       const path = headers[':path']
 
-      // log.info('received stream', { path })
+      const peerId = this._matchPathToPeerId(path)
 
-      // TODO better path matching
-      if (path) {
+      if (peerId && method === 'POST') {
         // Get the incoming data
         let chunks: Array<Buffer> = []
         stream.on('data', (chunk: Buffer) => {
@@ -82,10 +82,13 @@ export default class App {
         })
         stream.on('end', async () => {
           let packet = Buffer.concat(chunks)
-          let response = await this.handleIncomingPacket(path, packet)
+          let response = await this.handleIncomingPacket(peerId, packet)
           stream.end(response)
         })
         stream.on('error', (error) => log.error('stream error', { error }))
+      } else {
+        stream.respond({ ':status': 404 })
+        stream.end()
       }
     })
   }
@@ -96,13 +99,13 @@ export default class App {
   }
 
   // Find endpoint and drop packet onto it if found
-  private async handleIncomingPacket (path: string, data: Buffer) {
-    const endpoint = this.endpointsMap.get('alice')
+  private async handleIncomingPacket (peerId: string, data: Buffer) {
+    const endpoint = this.endpointsMap.get(peerId)
     if (endpoint) {
       return endpoint.handlePacket(data)
     } else {
       return serializeIlpReject({
-        code: 'T01',
+        code: 'T01', // TODO probably should be another error code
         data: Buffer.from(''),
         message: 'Peer not found',
         triggeredBy: this.connector.getOwnAddress() || ''
@@ -192,6 +195,13 @@ export default class App {
     }
 
     return peerInfo.rules.map(instantiateMiddleware)
+  }
+
+  private _matchPathToPeerId (path: string | undefined) {
+    if (!path) return null
+    let re = pathToRegexp('/ilp/:peerId')
+    const result = re.exec(path)
+    return result ? result[1] : null
   }
 
 }

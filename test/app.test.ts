@@ -83,7 +83,7 @@ describe('Test App', function () {
       expiresAt: new Date(Date.now() + 34000)
     }
 
-    const result = deserializeIlpReply(await post(client, '', serializeIlpPrepare(ilpPrepare)))
+    const result = deserializeIlpReply(await post(client, 'ilp/alice', serializeIlpPrepare(ilpPrepare)))
 
     assert.deepEqual(result, {
       data: Buffer.from(''),
