@@ -1,4 +1,6 @@
-import { RequestHandler } from './channel'
+import { RequestHandler } from './request-stream'
+
+export type ErrorHandler<Request, Reply> = (error: Error, request?: Request) => Promise<Reply | void>
 
 /**
  * A standardized interface for sending and receiving requests.
@@ -23,4 +25,9 @@ export interface Endpoint<Request, Reply> {
    */
   setIncomingRequestHandler: (handler: RequestHandler<Request, Reply>) => this
 
+}
+
+export function isEndpoint<Request, Response> (object: any): object is Endpoint<Request, Response> {
+  return typeof object.sendOutgoingRequest === 'function'
+    && typeof object.setIncomingRequestHandler === 'function'
 }

@@ -1,4 +1,4 @@
-import { BidirectionalDuplexRequestStream, RequestHandler, DuplexRequestStream, WritableRequestStream } from './channel'
+import { BidirectionalDuplexRequestStream, RequestHandler, DuplexRequestStream, WritableRequestStream } from './request-stream'
 import { IlpPrepare, IlpReply } from 'ilp-packet'
 
 export type IlpRequestHandler = RequestHandler<IlpPrepare, IlpReply>

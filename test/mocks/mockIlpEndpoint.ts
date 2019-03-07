@@ -1,7 +1,7 @@
 import { Endpoint } from '../../src/types/endpoint'
 import { IlpPrepare, IlpReply } from 'ilp-packet'
 import { EventEmitter } from 'events';
-import { RequestHandler } from '../../src/types/channel';
+import { RequestHandler } from '../../src/types/request-stream';
 
 export default class MockIlpEndpoint implements Endpoint<IlpPrepare, IlpReply> {
 

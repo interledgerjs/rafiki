@@ -1,6 +1,6 @@
 import { Endpoint } from '../types/endpoint'
 import { PluginInstance } from './plugin'
-import { RequestHandler } from '../types/channel'
+import { RequestHandler } from '../types/request-stream'
 import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpReply, deserializeIlpPrepare, serializeIlpReply, isFulfill, Errors } from 'ilp-packet'
 import { STATIC_FULFILLMENT, STATIC_CONDITION } from '../constants'
 

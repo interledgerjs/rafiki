@@ -1,5 +1,5 @@
 import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill, IlpFulfill } from 'ilp-packet'
-import { RequestHandler } from '../../types/channel'
+import { RequestHandler } from '../../types/request-stream'
 import { Middleware } from '../../types/middleware'
 import { Endpoint } from '../../types/endpoint'
 

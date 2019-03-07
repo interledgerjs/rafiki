@@ -1,5 +1,5 @@
 import { Endpoint } from '../types/endpoint'
-import { RequestHandler } from '../types/channel'
+import { RequestHandler } from '../types/request-stream'
 import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpReply, deserializeIlpPrepare, serializeIlpReply, isFulfill } from 'ilp-packet'
 import { ClientHttp2Session, connect, constants } from 'http2'
 import { IlpRequestHandler } from '../types/middleware'
