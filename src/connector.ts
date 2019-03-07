@@ -2,12 +2,11 @@ import { Router as RoutingTable, RouteManager, IncomingRoute } from 'ilp-routing
 import { pipeline } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { IlpPrepare, IlpReply, Errors } from 'ilp-packet'
-import { Middleware, setPipelineReader } from './types/middleware'
-import { PeerInfo, Relation, Protocol } from './types/peer'
-import { CcpMiddleware } from './middleware/protocol/ccp'
-import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
-import { HeartbeatMiddleware } from './middleware/business/heartbeat'
-import { EchoMiddleware } from './middleware/protocol/echo'
+import { Rule, setPipelineReader } from './types/rule'
+import { PeerInfo, Relation, ProtocolConfig } from './types/peer'
+import { CcpProtocol } from './protocols/ccp'
+import { IldcpProtocol } from './protocols/ildcp'
+import { EchoProtocol } from './protocols/echo'
 import { PeerUnreachableError } from 'ilp-packet/dist/src/errors'
 
 const { codes } = Errors
@@ -16,7 +15,7 @@ export default class Connector {
   routeManager: RouteManager = new RouteManager(this.routingTable)
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
   address?: string
-  peerMiddleware: Map<string, Middleware[]> = new Map()
+  peerRules: Map<string, Rule[]> = new Map()
 
   constructor () {
     this.addSelfPeer()
@@ -50,7 +49,7 @@ export default class Connector {
   async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, inheritAddressFrom: boolean = false) {
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation)
     const protocolMiddleware = this._createProtocols(peerInfo)
-    this.peerMiddleware.set(peerInfo.id, protocolMiddleware)
+    this.peerRules.set(peerInfo.id, protocolMiddleware)
     const combinedMiddleware = pipeline(...protocolMiddleware)
 
     const sendOutgoingRequest = (request: IlpPrepare): Promise<IlpReply> => {
@@ -79,7 +78,7 @@ export default class Connector {
 
     if (inheritAddressFrom) {
       const ildcpMiddleware = protocolMiddleware.find(mw => mw.constructor.name === 'IldcpMiddleware')
-      this.setOwnAddress(await (ildcpMiddleware as IldcpMiddleware).getAddressFrom(endpoint))
+      this.setOwnAddress(await (ildcpMiddleware as IldcpProtocol).getAddressFrom(endpoint))
     }
 
     // only add route for children. The rest are populated from route update.
@@ -95,9 +94,9 @@ export default class Connector {
   }
 
   async removePeer (id: string): Promise<void> {
-    const peerMiddleware = this.getPeerMiddleware(id)
+    const peerMiddleware = this.getPeerRules(id)
     if (peerMiddleware) peerMiddleware.forEach(mw => mw.shutdown())
-    this.peerMiddleware.delete(id)
+    this.peerRules.delete(id)
     this.outgoingIlpPacketHandlerMap.delete(id)
     this.routeManager.removePeer(id)
   }
@@ -134,10 +133,10 @@ export default class Connector {
     const selfPeerId = 'self'
     this.routeManager.addPeer(selfPeerId, 'local')
     const protocolMiddleware = [
-      new EchoMiddleware({ getOwnAddress: this.getOwnAddress.bind(this), minMessageWindow: 30000 }) // TODO need to fix the hard coded value
+      new EchoProtocol({ getOwnAddress: this.getOwnAddress.bind(this), minMessageWindow: 30000 }) // TODO need to fix the hard coded value
     ]
 
-    this.peerMiddleware.set(selfPeerId, [...protocolMiddleware])
+    this.peerRules.set(selfPeerId, [...protocolMiddleware])
     const combinedMiddleware = pipeline(...protocolMiddleware)
     const sendIncoming = setPipelineReader('incoming', combinedMiddleware, this.sendIlpPacket.bind(this))
     const sendOutgoing = setPipelineReader('outgoing', combinedMiddleware, (request: IlpPrepare): Promise<IlpReply> => {
@@ -187,20 +186,20 @@ export default class Connector {
     }
   }
 
-  getPeerMiddleware (id: string): Middleware[] | undefined {
-    return this.peerMiddleware.get(id)
+  getPeerRules (id: string): Rule[] | undefined {
+    return this.peerRules.get(id)
   }
 
   getPeerList () {
     return this.routeManager.getPeerList()
   }
 
-  private _createProtocols (peerInfo: PeerInfo): Middleware[] {
+  private _createProtocols (peerInfo: PeerInfo): Rule[] {
 
-    const instantiateProtocol = (protocol: Protocol): Middleware => {
+    const instantiateProtocol = (protocol: ProtocolConfig): Rule => {
       switch (protocol.name) {
         case('ccp'):
-          return new CcpMiddleware({
+          return new CcpProtocol({
             isSender: protocol.sendRoutes || false,
             isReceiver: protocol.receiveRoutes || false,
             peerId: peerInfo.id,
@@ -212,11 +211,10 @@ export default class Connector {
             getRouteWeight: this.calculateRouteWeight.bind(this)
           })
         case('ildcp'):
-          return new IldcpMiddleware({
+          return new IldcpProtocol({
             getPeerInfo: () => peerInfo,
-            getOwnAddress: this.getOwnAddress.bind(this),
-            getPeerAddress: () => this.getOwnAddress() + '.' + (protocol.ilpAddressSegment || peerInfo.id)
-          } as IldcpMiddlewareServices)
+            getOwnAddress: this.getOwnAddress.bind(this)
+          })
         default:
           throw new Error(`Protocol ${protocol.name} undefined`)
       }

@@ -2,6 +2,8 @@
 
 > A modular ILP connector with stand-alone settlement engine and router
 
+<img style="float: right;" src="./images/rafiki.jpeg">
+
 ** This is a BETA. There are still TODO's: **
 
  - [ ] Thorough code review 😬
@@ -19,9 +21,17 @@
  - [ ] Connector control-plane service
  - [ ] Consider creating mono-repo including endpoints and router
 
-## Usage
+## About
 
-TODO
+> More details coming soon, some major differences from `ilp-connector` below:
+
+<img style="float: center;" src="./images/architecture.png">
+
+ - Stand-alone routing table and route manager
+ - Stand-alone settlement engine
+ - [Endpoints](./endpoints.md) replace plugins and are built in for major transports
+ - Rules and protocols replace middleware and controllers and are instantiated per peer
+
 
 ## Project
 

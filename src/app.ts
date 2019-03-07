@@ -1,19 +1,19 @@
 import { log } from './winston'
-import { Middleware, setPipelineReader } from './types/middleware'
+import { Rule, setPipelineReader } from './types/rule'
 import Connector from './connector'
-import { PeerInfo, Rule } from './types/peer'
-import { ErrorHandlerMiddleware } from './middleware/business/error-handler'
-import { RateLimitMiddleware, createRateLimitBucketForPeer } from './middleware/business/rate-limit'
-import { MaxPacketAmountMiddleware } from './middleware/business/max-packet-amount'
-import { ThroughputMiddleware, createThroughputLimitBucketsForPeer } from './middleware/business/throughput'
-import { DeduplicateMiddleware, PacketCache, PacketCacheOptions } from './middleware/business/deduplicate'
-import { ExpireMiddleware } from './middleware/business/expire'
-import { ValidateFulfillmentMiddleware } from './middleware/business/validate-fulfillment'
-import { StatsMiddleware } from './middleware/business/stats'
-import { AlertMiddleware, Alerts } from './middleware/business/alert'
+import { PeerInfo, RuleConfig } from './types/peer'
+import { ErrorHandlerRule } from './rules/error-handler'
+import { RateLimitRule, createRateLimitBucketForPeer } from './rules/rate-limit'
+import { MaxPacketAmountRule } from './rules/max-packet-amount'
+import { ThroughputRule, createThroughputLimitBucketsForPeer } from './rules/throughput'
+import { DeduplicateRule, PacketCache, PacketCacheOptions } from './rules/deduplicate'
+import { ExpireRule } from './rules/expire'
+import { ValidateFulfillmentRule } from './rules/validate-fulfillment'
+import { StatsRule } from './rules/stats'
+import { AlertRule, Alerts } from './rules/alert'
 import TokenBucket from './lib/token-bucket'
 import Stats from './services/stats'
-import { ReduceExpiryMiddleware } from './middleware/protocol/reduce-expiry'
+import { ReduceExpiryRule } from './rules/reduce-expiry'
 import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2'
 
@@ -44,7 +44,7 @@ export default class App {
   server: Http2Server
   port: number
   endpointsMap: Map<string, Http2Endpoint>
-  businessRulesMap: Map<string, Middleware[]>
+  businessRulesMap: Map<string, Rule[]>
 
   constructor (opts: AppOptions) {
 
@@ -114,13 +114,13 @@ export default class App {
 
   async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
     logger.info('adding new peer: ' + peerInfo.id, { peerInfo, endpointInfo })
-    const middlewareInstances: Middleware[] = this._createMiddleware(peerInfo)
-    this.businessRulesMap.set(peerInfo.id, middlewareInstances)
+    const rulesInstances: Rule[] = this._createRule(peerInfo)
+    this.businessRulesMap.set(peerInfo.id, rulesInstances)
     const endpoint = this.createEndpoint(endpointInfo)
 
     // create incoming and outgoing pipelines for business rules
-    const combinedMiddleware = pipeline(...middlewareInstances)
-    const sendOutgoing = middlewareInstances.length > 0 ? setPipelineReader('outgoing', combinedMiddleware, endpoint.sendOutgoingRequest.bind(endpoint)) : endpoint.sendOutgoingRequest.bind(endpoint)
+    const combinedRule = pipeline(...rulesInstances)
+    const sendOutgoing = rulesInstances.length > 0 ? setPipelineReader('outgoing', combinedRule, endpoint.sendOutgoingRequest.bind(endpoint)) : endpoint.sendOutgoingRequest.bind(endpoint)
 
     // wrap endpoint and middleware pipelines in something that looks like an endpoint<IlpPrepare, IlpReply>
     const wrapperEndpoint = {
@@ -128,14 +128,14 @@ export default class App {
         return sendOutgoing(request)
       },
       setIncomingRequestHandler: (handler: RequestHandler<IlpPrepare, IlpReply>): Endpoint<IlpPrepare, IlpReply> => {
-        const sendIncoming = middlewareInstances.length > 0 ? setPipelineReader('incoming', combinedMiddleware, handler) : handler
+        const sendIncoming = rulesInstances.length > 0 ? setPipelineReader('incoming', combinedRule, handler) : handler
         endpoint.setIncomingRequestHandler(sendIncoming)
         return wrapperEndpoint
       }
     }
     await this.connector.addPeer(peerInfo, wrapperEndpoint, false)
 
-    middlewareInstances.forEach(mw => mw.startup())
+    rulesInstances.forEach(mw => mw.startup())
 
     this.endpointsMap.set(peerInfo.id, endpoint)
   }
@@ -168,7 +168,7 @@ export default class App {
     this.endpointsMap.clear()
   }
 
-  getRules (peerId: string): Middleware[] {
+  getRules (peerId: string): Rule[] {
     return this.businessRulesMap.get(peerId) || []
   }
 
@@ -184,45 +184,45 @@ export default class App {
     }
   }
 
-  private _createMiddleware (peerInfo: PeerInfo): Middleware[] {
+  private _createRule (peerInfo: PeerInfo): Rule[] {
     // Global/Config might be needed
     const globalMinExpirationWindow = 35000
     const globalMaxHoldWindow = 35000
 
-    const instantiateMiddleware = (rule: Rule): Middleware => {
+    const instantiateRule = (rule: RuleConfig): Rule => {
       switch (rule.name) {
         case('errorHandler'):
-          return new ErrorHandlerMiddleware({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' })
+          return new ErrorHandlerRule({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' })
         case('expire'):
-          return new ExpireMiddleware()
+          return new ExpireRule()
         case('reduceExpiry'):
-          return new ReduceExpiryMiddleware({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow })
+          return new ReduceExpiryRule({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow })
         case('rateLimit'):
           const rateLimitBucket: TokenBucket = createRateLimitBucketForPeer(peerInfo)
           this.rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
-          return new RateLimitMiddleware({ peerInfo, stats: this.stats, bucket: rateLimitBucket })
+          return new RateLimitRule({ peerInfo, stats: this.stats, bucket: rateLimitBucket })
         case('maxPacketAmount'):
-          return new MaxPacketAmountMiddleware({ maxPacketAmount: rule.maxPacketAmount })
+          return new MaxPacketAmountRule({ maxPacketAmount: rule.maxPacketAmount })
         case('throughput'):
           const throughputBuckets = createThroughputLimitBucketsForPeer(peerInfo)
           this.throughputBucketsMap.set(peerInfo.id, throughputBuckets)
-          return new ThroughputMiddleware(throughputBuckets)
+          return new ThroughputRule(throughputBuckets)
         case('deduplicate'):
           const cache = new PacketCache(rule as PacketCacheOptions || {}) // Could make this a global cache to allow for checking across different peers?
           this.packetCacheMap.set(peerInfo.id, cache)
-          return new DeduplicateMiddleware({ cache })
+          return new DeduplicateRule({ cache })
         case('validateFulfillment'):
-          return new ValidateFulfillmentMiddleware()
+          return new ValidateFulfillmentRule()
         case('stats'):
-          return new StatsMiddleware({ stats: this.stats, peerInfo })
+          return new StatsRule({ stats: this.stats, peerInfo })
         case('alert'):
-          return new AlertMiddleware({ createAlert: (triggeredBy: string, message: string) => this.alerts.createAlert(peerInfo.id, triggeredBy, message) })
+          return new AlertRule({ createAlert: (triggeredBy: string, message: string) => this.alerts.createAlert(peerInfo.id, triggeredBy, message) })
         default:
-          throw new Error('Middleware identifier undefined')
+          throw new Error('Rule identifier undefined')
       }
     }
 
-    return peerInfo.rules.map(instantiateMiddleware)
+    return peerInfo.rules.map(instantiateRule)
   }
 
   private _matchPathToPeerId (path: string | undefined) {

@@ -1,22 +1,22 @@
 {
-  "name": "wip-connector",
-  "version": "0.0.1",
-  "description": "Proof of concept for connector architecture redesign",
+  "name": "@interledger/rafiki",
+  "version": "0.0.1-beta.1",
+  "description": "A modular ILP connector with stand-alone settlement engine and router",
   "engines": {
     "node": ">=10.13"
   },
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "main": "build/src/index.js",
+  "types": "build/src/index.d.ts",
   "files": [
-    "build/**/*.js",
-    "build/**/*.js.map",
-    "build/**/*.d.ts",
+    "build/src/**/*.js",
+    "build/src/**/*.js.map",
+    "build/src/**/*.d.ts",
     "build/doc"
   ],
   "scripts": {
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
     "build": "npm run clean && npm run schema-to-tsd && tsc && npm run copy-schemas",
-    "copy-schemas": "mkdir -p ./build/schemas && cp ./src/schemas/*.json ./build/schemas",
+    "copy-schemas": "mkdir -p ./build/src/schemas && cp ./src/schemas/*.json ./build/src/schemas",
     "lint": "tslint --project .",
     "lintFix": "tslint --project . --fix",
     "schema-to-tsd": "node scripts/build_schema_types",
@@ -30,16 +30,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/interledgerjs/wip-connector.git"
+    "url": "git+https://github.com/interledgerjs/rafiki.git"
   },
   "author": "Interledger Team <info@interledger.org>",
   "license": "Apache-2.0",
   "dependencies": {
-    "@types/debug": "^0.0.31",
-    "@types/ioredis": "^4.0.9",
     "ajv": "^6.9.1",
     "change-case": "^3.1.0",
-    "debug": "^4.1.0",
     "extensible-error": "^1.0.2",
     "ilp-logger": "^1.1.3",
     "ilp-packet": "^3.0.8",
@@ -52,12 +49,13 @@
     "oer-utils": "^4.0.0",
     "path-to-regexp": "^3.0.0",
     "prom-client": "^11.2.1",
-    "supports-color": "^5.5.0",
     "winston": "^3.2.1"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/chai-as-promised": "^7.1.0",
+    "@types/debug": "^0.0.31",
+    "@types/ioredis": "^4.0.9",
     "@types/mocha": "^5.2.5",
     "@types/mock-require": "^2.0.0",
     "@types/sinon": "^5.0.7",

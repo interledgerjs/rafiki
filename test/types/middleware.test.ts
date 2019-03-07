@@ -5,11 +5,11 @@ import * as chaiAsPromised from 'chai-as-promised'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 import { IlpPrepare, IlpReply } from 'ilp-packet';
-import { setPipelineReader, Middleware, IlpRequestHandler } from '../../src/types/middleware';
+import { setPipelineReader, Rule, IlpRequestHandler } from '../../src/types/rule';
 import { start } from 'repl';
 
 
-class CustomMiddleware extends Middleware {
+class CustomRule extends Rule {
 
   protected _processIncoming = (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
     throw new Error('')
@@ -17,9 +17,9 @@ class CustomMiddleware extends Middleware {
 
 }
 
-describe('Middleware', function () {
+describe('Rule', function () {
     let counter: number
-    const startSendStop = async (mw: Middleware) => {
+    const startSendStop = async (mw: Rule) => {
       const sendIncoming = setPipelineReader('incoming', mw, async () => {
         return {
           fulfillment: Buffer.alloc(0),
@@ -59,7 +59,7 @@ describe('Middleware', function () {
 
     it('adds startup logic', async function () {
       assert.equal(counter, 0)
-      const middleware = new Middleware({
+      const middleware = new Rule({
         startup: async () => {
           counter = 100
         },
@@ -70,7 +70,7 @@ describe('Middleware', function () {
 
     it('adds shutdown logic', async function () {
       assert.equal(counter, 0)
-      const middleware = new Middleware({
+      const middleware = new Rule({
         shutdown: async () => {
           counter = 999
         },
@@ -81,7 +81,7 @@ describe('Middleware', function () {
 
     it('adds process function to incoming pipeline', async function () {
       assert.equal(counter, 0)
-      const middleware = new Middleware({
+      const middleware = new Rule({
         processIncoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter++
           return next(request)
@@ -93,7 +93,7 @@ describe('Middleware', function () {
 
     it('adds process function to outgoing pipeline', async function () {
       assert.equal(counter, 0)
-      const middleware = new Middleware({
+      const middleware = new Rule({
         processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter++
           return next(request)
@@ -105,7 +105,7 @@ describe('Middleware', function () {
 
     it('adds incoming and outgoing processing', async function () {
       assert.equal(counter, 0)
-      const middleware = new Middleware({
+      const middleware = new Rule({
         processIncoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter++
           counter++
@@ -122,7 +122,7 @@ describe('Middleware', function () {
 
     it('adds startup/shutdown and incoming/outgoing processing', async function () {
       assert.equal(counter, 0)
-      const middleware = new Middleware({
+      const middleware = new Rule({
         startup: async () => {
           counter = 100
         },

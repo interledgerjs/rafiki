@@ -3,18 +3,14 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import App, { EndpointInfo } from '../src/app'
-import mock = require('mock-require')
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-const RedisMock = require('ioredis-mock')
 
 import { connect, ClientHttp2Session, constants, createServer, Http2Server, Http2ServerRequest, Http2ServerResponse } from  'http2'
 import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
 import { PeerInfo } from '../src/types/peer';
-import { Http2Endpoint } from '../src/endpoints/http2';
-import { ErrorHandlerMiddleware } from '../src/middleware/business/error-handler';
+import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
-import { start } from 'repl';
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -143,11 +139,11 @@ describe('Test App', function () {
       await app.addPeer(peerInfo, endpointInfo)
 
       const businessRules = app.getRules(peerInfo.id)
-      assert.include(businessRules.map(mw => mw.constructor.name), 'ErrorHandlerMiddleware')
+      assert.include(businessRules.map(mw => mw.constructor.name), 'ErrorHandlerRule')
     })
 
     it('starts the business rules', async function () {
-      const startSpy = sinon.spy(ErrorHandlerMiddleware.prototype, 'startup')
+      const startSpy = sinon.spy(ErrorHandlerRule.prototype, 'startup')
 
       await app.addPeer(peerInfo, endpointInfo)
 

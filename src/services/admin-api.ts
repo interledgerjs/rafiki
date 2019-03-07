@@ -3,7 +3,7 @@ import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
 import InvalidJsonBodyError from '../errors/invalid-json-body-error'
 import Ajv = require('ajv')
 import App from '../app'
-import SettlementEngine from './settlement-engine';
+import SettlementEngine from './settlement-engine'
 const ajv = new Ajv()
 const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
 

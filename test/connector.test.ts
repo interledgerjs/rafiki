@@ -6,10 +6,10 @@ import Connector from '../src/connector'
 import { PeerInfo } from '../src/types/peer'
 import MockIlpEndpoint from './mocks/mockIlpEndpoint';
 import { IlpPrepare, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
-import { MockMiddleware } from './mocks/mockMiddleware';
+import { MockRule } from './mocks/mockRule';
 import { Errors } from 'ilp-packet'
-import { CcpMiddleware } from '../src/middleware/protocol/ccp';
-import { IldcpMiddleware } from '../src/middleware/protocol/ildcp';
+import { CcpProtocol } from '../src/protocols/ccp';
+import { IldcpProtocol } from '../src/protocols/ildcp';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -65,9 +65,9 @@ describe('Connector', function () {
     })
 
     it('sets up Echo middleware in pipeline', function() {
-      const peerMiddleware = connector.getPeerMiddleware('self')
+      const peerRule = connector.getPeerRules('self')
 
-      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'EchoMiddleware')
+      assert.include(peerRule!.map(mw => mw.constructor.name), 'EchoProtocol')
     })
 
   })
@@ -79,10 +79,10 @@ describe('Connector', function () {
 
       await connector.addPeer(peerInfo, endpoint)
       
-      const peerMiddleware = connector.getPeerMiddleware(peerInfo.id)
-      assert.isNotNull(peerMiddleware)
-      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'IldcpMiddleware')
-      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'CcpMiddleware')
+      const peerRule = connector.getPeerRules(peerInfo.id)
+      assert.isNotNull(peerRule)
+      assert.include(peerRule!.map(mw => mw.constructor.name), 'IldcpProtocol')
+      assert.include(peerRule!.map(mw => mw.constructor.name), 'CcpProtocol')
     })
 
     it.skip('adds heartbeat middleware to peer middleware', async function () {
@@ -90,9 +90,9 @@ describe('Connector', function () {
 
       await connector.addPeer(peerInfo, endpoint)
       
-      const peerMiddleware = connector.getPeerMiddleware(peerInfo.id)
-      assert.isNotNull(peerMiddleware)
-      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'HeartbeatMiddleware')
+      const peerRule = connector.getPeerRules(peerInfo.id)
+      assert.isNotNull(peerRule)
+      assert.include(peerRule!.map(mw => mw.constructor.name), 'HeartbeatRule')
     })
     
     it('sets ilp-endpoints incoming request handler', async function () {
@@ -128,8 +128,8 @@ describe('Connector', function () {
     })
 
     it('starts protocol middleware', async function () {
-      const ccpStartSpy = sinon.spy(CcpMiddleware.prototype, 'startup')
-      const ildcpStartSpy = sinon.spy(IldcpMiddleware.prototype, 'startup')
+      const ccpStartSpy = sinon.spy(CcpProtocol.prototype, 'startup')
+      const ildcpStartSpy = sinon.spy(IldcpProtocol.prototype, 'startup')
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
       await connector.addPeer(peerInfo, endpoint)
@@ -157,8 +157,8 @@ describe('Connector', function () {
       await connector.addPeer(peerInfo, endpoint)
     })
     it('shuts down the peer middleware', async function () {
-      const peerMiddleware = connector.getPeerMiddleware(peerInfo.id)
-      const shutdownSpies = peerMiddleware!.map(mw => sinon.spy(mw, 'shutdown'))
+      const peerRule = connector.getPeerRules(peerInfo.id)
+      const shutdownSpies = peerRule!.map(mw => sinon.spy(mw, 'shutdown'))
 
       await connector.removePeer(peerInfo.id)
 
@@ -166,11 +166,11 @@ describe('Connector', function () {
     })
 
     it('deletes peer middleware from map', async function () {
-      assert.isNotEmpty(connector.getPeerMiddleware(peerInfo.id))
+      assert.isNotEmpty(connector.getPeerRules(peerInfo.id))
 
       await connector.removePeer(peerInfo.id)
 
-      assert.isUndefined(connector.getPeerMiddleware(peerInfo.id))
+      assert.isUndefined(connector.getPeerRules(peerInfo.id))
     })
 
     it('removes the peer\'s outgoingPacketHandler', async function () {

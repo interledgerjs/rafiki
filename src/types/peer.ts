@@ -37,15 +37,15 @@ export interface PeerInfo {
   id: string,
   assetCode: string,
   assetScale: number,
-  rules: Rule[],
-  protocols: Protocol[]
+  rules: RuleConfig[],
+  protocols: ProtocolConfig[]
 }
-export interface Rule {
+export interface RuleConfig {
   name: string,
   [k: string]: any
 }
 
-export interface Protocol {
+export interface ProtocolConfig {
   name: string,
   [k: string]: any
 }
