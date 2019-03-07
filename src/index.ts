@@ -16,6 +16,9 @@ const SETTLEMENT_BALANCE_STREAM_KEY = process.env.SETTLEMENT_BALANCE_STREAM_KEY 
 const SETTLEMENT_REDIS_HOST = process.env.SETTLEMENT_REDIS_HOST || '0.0.0.0'
 const SETTLEMENT_REDIS_PORT = Number(process.env.SETTLEMENT_REDIS_PORT) || 6379
 
+const ADMIN_API_HOST = process.env.ADMIN_API_HOST || '0.0.0.0'
+const ADMIN_API_PORT = Number(process.env.ADMIN_API_PORT) || 7780
+
 winston.configure({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
@@ -61,7 +64,7 @@ const start = async () => {
     port: HTTP2_SERVER_PORT
   })
   const settlementEngine = new SettlementEngine({ streamKey: SETTLEMENT_BALANCE_STREAM_KEY, redisClient:  new Redis({ host: SETTLEMENT_REDIS_HOST, port: SETTLEMENT_REDIS_PORT }) })
-  const adminApi = new AdminApi({ app, settlementEngine })
+  const adminApi = new AdminApi({ host: ADMIN_API_HOST, port: ADMIN_API_PORT }, { app, settlementEngine })
 
   await app.start()
   adminApi.listen()

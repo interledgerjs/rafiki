@@ -7,6 +7,11 @@ import SettlementEngine from './settlement-engine'
 const ajv = new Ajv()
 const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
 
+export interface AdminApiOptions {
+  host?: string,
+  port?: number
+}
+
 export interface AdminApiDeps {
   app: App,
   settlementEngine: SettlementEngine
@@ -23,8 +28,10 @@ export default class AdminApi {
   private settlementEngine: SettlementEngine
   private server?: Server
   private routes: Route[]
+  private host: string
+  private port: number
 
-  constructor ({ app, settlementEngine }: AdminApiDeps) {
+  constructor ({ host, port }: AdminApiOptions, { app, settlementEngine }: AdminApiDeps) {
     this.app = app
     this.settlementEngine = settlementEngine
     this.routes = [
@@ -36,6 +43,9 @@ export default class AdminApi {
       { method: 'POST', match: '/peer$', fn: this.addPeer },
       { method: 'GET', match: '/peer$', fn: this.getPeer }
     ]
+
+    if (host) this.host = host
+    if (port) this.port = port
   }
 
   shutdown () {
@@ -43,8 +53,8 @@ export default class AdminApi {
   }
 
   listen () {
-    const adminApiHost = '0.0.0.0' // hardcoded for now
-    const adminApiPort = 7780
+    const adminApiHost = this.host || '0.0.0.0'
+    const adminApiPort = this.port || 7780
 
     // TODO: add logging
     // log.info('admin api listening. host=%s port=%s', adminApiHost, adminApiPort)
