@@ -3,11 +3,13 @@ import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
 import InvalidJsonBodyError from '../errors/invalid-json-body-error'
 import Ajv = require('ajv')
 import App from '../app'
+import SettlementEngine from './settlement-engine';
 const ajv = new Ajv()
 const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
 
 export interface AdminApiDeps {
-  app: App
+  app: App,
+  settlementEngine: SettlementEngine
 }
 
 interface Route {
@@ -18,11 +20,13 @@ interface Route {
 }
 export default class AdminApi {
   private app: App
+  private settlementEngine: SettlementEngine
   private server?: Server
   private routes: Route[]
 
-  constructor ({ app }: AdminApiDeps) {
+  constructor ({ app, settlementEngine }: AdminApiDeps) {
     this.app = app
+    this.settlementEngine = settlementEngine
     this.routes = [
       { method: 'GET', match: '/health$', fn: async () => 'Status: ok' },
       { method: 'GET', match: '/stats$', fn: this.getStats },
@@ -108,7 +112,7 @@ export default class AdminApi {
   }
 
   private async getBalances () {
-    return this.app.settlementEngine.getStatus()
+    return this.settlementEngine.getStatus()
   }
 
   private async updateBalance (url: string, _data: object) {
@@ -121,11 +125,11 @@ export default class AdminApi {
       throw new InvalidJsonBodyError('invalid balance update: error=' + firstError.message + ' dataPath=' + firstError.dataPath, err.errors || [])
     }
     const { peerId, amountDiff } = _data as BalanceUpdate
-    const limit = this.app.settlementEngine.getBalanceLimits(peerId)
-    await this.app.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
+    const limit = this.settlementEngine.getBalanceLimits(peerId)
+    await this.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
 
     return {
-      'balance': this.app.settlementEngine.getBalance(peerId).toString(),
+      'balance': this.settlementEngine.getBalance(peerId).toString(),
       'minimum': limit.min.toString(),
       'maximum': limit.max.toString()
     }

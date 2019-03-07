@@ -17,19 +17,12 @@ import { ReduceExpiryMiddleware } from './middleware/protocol/reduce-expiry'
 import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2'
 import { serializeIlpReject } from 'ilp-packet'
-import SettlementEngine from './services/settlement-engine'
 import * as pathToRegexp from 'path-to-regexp'
 import * as Redis from 'ioredis'
-
-const REDIS_BALANCE_STREAM_KEY = 'balance'
 
 export interface AppOptions {
   ilpAddress: string
   port: number,
-}
-
-export interface AppDeps {
-  redisClient: Redis.Redis
 }
 
 export interface EndpointInfo {
@@ -45,12 +38,11 @@ export default class App {
   packetCacheMap: Map<string, PacketCache>
   rateLimitBucketMap: Map<string, TokenBucket>
   throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
-  settlementEngine: SettlementEngine
   server: Http2Server
   port: number
   endpointsMap: Map<string, Http2Endpoint>
 
-  constructor (opts: AppOptions, deps?: AppDeps) {
+  constructor (opts: AppOptions) {
 
     this.connector = new Connector()
     this.stats = new Stats()
@@ -59,7 +51,6 @@ export default class App {
     this.rateLimitBucketMap = new Map()
     this.throughputBucketsMap = new Map()
     this.endpointsMap = new Map()
-    this.settlementEngine = new SettlementEngine({ streamKey: REDIS_BALANCE_STREAM_KEY, redisClient: deps ? deps.redisClient : new Redis({ host: '0.0.0.0' }) })
 
     this.connector.setOwnAddress(opts.ilpAddress)
 
