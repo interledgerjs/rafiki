@@ -2,9 +2,11 @@
 
 > A modular ILP connector with stand-alone settlement engine and router
 
-<img style="float: right;" src="./images/rafiki.jpeg">
+![](./images/rafiki.jpeg)
 
-** This is a BETA. There are still TODO's: **
+_Image Credit: [Felicia Ray](https://medium.com/r/?url=https%3A%2F%2Fwww.redbubble.com%2Fpeople%2Ffeliciaray%2Fworks%2F29271134-rafiki%3Fp%3Dposter)_
+
+**This is a BETA. There are still TODO's:**
 
  - [ ] Thorough code review 😬
  - [ ] Documentation
