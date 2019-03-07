@@ -84,7 +84,7 @@ export default class Connector {
     // only add route for children. The rest are populated from route update.
     if (peerInfo.relation === 'child') {
       const ildcpProtocol = peerInfo.protocols.filter(protocol => protocol.name === 'ildcp')[0]
-      const address = this.getOwnAddress() + '.' + (ildcpProtocol.ilpAddressSegment || peerInfo.id)
+      const address = this.getOwnAddress() + '.' + (ildcpProtocol && ildcpProtocol.ilpAddressSegment || peerInfo.id)
       this.routeManager.addRoute({
         peer: peerInfo.id,
         prefix: address,
