@@ -104,14 +104,13 @@ describe('Codecs', () => {
     it('should decode a message from the stream', () => {
       const decoder = new MessageDecoder<string, string>(codecs)
       const buffer = new BufferedStream({ objectMode: true })
+      
       decoder.pipe(buffer)
       decoder.write(Buffer.from('00000001', 'hex'))
       decoder.write(Buffer.from('REQUEST'))
-      
-      setTimeout(() => {
-        expect(buffer.chunks[0].id).to.be.equal(1)
-        expect(buffer.chunks[0].payload).to.be.equal('REQUEST')  
-      }, 10000)
+
+      expect(buffer.chunks[0].id).to.be.equal(1)
+      expect(buffer.chunks[0].payload).to.be.equal('REQUEST')
     })
 
     it('should have nothing to read if less than a full frame is available', () => {
