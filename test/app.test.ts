@@ -11,7 +11,7 @@ const RedisMock = require('ioredis-mock')
 import { connect, ClientHttp2Session, constants, createServer, Http2Server, Http2ServerRequest, Http2ServerResponse } from  'http2'
 import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
 import { PeerInfo } from '../src/types/peer';
-import { Http2Endpoint } from '../src/endpoints/http2-endpoint';
+import { Http2Endpoint } from '../src/endpoints/http2';
 import { ErrorHandlerMiddleware } from '../src/middleware/business/error-handler';
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {

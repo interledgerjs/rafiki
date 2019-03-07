@@ -1,5 +1,5 @@
 import { Router as RoutingTable, RouteManager, IncomingRoute } from 'ilp-routing'
-import { pipeline } from './types/channel'
+import { pipeline } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { IlpPrepare, IlpReply, Errors } from 'ilp-packet'
 import { Middleware, setPipelineReader } from './types/middleware'
