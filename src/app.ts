@@ -59,7 +59,7 @@ export default class App {
     this.rateLimitBucketMap = new Map()
     this.throughputBucketsMap = new Map()
     this.endpointsMap = new Map()
-    this.settlementEngine = new SettlementEngine({ streamKey: REDIS_BALANCE_STREAM_KEY, redisClient: deps ? deps.redisClient : new Redis({ host: 'redis' }) })
+    this.settlementEngine = new SettlementEngine({ streamKey: REDIS_BALANCE_STREAM_KEY, redisClient: deps ? deps.redisClient : new Redis({ host: '0.0.0.0' }) })
 
     this.connector.setOwnAddress(opts.ilpAddress)
 

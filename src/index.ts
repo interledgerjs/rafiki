@@ -47,7 +47,7 @@ const start = async () => {
   })
 
   const app = new App({
-    ilpAddress: 'test',
+    ilpAddress: 'g.harry',
     port: 8443
   })
   const adminApi = new AdminApi({ app })
