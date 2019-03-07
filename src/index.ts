@@ -9,12 +9,12 @@ const formatter = winston.format.printf(({ service, level, message, component, t
   return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}`
 })
 
-const ILP_ADDRESS = process.env.ILP_ADDRESS ? process.env.ILP_ADDRESS : ''
-const HTTP2_SERVER_PORT = process.env.HTTP2_SERVER_PORT ? Number(process.env.HTTP2_SERVER_PORT) : 8443
+const ILP_ADDRESS = process.env.ILP_ADDRESS || ''
+const HTTP2_SERVER_PORT = process.env.HTTP2_SERVER_PORT || 8443
 
-const SETTLEMENT_BALANCE_STREAM_KEY = process.env.SETTLEMENT_BALANCE_STREAM_KEY ? process.env.SETTLEMENT_BALANCE_STREAM_KEY : 'balance'
-const SETTLEMENT_REDIS_HOST = process.env.SETTLEMENT_REDIS_HOST ? process.env.SETTLEMENT_REDIS_HOST : '0.0.0.0'
-const SETTLEMENT_REDIS_PORT = process.env.SETTLEMENT_REDIS_PORT ? Number(process.env.SETTLEMENT_REDIS_PORT) : 6379
+const SETTLEMENT_BALANCE_STREAM_KEY = process.env.SETTLEMENT_BALANCE_STREAM_KEY || 'balance'
+const SETTLEMENT_REDIS_HOST = process.env.SETTLEMENT_REDIS_HOST || '0.0.0.0'
+const SETTLEMENT_REDIS_PORT = process.env.SETTLEMENT_REDIS_PORT || 6379
 
 winston.configure({
   level: process.env.LOG_LEVEL || 'info',

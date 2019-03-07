@@ -18,7 +18,6 @@ import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2'
 import { serializeIlpReject } from 'ilp-packet'
 import * as pathToRegexp from 'path-to-regexp'
-import * as Redis from 'ioredis'
 
 export interface AppOptions {
   ilpAddress: string
