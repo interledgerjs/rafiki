@@ -58,7 +58,7 @@ describe('Test App', function () {
   }
 
   beforeEach(async () => {
-    app = new App({ilpAddress: 'test.harry', port: 8083}, { redisClient: new RedisMock() })
+    app = new App({ilpAddress: 'test.harry', port: 8083})
     await app.start()
     await app.addPeer(peerInfo, {
       type: 'http',

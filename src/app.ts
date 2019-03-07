@@ -1,4 +1,4 @@
-import * as log from 'winston'
+import { log } from './winston'
 import { Middleware, setPipelineReader } from './types/middleware'
 import Connector from './connector'
 import { PeerInfo, Rule } from './types/peer'
@@ -16,22 +16,16 @@ import Stats from './services/stats'
 import { ReduceExpiryMiddleware } from './middleware/protocol/reduce-expiry'
 import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2'
+
 import { serializeIlpReject, IlpReply, IlpPrepare } from 'ilp-packet'
-import SettlementEngine from './services/settlement-engine'
 import * as pathToRegexp from 'path-to-regexp'
-import * as Redis from 'ioredis'
-import { pipeline, RequestHandler } from './types/request-stream';
-import { Endpoint } from './types/endpoint';
+import { pipeline, RequestHandler } from './types/request-stream'
+import { Endpoint } from './types/endpoint'
 
-const REDIS_BALANCE_STREAM_KEY = 'balance'
-
+const logger = log.child({ component: 'App' })
 export interface AppOptions {
   ilpAddress: string
   port: number,
-}
-
-export interface AppDeps {
-  redisClient: Redis.Redis
 }
 
 export interface EndpointInfo {
@@ -47,13 +41,12 @@ export default class App {
   packetCacheMap: Map<string, PacketCache>
   rateLimitBucketMap: Map<string, TokenBucket>
   throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
-  settlementEngine: SettlementEngine
   server: Http2Server
   port: number
   endpointsMap: Map<string, Http2Endpoint>
   businessRulesMap: Map<string, Middleware[]>
 
-  constructor (opts: AppOptions, deps?: AppDeps) {
+  constructor (opts: AppOptions) {
 
     this.connector = new Connector()
     this.stats = new Stats()
@@ -62,7 +55,6 @@ export default class App {
     this.rateLimitBucketMap = new Map()
     this.throughputBucketsMap = new Map()
     this.endpointsMap = new Map()
-    this.settlementEngine = new SettlementEngine({ streamKey: REDIS_BALANCE_STREAM_KEY, redisClient: deps ? deps.redisClient : new Redis({ host: 'redis' }) })
     this.businessRulesMap = new Map()
 
     this.connector.setOwnAddress(opts.ilpAddress)
@@ -76,6 +68,7 @@ export default class App {
       const method = headers[':method']
       const path = headers[':path']
 
+      logger.silly('incoming http2 stream', { path, method })
       const peerId = this._matchPathToPeerId(path)
 
       if (peerId && method === 'POST') {
@@ -89,7 +82,7 @@ export default class App {
           let response = await this.handleIncomingPacket(peerId, packet)
           stream.end(response)
         })
-        stream.on('error', (error) => log.error('stream error', { error }))
+        stream.on('error', (error) => logger.error('stream error', { error }))
       } else {
         stream.respond({ ':status': 404 })
         stream.end()
@@ -98,7 +91,8 @@ export default class App {
   }
 
   async start () {
-    log.info('starting connector on port ' + this.port)
+    logger.info('starting connector....')
+    logger.info('starting HTTP2 server on port ' + this.port)
     this.server.listen(this.port)
   }
 
@@ -108,6 +102,7 @@ export default class App {
     if (endpoint) {
       return endpoint.handlePacket(data)
     } else {
+      logger.info('endpoint not found for incoming packet', { peerId })
       return serializeIlpReject({
         code: 'T01', // TODO probably should be another error code
         data: Buffer.from(''),
@@ -118,6 +113,7 @@ export default class App {
   }
 
   async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
+    logger.info('adding new peer: ' + peerInfo.id, { peerInfo, endpointInfo })
     const middlewareInstances: Middleware[] = this._createMiddleware(peerInfo)
     this.businessRulesMap.set(peerInfo.id, middlewareInstances)
     const endpoint = this.createEndpoint(endpointInfo)
@@ -145,6 +141,7 @@ export default class App {
   }
 
   async removePeer (peerId: string) {
+    logger.info('Removing peer: ' + peerId, { peerId })
     const endpoint = this.endpointsMap.get(peerId)
     if (endpoint) {
       endpoint.close()
@@ -161,6 +158,7 @@ export default class App {
    * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's middleware.
    */
   async shutdown () {
+    logger.info('Shutting down app...')
     this.connector.getPeerList().forEach((peerId: string) => this.removePeer(peerId))
     Array.from(this.packetCacheMap.values()).forEach(cache => cache.dispose())
     this.packetCacheMap.clear()
@@ -178,8 +176,10 @@ export default class App {
     const { type, url } = endpointInfo
     switch (type) {
       case ('http'):
+        logger.info('adding new Http2 endpoint for peer', { endpointInfo })
         return new Http2Endpoint({ url })
       default:
+        logger.warn('Endpoint type specified not support', { endpointInfo })
         throw new Error('Endpoint type not supported')
     }
   }

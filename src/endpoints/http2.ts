@@ -3,6 +3,7 @@ import { RequestHandler } from '../types/request-stream'
 import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpReply, deserializeIlpPrepare, serializeIlpReply, isFulfill } from 'ilp-packet'
 import { ClientHttp2Session, connect, constants } from 'http2'
 import { IlpRequestHandler } from '../types/middleware'
+import Http2Client from 'ilp-plugin-http/build/lib/http2' // TODO remove this dependency
 
 export interface HttpEndpointOpts {
   url: string
@@ -10,7 +11,7 @@ export interface HttpEndpointOpts {
 
 export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
 
-  private client: ClientHttp2Session
+  private client: Http2Client
   private path: string
   private origin: string
   private protocol: string
@@ -25,27 +26,15 @@ export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
     this.protocol = url.protocol.substring(0, url.protocol.length - 1)
 
     // Setup connection to the other side
-    this.client = connect(this.origin)
-    this.client.on('error', (err) => console.error(err))
+    this.client = new Http2Client(this.origin, {
+      maxRequestsPerSession: 100
+    })
   }
 
   private async sendIlpPacket (packet: Buffer): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const req = this.client.request({
-        [constants.HTTP2_HEADER_SCHEME]: this.protocol,
-        [constants.HTTP2_HEADER_METHOD]: constants.HTTP2_METHOD_POST,
-        [constants.HTTP2_HEADER_PATH]: `/${this.path}`
-      })
-
-      let data: Buffer[] = []
-      req.on('data', (chunk) => {
-        data.push(chunk)
-      })
-      req.on('error', (error) => { console.log(error) })
-      req.on('end', () => {
-        resolve(Buffer.concat(data))
-      })
-      req.end(packet)
+    return new Promise(async (resolve, reject) => {
+      const result = await this.client.fetch(this.path, { method: 'POST', body: packet, headers: {} })
+      resolve(result.buffer())
     })
   }
 

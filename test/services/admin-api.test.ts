@@ -6,6 +6,7 @@ import AdminApi from '../../src/services/admin-api'
 import axios from 'axios'
 import { PeerInfo } from '../../src/types/peer'
 import App, { EndpointInfo } from '../../src/app'
+import SettlementEngine from '../../src/services/settlement-engine';
 const RedisMock = require('ioredis-mock')
 
 Chai.use(chaiAsPromised)
@@ -14,10 +15,12 @@ describe('Admin Api', function () {
 
   let app: App
   let adminApi: AdminApi
+  let settlementEngine: SettlementEngine
 
   beforeEach(function () {
-    app = new App({ ilpAddress: 'unknown', port: 8083 }, { redisClient: new RedisMock() })
-    adminApi = new AdminApi({ app })
+    app = new App({ ilpAddress: 'unknown', port: 8083 })
+    settlementEngine = new SettlementEngine({ streamKey: 'balance', redisClient: new RedisMock() })
+    adminApi = new AdminApi({ app, settlementEngine })
     adminApi.listen()
   })
 
@@ -134,8 +137,8 @@ describe('Admin Api', function () {
 
   describe('getBalances', function () {
     it('returns balances and limits for all peers', async function () {
-      app.settlementEngine.setBalance('alice', 300n, 0n, 400n)
-      app.settlementEngine.setBalance('bob', 100n, 0n, 200n)
+      settlementEngine.setBalance('alice', 300n, 0n, 400n)
+      settlementEngine.setBalance('bob', 100n, 0n, 200n)
       const expectedBalances = {
         'alice': {
           'balance': '300',
@@ -157,7 +160,7 @@ describe('Admin Api', function () {
 
   describe('updateBalance', function ()  {
     it('updates the balance of the specified peer and returns the balance', async function () {
-      app.settlementEngine.setBalance('alice', 100n, 0n, 400n)
+      settlementEngine.setBalance('alice', 100n, 0n, 400n)
 
       const response = await axios.post('http://127.0.0.1:7780/balance', { peerId: 'alice', amountDiff: '100' })
 
