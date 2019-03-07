@@ -8,6 +8,8 @@ import MockIlpEndpoint from './mocks/mockIlpEndpoint';
 import { IlpPrepare, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
 import { MockMiddleware } from './mocks/mockMiddleware';
 import { Errors } from 'ilp-packet'
+import { CcpMiddleware } from '../src/middleware/protocol/ccp';
+import { IldcpMiddleware } from '../src/middleware/protocol/ildcp';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -22,7 +24,16 @@ describe('Connector', function () {
     assetScale: 2,
     assetCode: 'USD',
     rules: [],
-    protocols: []
+    protocols: [
+      {
+        name: 'ccp',
+        sendRoutes: false,
+        receiveRoutes: false
+      },
+      {
+        name: 'ildcp'
+      }
+    ]
   }
   const preparePacket = {
     amount: '52',
@@ -63,54 +74,41 @@ describe('Connector', function () {
 
   describe('addPeer', function () {
 
-    it('adds business logic middleware to peer middleware', async function () {
-      const middleware = [new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)]
+    it('adds protocol middleware to peer', async function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
-      await connector.addPeer(peerInfo, endpoint, middleware)
+      await connector.addPeer(peerInfo, endpoint)
       
       const peerMiddleware = connector.getPeerMiddleware(peerInfo.id)
       assert.isNotNull(peerMiddleware)
-      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'MockMiddleware')
+      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'IldcpMiddleware')
+      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'CcpMiddleware')
     })
 
     it.skip('adds heartbeat middleware to peer middleware', async function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
-      await connector.addPeer(peerInfo, endpoint, [])
+      await connector.addPeer(peerInfo, endpoint)
       
       const peerMiddleware = connector.getPeerMiddleware(peerInfo.id)
       assert.isNotNull(peerMiddleware)
       assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'HeartbeatMiddleware')
     })
-    it('adds ildcp protocol middleware to peer middleware', async function () {
-      const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
-
-      await connector.addPeer(peerInfo, endpoint, [])
-      
-      const peerMiddleware = connector.getPeerMiddleware(peerInfo.id)
-      assert.isNotNull(peerMiddleware)
-      assert.include(peerMiddleware!.map(mw => mw.constructor.name), 'IldcpMiddleware')
-    })
     
-    it('connects ilp-endpoint to incoming data pipeline', async function () {
+    it('sets ilp-endpoints incoming request handler', async function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
-      let isConnected: boolean = false
-      const mockMiddleware = new MockMiddleware(async (packet: IlpPrepare) => {
-        isConnected = true
-        return fulfillPacket
-      })
-      await connector.addPeer(peerInfo, endpoint, [mockMiddleware])
-      await endpoint.mockIncomingRequest({} as IlpPrepare)
+      const setIncomingRequestHandlerSpy = sinon.spy(endpoint, 'setIncomingRequestHandler')
 
-      assert.isOk(isConnected)
+      await connector.addPeer(peerInfo, endpoint)
+
+      sinon.assert.calledOnce(setIncomingRequestHandlerSpy)
     })
 
     it('connects the incoming data pipeline to sendIlpPacket', async function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
       const sendIlpPacketSpy = sinon.spy(connector, 'sendIlpPacket')
-      
-      await connector.addPeer(peerInfo, endpoint, [])
+      await connector.addPeer(peerInfo, endpoint)
+
       await endpoint.mockIncomingRequest(preparePacket)
 
       sinon.assert.calledOnce(sendIlpPacketSpy)
@@ -122,38 +120,31 @@ describe('Connector', function () {
         isConnected = true
         return fulfillPacket
       })
-      await connector.addPeer(peerInfo, endpoint, [])
+      await connector.addPeer(peerInfo, endpoint)
 
       await connector.sendIlpPacket(preparePacket)
 
       assert.isOk(isConnected)
     })
 
-    it('starts peer middleware', async function () {
-      const middleware = [new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)]
-      const startSpy = sinon.spy(middleware[0], 'startup')
+    it('starts protocol middleware', async function () {
+      const ccpStartSpy = sinon.spy(CcpMiddleware.prototype, 'startup')
+      const ildcpStartSpy = sinon.spy(IldcpMiddleware.prototype, 'startup')
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
-      await connector.addPeer(peerInfo, endpoint, middleware)
+      await connector.addPeer(peerInfo, endpoint)
       
-      sinon.assert.calledOnce(startSpy)
+      sinon.assert.calledOnce(ccpStartSpy)
+      sinon.assert.calledOnce(ildcpStartSpy)
     })
 
     it('adds child peer to routing table', async function () {
-      const middleware = [new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)]
       const addRouteSpy = sinon.spy(connector.routeManager, 'addRoute')
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
-      const peerInfo: PeerInfo = {
-        id: 'alice',
-        relation: 'child',
-        assetScale: 2,
-        assetCode: 'USD',
-        rules: [],
-        protocols: []
-      }
+      
       connector.setOwnAddress('test.connie')
 
-      await connector.addPeer(peerInfo, endpoint, middleware)
+      await connector.addPeer(peerInfo, endpoint)
       
       sinon.assert.calledWith(addRouteSpy, { path: [], peer: "alice", prefix: "test.connie.alice" })
     })
@@ -161,10 +152,9 @@ describe('Connector', function () {
 
   describe('remove peer', function () {
     beforeEach(async function () {
-      const middleware = [new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)]
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
-      await connector.addPeer(peerInfo, endpoint, middleware)
+      await connector.addPeer(peerInfo, endpoint)
     })
     it('shuts down the peer middleware', async function () {
       const peerMiddleware = connector.getPeerMiddleware(peerInfo.id)
@@ -221,8 +211,8 @@ describe('Connector', function () {
       }
       const bobEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => bobFulfillPacket)
       const aliceEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => aliceFulfillPacket)
-      await connector.addPeer(peerInfo, aliceEndpoint, [])
-      await connector.addPeer(bobPeerInfo, bobEndpoint, [])
+      await connector.addPeer(peerInfo, aliceEndpoint)
+      await connector.addPeer(bobPeerInfo, bobEndpoint)
 
       const reply = await connector.sendIlpPacket(preparePacket) // packet addressed to alice
 
@@ -239,7 +229,7 @@ describe('Connector', function () {
         protocols: []
       }
       const bobEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
-      await connector.addPeer(bobPeerInfo, bobEndpoint, [])
+      await connector.addPeer(bobPeerInfo, bobEndpoint)
 
       try{
         await connector.sendIlpPacket({...preparePacket, destination: 'g.alice'}) // packet addressed to alice
@@ -264,10 +254,9 @@ describe('Connector', function () {
     })
 
     it('returns array of peer ids', async function () {
-      const middleware = [new MockMiddleware(async (packet: IlpPrepare) => fulfillPacket)]
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
-      await conn.addPeer(peerInfo, endpoint, middleware)
+      await conn.addPeer(peerInfo, endpoint)
 
       assert.deepEqual(conn.getPeerList(), ['self', 'alice'])
     })
@@ -280,7 +269,7 @@ describe('Connector', function () {
   it('throws a peer unreachable error when the endpoint fails to send outgoing packet', async function () {
     const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
     endpoint.connected = false
-    await connector.addPeer(peerInfo, endpoint, [])
+    await connector.addPeer(peerInfo, endpoint)
 
     try {
       await endpoint.mockIncomingRequest(preparePacket)

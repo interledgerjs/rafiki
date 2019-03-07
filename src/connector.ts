@@ -3,7 +3,7 @@ import { pipeline } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { IlpPrepare, IlpReply, Errors } from 'ilp-packet'
 import { Middleware, setPipelineReader } from './types/middleware'
-import { PeerInfo, Relation } from './types/peer'
+import { PeerInfo, Relation, Protocol } from './types/peer'
 import { CcpMiddleware } from './middleware/protocol/ccp'
 import { IldcpMiddleware, IldcpMiddlewareServices } from './middleware/protocol/ildcp'
 import { HeartbeatMiddleware } from './middleware/business/heartbeat'
@@ -47,44 +47,13 @@ export default class Connector {
  * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
  * @param middleware The business logic middleware that is to be added to the protocol middleware for the peer
  */
-  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, middleware: Middleware[], inheritAddressFrom: boolean = false) {
+  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, inheritAddressFrom: boolean = false) {
+    this.routeManager.addPeer(peerInfo.id, peerInfo.relation)
+    const protocolMiddleware = this._createProtocols(peerInfo)
+    this.peerMiddleware.set(peerInfo.id, protocolMiddleware)
+    const combinedMiddleware = pipeline(...protocolMiddleware)
 
-    this.routeManager.addPeer(peerInfo.id, peerInfo.relation) // TODO refactor when RouteManager is finished
-
-    const protocolMiddleware = []
-    // const protocolMiddleware = [
-    //   // new HeartbeatMiddleware({
-    //   //   endpoint,
-    //   //   onSuccessfulHeartbeat: () => this.routeManager.addPeer(peerInfo.id, peerInfo.relation), // TODO refactor when RouteManager is finished
-    //   //   onFailedHeartbeat: () => this.routeManager.removePeer(peerInfo.id) // TODO refactor when RouteManager is finished
-    //   // }),
-    //   ,
-    // ]
-
-    const ccpProtocol = peerInfo.protocols.filter(protocol => protocol.name === 'ccp')[0]
-    protocolMiddleware.push(new CcpMiddleware({
-      isSender: ccpProtocol ? ccpProtocol.sendRoutes as boolean : false,
-      isReceiver: ccpProtocol ? ccpProtocol.receiveRoutes as boolean : false,
-      peerId: peerInfo.id,
-      forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
-      getPeerRelation: this.getPeerRelation.bind(this),
-      getOwnAddress: () => this.getOwnAddress() as string,
-      addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
-      removeRoute: this.routeManager.removeRoute.bind(this),
-      getRouteWeight: this.calculateRouteWeight.bind(this)
-    }))
-
-    const ildcpProtocol = peerInfo.protocols.filter(protocol => protocol.name === 'ildcp')[0]
-    protocolMiddleware.push(new IldcpMiddleware({
-      getPeerInfo: () => peerInfo,
-      getOwnAddress: this.getOwnAddress.bind(this),
-      getPeerAddress: () => this.getOwnAddress() + '.' + (ildcpProtocol && ildcpProtocol.ilpAddressSegment || peerInfo.id)
-    } as IldcpMiddlewareServices))
-
-    this.peerMiddleware.set(peerInfo.id, [...middleware, ...protocolMiddleware])
-    const combinedMiddleware = pipeline(...middleware, ...protocolMiddleware)
-    const sendIncoming = setPipelineReader('incoming', combinedMiddleware, this.sendIlpPacket.bind(this))
-    const sendOutgoing = setPipelineReader('outgoing', combinedMiddleware, (request: IlpPrepare): Promise<IlpReply> => {
+    const sendOutgoingRequest = (request: IlpPrepare): Promise<IlpReply> => {
       try {
         return endpoint.sendOutgoingRequest(request)
       } catch (e) {
@@ -97,13 +66,15 @@ export default class Connector {
 
         throw e
       }
-    })
+    }
+
+    const sendIncoming = protocolMiddleware.length > 0 ? setPipelineReader('incoming', combinedMiddleware, this.sendIlpPacket.bind(this)) : this.sendIlpPacket.bind(this)
+    const sendOutgoing = protocolMiddleware.length > 0 ? setPipelineReader('outgoing', combinedMiddleware, sendOutgoingRequest) : sendOutgoingRequest
     endpoint.setIncomingRequestHandler((request: IlpPrepare) => {
       return sendIncoming(request)
     })
     this.outgoingIlpPacketHandlerMap.set(peerInfo.id, sendOutgoing)
 
-    middleware.forEach(mw => mw.startup())
     protocolMiddleware.forEach(mw => mw.startup())
 
     if (inheritAddressFrom) {
@@ -113,7 +84,8 @@ export default class Connector {
 
     // only add route for children. The rest are populated from route update.
     if (peerInfo.relation === 'child') {
-      const address = this.getOwnAddress() + '.' + (ildcpProtocol && ildcpProtocol.ilpAddressSegment || peerInfo.id)
+      const ildcpProtocol = peerInfo.protocols.filter(protocol => protocol.name === 'ildcp')[0]
+      const address = this.getOwnAddress() + '.' + (ildcpProtocol.ilpAddressSegment || peerInfo.id)
       this.routeManager.addRoute({
         peer: peerInfo.id,
         prefix: address,
@@ -221,5 +193,35 @@ export default class Connector {
 
   getPeerList () {
     return this.routeManager.getPeerList()
+  }
+
+  private _createProtocols (peerInfo: PeerInfo): Middleware[] {
+
+    const instantiateProtocol = (protocol: Protocol): Middleware => {
+      switch (protocol.name) {
+        case('ccp'):
+          return new CcpMiddleware({
+            isSender: protocol.sendRoutes || false,
+            isReceiver: protocol.receiveRoutes || false,
+            peerId: peerInfo.id,
+            forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
+            getPeerRelation: this.getPeerRelation.bind(this),
+            getOwnAddress: () => this.getOwnAddress() as string,
+            addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
+            removeRoute: this.routeManager.removeRoute.bind(this),
+            getRouteWeight: this.calculateRouteWeight.bind(this)
+          })
+        case('ildcp'):
+          return new IldcpMiddleware({
+            getPeerInfo: () => peerInfo,
+            getOwnAddress: this.getOwnAddress.bind(this),
+            getPeerAddress: () => this.getOwnAddress() + '.' + (protocol.ilpAddressSegment || peerInfo.id)
+          } as IldcpMiddlewareServices)
+        default:
+          throw new Error(`Protocol ${protocol.name} undefined`)
+      }
+    }
+
+    return peerInfo.protocols.map(instantiateProtocol)
   }
 }

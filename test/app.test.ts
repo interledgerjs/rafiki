@@ -13,6 +13,8 @@ import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, seria
 import { PeerInfo } from '../src/types/peer';
 import { Http2Endpoint } from '../src/endpoints/http2';
 import { ErrorHandlerMiddleware } from '../src/middleware/business/error-handler';
+import { isEndpoint } from '../src/types/endpoint';
+import { start } from 'repl';
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -45,7 +47,14 @@ describe('Test App', function () {
     rules: [{
       name: 'errorHandler'
     }],
-    protocols: [],
+    protocols: [{
+      name: 'ildcp'
+    }],
+  }
+
+  const endpointInfo: EndpointInfo = {
+    type: 'http',
+    'url': 'http://localhost:1234'
   }
 
   beforeEach(async () => {
@@ -107,54 +116,54 @@ describe('Test App', function () {
 
       packetCacheSpies.forEach(spy => sinon.assert.calledOnce(spy))
     })
+
+    it('removes peers', async function () {
+      await app.addPeer(peerInfo, endpointInfo)
+      const removePeerSpy = sinon.spy(app, 'removePeer')
+
+      await app.shutdown()
+
+      sinon.assert.calledTwice(removePeerSpy)
+      assert.equal(removePeerSpy.args[0][0], 'self')
+      assert.equal(removePeerSpy.args[1][0], peerInfo.id)
+    })
   })
 
   describe('addPeer', async function () {
     it('creates endpoint to be used by connector to add peer', async function () {
       const addPeerStub = sinon.stub(app.connector, 'addPeer').resolves()
-      const peerInfo: PeerInfo = {
-        id: 'bob',
-        assetCode: 'XRP',
-        assetScale: 9,
-        relation: 'child',
-        rules: [{
-          name: 'errorHandler'
-        }],
-        protocols: [],
-      }
-      const endpointInfo: EndpointInfo = {
-        type: 'http',
-        'url': 'http://localhost:1234'
-      }
 
       await app.addPeer(peerInfo, endpointInfo)
 
       const endpoint = addPeerStub.args[0][1]
-      assert.isTrue(endpoint instanceof Http2Endpoint)
+      assert.isTrue(isEndpoint(endpoint))
     })
 
-    it('creates middleware instances to be used by connector to add peer', async function () {
-      const addPeerStub = sinon.stub(app.connector, 'addPeer').resolves()
-      const peerInfo: PeerInfo = {
-        id: 'bob',
-        assetCode: 'XRP',
-        assetScale: 9,
-        relation: 'child',
-        rules: [{
-          name: 'errorHandler'
-        }],
-        protocols: [],
-      }
-      const endpointInfo: EndpointInfo = {
-        type: 'http',
-        'url': 'http://localhost:1234'
-      }
+    it('creates and stores the business rules', async function () {
+      await app.addPeer(peerInfo, endpointInfo)
+
+      const businessRules = app.getRules(peerInfo.id)
+      assert.include(businessRules.map(mw => mw.constructor.name), 'ErrorHandlerMiddleware')
+    })
+
+    it('starts the business rules', async function () {
+      const startSpy = sinon.spy(ErrorHandlerMiddleware.prototype, 'startup')
 
       await app.addPeer(peerInfo, endpointInfo)
 
-      const middlewareArray = addPeerStub.args[0][2]
-      assert.equal(middlewareArray.length, 1)
-      assert.isTrue(middlewareArray[0] instanceof ErrorHandlerMiddleware)
+      sinon.assert.calledOnce(startSpy)
+    })
+  })
+
+  describe('remove peer', function () {
+    it('shuts down the rules', async function () {
+      await app.addPeer(peerInfo, endpointInfo)
+      const rules = app.getRules(peerInfo.id)
+      const shutdownSpies = rules.map(rule => sinon.spy(rule, 'shutdown'))
+
+      await app.removePeer(peerInfo.id)
+
+      shutdownSpies.forEach(spy => sinon.assert.calledOnce(spy))
     })
   })
 

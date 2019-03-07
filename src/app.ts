@@ -1,5 +1,5 @@
 import * as log from 'winston'
-import { Middleware } from './types/middleware'
+import { Middleware, setPipelineReader } from './types/middleware'
 import Connector from './connector'
 import { PeerInfo, Rule } from './types/peer'
 import { ErrorHandlerMiddleware } from './middleware/business/error-handler'
@@ -16,10 +16,12 @@ import Stats from './services/stats'
 import { ReduceExpiryMiddleware } from './middleware/protocol/reduce-expiry'
 import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2'
-import { serializeIlpReject } from 'ilp-packet'
+import { serializeIlpReject, IlpReply, IlpPrepare } from 'ilp-packet'
 import SettlementEngine from './services/settlement-engine'
 import * as pathToRegexp from 'path-to-regexp'
 import * as Redis from 'ioredis'
+import { pipeline, RequestHandler } from './types/request-stream';
+import { Endpoint } from './types/endpoint';
 
 const REDIS_BALANCE_STREAM_KEY = 'balance'
 
@@ -49,6 +51,7 @@ export default class App {
   server: Http2Server
   port: number
   endpointsMap: Map<string, Http2Endpoint>
+  businessRulesMap: Map<string, Middleware[]>
 
   constructor (opts: AppOptions, deps?: AppDeps) {
 
@@ -60,6 +63,7 @@ export default class App {
     this.throughputBucketsMap = new Map()
     this.endpointsMap = new Map()
     this.settlementEngine = new SettlementEngine({ streamKey: REDIS_BALANCE_STREAM_KEY, redisClient: deps ? deps.redisClient : new Redis({ host: 'redis' }) })
+    this.businessRulesMap = new Map()
 
     this.connector.setOwnAddress(opts.ilpAddress)
 
@@ -114,10 +118,30 @@ export default class App {
   }
 
   async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
+    const middlewareInstances: Middleware[] = this._createMiddleware(peerInfo)
+    this.businessRulesMap.set(peerInfo.id, middlewareInstances)
     const endpoint = this.createEndpoint(endpointInfo)
+
+    // create incoming and outgoing pipelines for business rules
+    const combinedMiddleware = pipeline(...middlewareInstances)
+    const sendOutgoing = middlewareInstances.length > 0 ? setPipelineReader('outgoing', combinedMiddleware, endpoint.sendOutgoingRequest.bind(endpoint)) : endpoint.sendOutgoingRequest.bind(endpoint)
+
+    // wrap endpoint and middleware pipelines in something that looks like an endpoint<IlpPrepare, IlpReply>
+    const wrapperEndpoint = {
+      sendOutgoingRequest: async (request: IlpPrepare, sentCallback?: () => void): Promise<IlpReply> => {
+        return sendOutgoing(request)
+      },
+      setIncomingRequestHandler: (handler: RequestHandler<IlpPrepare, IlpReply>): Endpoint<IlpPrepare, IlpReply> => {
+        const sendIncoming = middlewareInstances.length > 0 ? setPipelineReader('incoming', combinedMiddleware, handler) : handler
+        endpoint.setIncomingRequestHandler(sendIncoming)
+        return wrapperEndpoint
+      }
+    }
+    await this.connector.addPeer(peerInfo, wrapperEndpoint, false)
+
+    middlewareInstances.forEach(mw => mw.startup())
+
     this.endpointsMap.set(peerInfo.id, endpoint)
-    // TODO need to resolve some stuff here
-    await this.connector.addPeer(peerInfo, endpoint, this._createMiddleware(peerInfo), false)
   }
 
   async removePeer (peerId: string) {
@@ -130,7 +154,7 @@ export default class App {
     this.throughputBucketsMap.delete(peerId)
     this.endpointsMap.delete(peerId)
     await this.connector.removePeer(peerId)
-    // TODO need to resolve some stuff here
+    Array.from(this.getRules(peerId)).forEach(rule => rule.shutdown())
   }
 
   /**
@@ -144,6 +168,10 @@ export default class App {
     this.throughputBucketsMap.clear()
     this.server.close()
     this.endpointsMap.clear()
+  }
+
+  getRules (peerId: string): Middleware[] {
+    return this.businessRulesMap.get(peerId) || []
   }
 
   private createEndpoint (endpointInfo: EndpointInfo) {
