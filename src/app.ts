@@ -1,4 +1,4 @@
-import * as log from 'winston'
+import { log } from './winston'
 import { Middleware } from './types/middleware'
 import Connector from './connector'
 import { PeerInfo, Rule } from './types/peer'
@@ -19,6 +19,7 @@ import { Http2Endpoint } from './endpoints/http2'
 import { serializeIlpReject } from 'ilp-packet'
 import * as pathToRegexp from 'path-to-regexp'
 
+const logger = log.child({ component: 'App' })
 export interface AppOptions {
   ilpAddress: string
   port: number,
@@ -62,6 +63,7 @@ export default class App {
       const method = headers[':method']
       const path = headers[':path']
 
+      logger.silly('incoming http2 stream', { path, method })
       const peerId = this._matchPathToPeerId(path)
 
       if (peerId && method === 'POST') {
@@ -75,7 +77,7 @@ export default class App {
           let response = await this.handleIncomingPacket(peerId, packet)
           stream.end(response)
         })
-        stream.on('error', (error) => log.error('stream error', { error }))
+        stream.on('error', (error) => logger.error('stream error', { error }))
       } else {
         stream.respond({ ':status': 404 })
         stream.end()
@@ -84,7 +86,8 @@ export default class App {
   }
 
   async start () {
-    log.info('starting connector on port ' + this.port)
+    logger.info('starting connector....')
+    logger.info('starting HTTP2 server on port ' + this.port)
     this.server.listen(this.port)
   }
 
@@ -94,6 +97,7 @@ export default class App {
     if (endpoint) {
       return endpoint.handlePacket(data)
     } else {
+      logger.info('endpoint not found for incoming packet', { peerId })
       return serializeIlpReject({
         code: 'T01', // TODO probably should be another error code
         data: Buffer.from(''),
@@ -104,6 +108,7 @@ export default class App {
   }
 
   async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
+    logger.info('adding new peer: ' + peerInfo.id, { peerInfo, endpointInfo })
     const endpoint = this.createEndpoint(endpointInfo)
     this.endpointsMap.set(peerInfo.id, endpoint)
     // TODO need to resolve some stuff here
@@ -111,6 +116,7 @@ export default class App {
   }
 
   async removePeer (peerId: string) {
+    logger.info('Removing peer: ' + peerId, { peerId })
     const endpoint = this.endpointsMap.get(peerId)
     if (endpoint) {
       endpoint.close()
@@ -127,6 +133,7 @@ export default class App {
    * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's middleware.
    */
   async shutdown () {
+    logger.info('Shutting down app...')
     this.connector.getPeerList().forEach((peerId: string) => this.removePeer(peerId))
     Array.from(this.packetCacheMap.values()).forEach(cache => cache.dispose())
     this.packetCacheMap.clear()
@@ -140,8 +147,10 @@ export default class App {
     const { type, url } = endpointInfo
     switch (type) {
       case ('http'):
+        logger.info('adding new Http2 endpoint for peer', { endpointInfo })
         return new Http2Endpoint({ url })
       default:
+        logger.warn('Endpoint type specified not support', { endpointInfo })
         throw new Error('Endpoint type not supported')
     }
   }
