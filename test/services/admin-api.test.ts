@@ -20,7 +20,7 @@ describe('Admin Api', function () {
   beforeEach(function () {
     app = new App({ ilpAddress: 'unknown', port: 8083 })
     settlementEngine = new SettlementEngine({ streamKey: 'balance', redisClient: new RedisMock() })
-    adminApi = new AdminApi({ app, settlementEngine })
+    adminApi = new AdminApi({},{ app, settlementEngine })
     adminApi.listen()
   })
 
