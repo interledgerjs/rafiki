@@ -4,7 +4,7 @@
 
 ![](./images/rafiki.jpeg)
 
-_Image Credit: [Felicia Ray](https://medium.com/r/?url=https%3A%2F%2Fwww.redbubble.com%2Fpeople%2Ffeliciaray%2Fworks%2F29271134-rafiki%3Fp%3Dposter)_
+_Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/29271134-rafiki?p=poster)_
 
 **This is a BETA. There are still TODO's:**
 
