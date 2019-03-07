@@ -1,13 +1,33 @@
-# ilp-connector-beta
-> Proof of concept for connector architecture redesign
+# rafiki
 
+> A modular ILP connector with stand-alone settlement engine and router
+
+** This is a BETA. There are still TODO's: **
+
+ - [ ] Thorough code review 😬
+ - [ ] Documentation
+ - [ ] CI/CD and some automation around commit checks
+ - [ ] Get/set own address when child
+ - [ ] Make own address configurable
+ - [ ] Update config schemas and/or support old schemas
+ - [ ] HTTP/2 endpoint reconnect logic
+ - [ ] Fix/review logging
+ - [ ] Support unsolicited peer connections
+ - [ ] Pluggable settlement and/or alternative settlement engines
+ - [ ] Synchronous/atomic settlement model (alternative balance rule and settlement engine)
+ - [ ] Exchange rate rules
+ - [ ] Connector control-plane service
+ - [ ] Consider creating mono-repo including endpoints and router
 
 ## Usage
 
-
+TODO
 
 ## Project
 
+We designed Rafiki to be modular and therefor easy for work to be done on individual components in isolation. We encourage contributions especially in the form of new rules, protocols or settlement engines.
+
+If you are keen to contribute please look at the issues, especially those labelled 'Good First Issue'.
 
 ### Folders
 
