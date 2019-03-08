@@ -2,7 +2,7 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
-import SettlementEngine from '../../src/services/settlement-engine'
+import { SettlementEngine } from '../../src/services/settlement-engine'
 import { Redis } from 'ioredis'
 const RedisMock = require('ioredis-mock')
 

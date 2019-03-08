@@ -1,6 +1,6 @@
 import { log } from './winston'
 import { Rule, setPipelineReader } from './types/rule'
-import Connector from './connector'
+import { Connector } from './connector'
 import { PeerInfo, RuleConfig } from './types/peer'
 import { ErrorHandlerRule } from './rules/error-handler'
 import { RateLimitRule, createRateLimitBucketForPeer } from './rules/rate-limit'
@@ -11,8 +11,8 @@ import { ExpireRule } from './rules/expire'
 import { ValidateFulfillmentRule } from './rules/validate-fulfillment'
 import { StatsRule } from './rules/stats'
 import { AlertRule, Alerts } from './rules/alert'
-import TokenBucket from './lib/token-bucket'
-import Stats from './services/stats'
+import { TokenBucket } from './lib/token-bucket'
+import { Stats } from './services/stats'
 import { ReduceExpiryRule } from './rules/reduce-expiry'
 import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2'
@@ -33,7 +33,7 @@ export interface EndpointInfo {
   url: string
 }
 
-export default class App {
+export class App {
 
   connector: Connector
   stats: Stats

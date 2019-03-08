@@ -7,7 +7,7 @@ import { IlpPrepare, IlpFulfill, serializeIlpFulfill, IlpReply, deserializeIlpRe
 import * as ILDCP from 'ilp-protocol-ildcp'
 import { PeerInfo } from '../../src/types/peer'
 import { setPipelineReader } from '../../src/types/rule'
-import MockEndpoint from '../mocks/mockIlpEndpoint'
+import { MockIlpEndpoint } from '../mocks/mockIlpEndpoint'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -128,7 +128,7 @@ describe('ILDCP Rule', function () {
         assetCode: 'USD',
         assetScale: 2
       } as ILDCP.IldcpResponse
-      const parentEndpoint = new MockEndpoint(async (packet: IlpPrepare): Promise<IlpReply> => deserializeIlpReply(ILDCP.serializeIldcpResponse(ildcpResponse)))
+      const parentEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare): Promise<IlpReply> => deserializeIlpReply(ILDCP.serializeIldcpResponse(ildcpResponse)))
       const ildcpRule = new IldcpProtocol(ildcpServices)
 
       try{
@@ -146,7 +146,7 @@ describe('ILDCP Rule', function () {
         assetCode: 'USD',
         assetScale: 2
       } as ILDCP.IldcpResponse
-      const parentEndpoint = new MockEndpoint(async (packet: IlpPrepare): Promise<IlpReply> => deserializeIlpReply(ILDCP.serializeIldcpResponse(ildcpResponse)))
+      const parentEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare): Promise<IlpReply> => deserializeIlpReply(ILDCP.serializeIldcpResponse(ildcpResponse)))
       const ildcpRule = new IldcpProtocol(ildcpServices)
 
       const address = await ildcpRule.getAddressFrom(parentEndpoint)

@@ -10,7 +10,7 @@ import { EchoProtocol } from './protocols/echo'
 import { PeerUnreachableError } from 'ilp-packet/dist/src/errors'
 
 const { codes } = Errors
-export default class Connector {
+export class Connector {
   routingTable: RoutingTable = new RoutingTable()
   routeManager: RouteManager = new RouteManager(this.routingTable)
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()

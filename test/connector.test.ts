@@ -2,14 +2,13 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
-import Connector from '../src/connector'
+import { Connector } from '../src/connector'
 import { PeerInfo } from '../src/types/peer'
-import MockIlpEndpoint from './mocks/mockIlpEndpoint';
-import { IlpPrepare, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
-import { MockRule } from './mocks/mockRule';
+import { MockIlpEndpoint } from './mocks/mockIlpEndpoint'
+import { IlpPrepare, IlpFulfill } from 'ilp-packet'
 import { Errors } from 'ilp-packet'
-import { CcpProtocol } from '../src/protocols/ccp';
-import { IldcpProtocol } from '../src/protocols/ildcp';
+import { CcpProtocol } from '../src/protocols/ccp'
+import { IldcpProtocol } from '../src/protocols/ildcp'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

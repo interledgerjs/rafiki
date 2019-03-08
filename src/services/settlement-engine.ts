@@ -13,7 +13,7 @@ interface SettlementEngineServices {
   streamKey: string
 }
 
-export default class SettlementEngine {
+export class SettlementEngine {
 
   redis: Redis.Redis
   streamKey: string

@@ -1,4 +1,4 @@
-export default class TokenBucket {
+export class TokenBucket {
   private _lastTime: number
   private _left: bigint
   private _capacity: bigint

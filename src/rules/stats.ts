@@ -1,6 +1,6 @@
 import { IlpPrepare, IlpReply, isFulfill } from 'ilp-packet'
 import { Rule, IlpRequestHandler } from '../types/rule'
-import Stats from '../services/stats'
+import { Stats } from '../services/stats'
 import { PeerInfo } from '../types/peer'
 
 export interface StatsRuleServices {

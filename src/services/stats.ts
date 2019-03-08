@@ -30,7 +30,7 @@ export class PeerGauge extends Prometheus.Gauge {
   }
 }
 
-export default class Stats {
+export class Stats {
   public incomingDataPackets: PeerCounter
   public incomingDataPacketValue: PeerCounter
   public outgoingDataPackets: PeerCounter

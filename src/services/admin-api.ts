@@ -2,8 +2,8 @@ import { Server, IncomingMessage, ServerResponse } from 'http'
 import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
 import InvalidJsonBodyError from '../errors/invalid-json-body-error'
 import Ajv = require('ajv')
-import App from '../app'
-import SettlementEngine from './settlement-engine'
+import { App } from '../app'
+import { SettlementEngine } from './settlement-engine'
 const ajv = new Ajv()
 const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
 
@@ -23,7 +23,7 @@ interface Route {
   fn: (url: string, body: object) => Promise<object | string | void>
   responseType?: string
 }
-export default class AdminApi {
+export class AdminApi {
   private app: App
   private settlementEngine: SettlementEngine
   private server?: Server

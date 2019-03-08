@@ -8,7 +8,6 @@
  */
 
 import * as winston from 'winston'
-import * as debug from 'debug'
 
 const log = {
   child: (options: Object): winston.Logger => {

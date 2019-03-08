@@ -7,7 +7,7 @@ const assert = Object.assign(Chai.assert, sinon.assert)
 import { IlpPrepare, IlpReject, IlpFulfill } from 'ilp-packet';
 import { PeerInfo } from '../../src/types/peer';
 import { InMemoryBalanceRule } from '../../src/rules/in-memory-balance'
-import Stats from '../../src/services/stats';
+import { Stats } from '../../src/services/stats';
 import { setPipelineReader } from '../../src/types/rule';
 import { MAX_UINT_64 } from '../../src/constants';
 

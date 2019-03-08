@@ -6,9 +6,9 @@ Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 import { IlpPrepare, IlpFulfill, isFulfill, Errors } from 'ilp-packet';
 import { RateLimitRule, createRateLimitBucketForPeer } from '../../src/rules/rate-limit'
-import Stats from '../../src/services/stats';
+import { Stats } from '../../src/services/stats';
 import { PeerInfo } from '../../src/types/peer';
-import TokenBucket from '../../src/lib/token-bucket';
+import { TokenBucket } from '../../src/lib/token-bucket';
 import { setPipelineReader } from '../../src/types/rule';
 const { RateLimitedError } = Errors
 

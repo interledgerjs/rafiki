@@ -5,7 +5,7 @@ import * as chaiAsPromised from 'chai-as-promised'
 import { IlpPrepare, IlpReply, deserializeIlpFulfill, IlpReject, IlpFulfill, isFulfill } from 'ilp-packet'
 import { HeartbeatRule } from '../../src/rules/heartbeat'
 import { setPipelineReader } from '../../src/types/rule';
-import MockIlpEndpoint from '../mocks/mockIlpEndpoint';
+import { MockIlpEndpoint } from '../mocks/mockIlpEndpoint';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

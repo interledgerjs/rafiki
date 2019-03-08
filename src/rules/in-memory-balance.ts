@@ -1,7 +1,7 @@
 import { Rule, IlpRequestHandler, RuleRequestHandler } from '../types/rule'
 import { PeerInfo } from '../types/peer'
 import { IlpPrepare, Errors, isFulfill } from 'ilp-packet'
-import Stats from '../services/stats'
+import { Stats } from '../services/stats'
 import { log } from '../winston'
 import { MAX_UINT_64, STATIC_FULFILLMENT, MIN_INT_64 } from '../constants'
 const logger = log.child({ component: 'balance-middleware' })

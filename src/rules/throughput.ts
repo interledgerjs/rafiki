@@ -1,6 +1,6 @@
 import { Rule, IlpRequestHandler } from '../types/rule'
 import { PeerInfo } from '../types/peer'
-import TokenBucket from '../lib/token-bucket'
+import { TokenBucket } from '../lib/token-bucket'
 import { Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
 import { log } from '../winston'
 const logger = log.child({ component: 'throughput-middleware' })

@@ -1,8 +1,8 @@
 import { Errors, IlpPrepare, IlpReply } from 'ilp-packet'
 import { Rule, IlpRequestHandler } from '../types/rule'
-import TokenBucket from '../lib/token-bucket'
+import { TokenBucket } from '../lib/token-bucket'
 import { PeerInfo } from '../types/peer'
-import Stats from '../services/stats'
+import { Stats } from '../services/stats'
 import { log } from '../winston'
 const logger = log.child({ component: 'rate-limit-middleware' })
 

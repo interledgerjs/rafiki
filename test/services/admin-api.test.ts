@@ -2,11 +2,11 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
-import AdminApi from '../../src/services/admin-api'
+import { AdminApi } from '../../src/services/admin-api'
 import axios from 'axios'
 import { PeerInfo } from '../../src/types/peer'
-import App, { EndpointInfo } from '../../src/app'
-import SettlementEngine from '../../src/services/settlement-engine';
+import { App, EndpointInfo } from '../../src/app'
+import { SettlementEngine } from '../../src/services/settlement-engine';
 const RedisMock = require('ioredis-mock')
 
 Chai.use(chaiAsPromised)
