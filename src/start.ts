@@ -2,7 +2,7 @@ import * as winston from 'winston'
 import { App } from './app'
 import { AdminApi } from './services/admin-api'
 import { SettlementEngine } from './services/settlement-engine'
-import * as Redis from 'ioredis'
+import Redis from 'ioredis'
 
 // Logging
 const formatter = winston.format.printf(({ service, level, message, component, timestamp }) => {

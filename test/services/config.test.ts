@@ -1,8 +1,8 @@
 import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
-import Config from '../../src/services/config'
+import chaiAsPromised from 'chai-as-promised'
+import { Config } from '../../src/services/config'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

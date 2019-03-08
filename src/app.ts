@@ -18,7 +18,7 @@ import { Http2Server, createServer } from 'http2'
 import { Http2Endpoint } from './endpoints/http2'
 
 import { serializeIlpReject, IlpReply, IlpPrepare } from 'ilp-packet'
-import * as pathToRegexp from 'path-to-regexp'
+import pathToRegexp from 'path-to-regexp'
 import { pipeline, RequestHandler } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 

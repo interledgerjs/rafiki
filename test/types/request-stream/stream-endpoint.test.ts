@@ -1,7 +1,7 @@
 import 'mocha'
 import { StreamEndpoint, EndpointCodecs } from '../../../src/types/request-stream/stream-endpoint'
 import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { MessageFrame } from '../../../src/types/request-stream/frame'
 import { Readable, Writable, Transform, Duplex, TransformCallback } from 'stream'
 import { isEndpoint } from '../../../src/types/endpoint'

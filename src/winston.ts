@@ -11,7 +11,7 @@ import * as winston from 'winston'
 
 const log = {
   child: (options: Object): winston.Logger => {
-    const logger = winston.exceptions.logger
+    const logger = winston['default'].exceptions.logger
     const child = logger.child(options)
     // TODO: Consider adding a transport that writes to debug if this is enabled for the component
     // if (options['component'] && debug.enabled(options['component'])) {
