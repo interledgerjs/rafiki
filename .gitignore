@@ -4,7 +4,3 @@ coverage
 .nyc_output
 build
 .DS_Store
-
-# Generated typings for schemas should not be checked in
-/src/schemas/*.ts
-!/schemas/index.ts
