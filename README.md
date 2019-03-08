@@ -2,6 +2,10 @@
 
 > A modular ILP connector with stand-alone settlement engine and router
 
+<!-- [![NPM Package](https://img.shields.io/npm/v/ilp-routing.svg?style=flat)](https://npmjs.org/package/ilp-routing) -->
+[![CircleCI](https://circleci.com/gh/interledgerjs/rafiki.svg?style=shield)](https://circleci.com/gh/interledgerjs/rafiki)
+[![codecov](https://codecov.io/gh/interledgerjs/rafiki/branch/master/graph/badge.svg)](https://codecov.io/gh/interledgerjs/rafiki)
+
 ![](./images/rafiki.jpeg)
 
 _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/29271134-rafiki?p=poster)_
@@ -12,10 +16,8 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
  - [ ] Documentation
  - [ ] CI/CD and some automation around commit checks
  - [ ] Get/set own address when child
- - [ ] Make own address configurable
  - [ ] Update config schemas and/or support old schemas
  - [ ] HTTP/2 endpoint reconnect logic
- - [ ] Fix/review logging
  - [ ] Support unsolicited peer connections
  - [ ] Pluggable settlement and/or alternative settlement engines
  - [ ] Synchronous/atomic settlement model (alternative balance rule and settlement engine)
