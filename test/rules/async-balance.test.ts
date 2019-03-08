@@ -120,7 +120,7 @@ describe('BalanceV2 Rule', function () {
         })
       })
 
-      it('throws insufficient liquidity error if middleware disabled on packets coming in', async function () {
+      it('throws insufficient liquidity error if rule disabled on packets coming in', async function () {
         redis = new Redis({
           data: {
             'harry:balance:enabled': false

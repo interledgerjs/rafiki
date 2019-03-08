@@ -63,7 +63,7 @@ describe('Connector', function () {
       assert.deepEqual(peers, ['self'])
     })
 
-    it('sets up Echo middleware in pipeline', function() {
+    it('sets up Echo protocol in pipeline', function() {
       const peerRule = connector.getPeerRules('self')
 
       assert.include(peerRule!.map(mw => mw.constructor.name), 'EchoProtocol')
@@ -73,7 +73,7 @@ describe('Connector', function () {
 
   describe('addPeer', function () {
 
-    it('adds protocol middleware to peer', async function () {
+    it('adds protocols to peer', async function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
       await connector.addPeer(peerInfo, endpoint)
@@ -84,7 +84,7 @@ describe('Connector', function () {
       assert.include(peerRule!.map(mw => mw.constructor.name), 'CcpProtocol')
     })
 
-    it.skip('adds heartbeat middleware to peer middleware', async function () {
+    it.skip('adds heartbeat rule to peer', async function () {
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
 
       await connector.addPeer(peerInfo, endpoint)
@@ -126,7 +126,7 @@ describe('Connector', function () {
       assert.isOk(isConnected)
     })
 
-    it('starts protocol middleware', async function () {
+    it('starts protocols', async function () {
       const ccpStartSpy = sinon.spy(CcpProtocol.prototype, 'startup')
       const ildcpStartSpy = sinon.spy(IldcpProtocol.prototype, 'startup')
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
@@ -155,7 +155,7 @@ describe('Connector', function () {
 
       await connector.addPeer(peerInfo, endpoint)
     })
-    it('shuts down the peer middleware', async function () {
+    it('shuts down the peer protocols', async function () {
       const peerRule = connector.getPeerRules(peerInfo.id)
       const shutdownSpies = peerRule!.map(mw => sinon.spy(mw, 'shutdown'))
 
@@ -164,7 +164,7 @@ describe('Connector', function () {
       shutdownSpies.forEach(spy => sinon.assert.calledOnce(spy))
     })
 
-    it('deletes peer middleware from map', async function () {
+    it('deletes peer protocols from map', async function () {
       assert.isNotEmpty(connector.getPeerRules(peerInfo.id))
 
       await connector.removePeer(peerInfo.id)

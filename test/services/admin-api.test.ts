@@ -132,7 +132,7 @@ describe('Admin Api', function () {
       assert.deepEqual(response.data, {alerts: []})
     })
 
-    it('returns an alert when a peer returns "maximum balance exceeded"') // TODO: complete when balance middleware is added
+    it('returns an alert when a peer returns "maximum balance exceeded"') // TODO: complete when balance rule is added
   })
 
   describe('getBalances', function () {
