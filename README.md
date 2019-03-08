@@ -24,6 +24,14 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
  - [ ] Exchange rate rules
  - [ ] Connector control-plane service
  - [ ] Consider creating mono-repo including endpoints and router
+ 
+ Dependencies:
+ 
+> Changes required in other projects that we've worked around for now.
+ 
+ - [ ] https://github.com/winstonjs/logform/pull/84
+ - [ ] https://github.com/interledgerjs/ilp-protocol-ccp/pull/3
+ - [ ] https://github.com/winstonjs/winston/pull/1603
 
 ## About
 
