@@ -2,7 +2,7 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { App, EndpointInfo } from '../src/app'
+import { App } from '../src/app'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 
@@ -11,6 +11,7 @@ import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, seria
 import { PeerInfo } from '../src/types/peer';
 import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
+import { EndpointInfo } from '../src';
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -54,7 +55,7 @@ describe('Test App', function () {
   }
 
   beforeEach(async () => {
-    app = new App({ilpAddress: 'test.harry', port: 8083})
+    app = new App({ilpAddress: 'test.harry', http2Port: 8083})
     await app.start()
     await app.addPeer(peerInfo, {
       type: 'http',
@@ -106,7 +107,7 @@ describe('Test App', function () {
     })
 
     it('disposes of packet caches', async function () {
-      const packetCacheSpies = Array.from(app.packetCacheMap.values()).map(cache => sinon.spy(cache, 'dispose'))
+      const packetCacheSpies = Array.from(app['_packetCacheMap'].values()).map(cache => sinon.spy(cache, 'dispose'))
 
       await app.shutdown()
 
