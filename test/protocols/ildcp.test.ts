@@ -1,7 +1,7 @@
 import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { IldcpProtocol, IldcpProtocolServices } from '../../src/protocols/ildcp'
 import { IlpPrepare, IlpFulfill, serializeIlpFulfill, IlpReply, deserializeIlpReply } from 'ilp-packet'
 import * as ILDCP from 'ilp-protocol-ildcp'

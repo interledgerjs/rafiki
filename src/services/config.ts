@@ -1,8 +1,8 @@
-import InvalidJsonBodyError from '../errors/invalid-json-body-error'
+import { InvalidJsonBodyError } from '../errors/invalid-json-body-error'
 import { constantCase } from 'change-case'
 import { Config as ConfigSchemaTyping } from '../schemas/ConfigTyping'
 import { log } from '../winston'
-const schema = require('../schemas/Config.json')
+import * as configSchema from '../schemas/Config.json'
 const {
   extractDefaultsFromSchema
 } = require('../lib/utils')
@@ -20,7 +20,7 @@ const BOOLEAN_VALUES = {
   '': false
 }
 
-export default class Config extends ConfigSchemaTyping {
+export class Config extends ConfigSchemaTyping {
   // TODO: These fields are already all defined in the config schema, however
   //   they are defined as optional and as a result, TypeScript thinks that they
   //   may not be set. However, when we construct a new Config instance, we load
@@ -41,12 +41,12 @@ export default class Config extends ConfigSchemaTyping {
 
     this.loadDefaults()
 
-    this._validate = ajv.compile(schema)
-    this._validateAccount = ajv.compile(schema.properties.accounts.additionalProperties)
+    this._validate = ajv.compile(configSchema)
+    this._validateAccount = ajv.compile(configSchema.properties.accounts.additionalProperties)
   }
 
   loadDefaults () {
-    Object.assign(this, extractDefaultsFromSchema(schema))
+    Object.assign(this, extractDefaultsFromSchema(configSchema))
   }
 
   loadFromEnv (env?: NodeJS.ProcessEnv) {
@@ -61,14 +61,14 @@ export default class Config extends ConfigSchemaTyping {
     )
 
     const config = {}
-    for (let key of Object.keys(schema.properties)) {
+    for (let key of Object.keys(configSchema.properties)) {
       const envKey = ENV_PREFIX + constantCase(key)
       const envValue = env[envKey]
 
       unrecognizedEnvKeys.delete(envKey)
 
       if (typeof envValue === 'string') {
-        switch (schema.properties[key].type) {
+        switch (configSchema.properties[key].type) {
           case 'string':
             config[key] = envValue
             break
@@ -88,7 +88,7 @@ export default class Config extends ConfigSchemaTyping {
             config[key] = Number(envValue)
             break
           default:
-            throw new TypeError('Unknown JSON schema type: ' + schema.properties[key].type)
+            throw new TypeError('Unknown JSON schema type: ' + configSchema.properties[key].type)
         }
       }
     }

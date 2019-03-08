@@ -1,7 +1,7 @@
 import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { Connector } from '../src/connector'
 import { PeerInfo } from '../src/types/peer'
 import { MockIlpEndpoint } from './mocks/mockIlpEndpoint'

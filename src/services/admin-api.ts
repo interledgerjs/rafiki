@@ -1,12 +1,14 @@
 import { log } from './../winston'
 import { Server, IncomingMessage, ServerResponse } from 'http'
 import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
-import InvalidJsonBodyError from '../errors/invalid-json-body-error'
-import Ajv = require('ajv')
+import { InvalidJsonBodyError } from '../errors/invalid-json-body-error'
+import Ajv from 'ajv'
 import { App } from '../app'
 import { SettlementEngine } from './settlement-engine'
+import * as balanceUpdateSchema from '../schemas/BalanceUpdate.json'
+
 const ajv = new Ajv()
-const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
+const validateBalanceUpdate = ajv.compile(balanceUpdateSchema)
 const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
@@ -14,7 +16,7 @@ export interface AdminApiOptions {
   port?: number
 }
 
-export interface AdminApiDeps {
+export interface AdminApiServices {
   app: App,
   settlementEngine: SettlementEngine
 }
@@ -25,6 +27,7 @@ interface Route {
   fn: (url: string, body: object) => Promise<object | string | void>
   responseType?: string
 }
+
 export class AdminApi {
   private app: App
   private settlementEngine: SettlementEngine
@@ -33,7 +36,7 @@ export class AdminApi {
   private host: string
   private port: number
 
-  constructor ({ host, port }: AdminApiOptions, { app, settlementEngine }: AdminApiDeps) {
+  constructor ({ host, port }: AdminApiOptions, { app, settlementEngine }: AdminApiServices) {
     this.app = app
     this.settlementEngine = settlementEngine
     this.routes = [

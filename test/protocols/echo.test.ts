@@ -1,11 +1,11 @@
 import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { EchoProtocol } from '../../src/protocols/echo'
 import { setPipelineReader } from '../../src/types/rule'
 import { IlpPrepare, IlpReply, IlpFulfill } from 'ilp-packet'
-import { Reader, Writer } from 'oer-utils'
+import { Writer } from 'oer-utils'
 import { InvalidPacketError } from 'ilp-packet/dist/src/errors';
 
 Chai.use(chaiAsPromised)

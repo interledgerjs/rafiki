@@ -1,7 +1,7 @@
 import 'mocha'
 import { getReadBuffer, MessageEncoder, MessageDecoder } from '../../../src/types/request-stream/message-stream'
 import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { MessageFrame, isMessageFrame } from '../../../src/types/request-stream/frame';
 import { BufferedStream } from '../../mocks/buffered-stream'
 const { expect } = Chai
