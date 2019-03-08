@@ -46,6 +46,10 @@ export class App {
   endpointsMap: Map<string, Http2Endpoint>
   businessRulesMap: Map<string, Rule[]>
 
+  /**
+   * Instantiates an http2 server which handles posts to ilp/:peerId and passes the packet on to the appropriate peer's endpoint.
+   * @param opts Options for the application
+   */
   constructor (opts: AppOptions) {
 
     this.connector = new Connector()
@@ -96,7 +100,11 @@ export class App {
     this.server.listen(this.port)
   }
 
-  // Find endpoint and drop packet onto it if found
+  /**
+   * Find endpoint and drop packet onto it if found
+   * @param peerId id of the peer
+   * @param data Buffer filled with the received packet
+   */
   private async handleIncomingPacket (peerId: string, data: Buffer) {
     const endpoint = this.endpointsMap.get(peerId)
     if (endpoint) {
@@ -112,6 +120,12 @@ export class App {
     }
   }
 
+  /**
+   * Instantiates the business rules specified in the peer information and attaches it to a pipeline. Creates a wrapper endpoint which connects the pipeline to
+   * the original endpoint. This is then passed into the connector's addPeer. The business rules are then started and the original endpoint stored.
+   * @param peerInfo Peer information
+   * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
+   */
   async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
     logger.info('adding new peer: ' + peerInfo.id, { peerInfo, endpointInfo })
     const rulesInstances: Rule[] = this._createRule(peerInfo)
@@ -133,7 +147,7 @@ export class App {
         return wrapperEndpoint
       }
     }
-    await this.connector.addPeer(peerInfo, wrapperEndpoint, false)
+    await this.connector.addPeer(peerInfo, wrapperEndpoint, false) // TODO: add logic to determine whether address should be inherited.
 
     rulesInstances.forEach(mw => mw.startup())
 
@@ -155,7 +169,7 @@ export class App {
   }
 
   /**
-   * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's middleware.
+   * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's protocols.
    */
   async shutdown () {
     logger.info('Shutting down app...')
@@ -184,6 +198,11 @@ export class App {
     }
   }
 
+  /**
+   * Creates the business rules specified in the peer information. Custom rules should be added to the list.
+   * @param peerInfo Peer information
+   * @returns An array of rules
+   */
   private _createRule (peerInfo: PeerInfo): Rule[] {
 
     logger.verbose('Creating rules for peer', { peerInfo })

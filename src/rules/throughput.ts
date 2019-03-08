@@ -14,7 +14,7 @@ export interface ThroughputRuleServices {
 }
 
 /**
- * The Throughput middleware throttles throughput based on the amount in the packets.
+ * The Throughput rule throttles throughput based on the amount in the packets.
  */
 export class ThroughputRule extends Rule {
   constructor ({ incomingBucket, outgoingBucket }: ThroughputRuleServices) {
