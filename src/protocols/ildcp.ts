@@ -3,7 +3,8 @@ import * as ILDCP from 'ilp-protocol-ildcp'
 import { Rule, IlpRequestHandler } from '../types/rule'
 import { PeerInfo } from '../types/peer'
 import { Endpoint } from '../types/endpoint'
-
+import { log } from '../winston'
+const logger = log.child({ component: 'ildcp-protocol' })
 export interface IldcpProtocolServices {
   getPeerInfo: () => PeerInfo,
   getOwnAddress: () => string
@@ -17,9 +18,12 @@ export class IldcpProtocol extends Rule {
           const { assetCode, assetScale, protocols, id, relation } = getPeerInfo()
           const ildcpProtocol = protocols.filter(protocol => protocol.name === 'ildcp')[0]
           if (relation !== 'child') {
+            logger.warn('received ILDCP request for peer that is not a child', { peerId: id, relation })
             throw new Error('Can\'t generate address for a peer that isn\t a child.')
           }
           const clientAddress = getOwnAddress() + '.' + (ildcpProtocol.ilpAddressSegment || id)
+          logger.info('responding to ILDCP request from child', { address: clientAddress })
+
           // TODO: Remove unnecessary serialization from ILDCP module
           return deserializeIlpReply(await ILDCP.serve({
             requestPacket: serializeIlpPrepare(request),
@@ -41,12 +45,17 @@ export class IldcpProtocol extends Rule {
   async getAddressFrom (parentEndpoint: Endpoint<IlpPrepare, IlpReply>): Promise<string> {
     const { clientAddress } = await ILDCP.fetch(async (data: Buffer): Promise<Buffer> => {
       const ildcpRequest = deserializeIlpPrepare(data)
+      logger.info('sending ILDCP address to parent')
       const reply = await parentEndpoint.sendOutgoingRequest(ildcpRequest)
       return serializeIlpReply(reply)
     })
 
-    if (clientAddress === 'unknown') throw new Error('no ilp address configured')
+    if (clientAddress === 'unknown') {
+      logger.error('failed to get ILDCP address from parent')
+      throw new Error('no ilp address configured')
+    }
 
+    logger.info('received ILDCP address from parent', { address: clientAddress })
     return clientAddress
   }
 }

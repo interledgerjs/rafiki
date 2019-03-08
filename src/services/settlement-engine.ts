@@ -1,5 +1,7 @@
 import * as Redis from 'ioredis'
 import { MAX_UINT_64 } from '../constants'
+import { log } from '../winston'
+const logger = log.child({ component: 'settlement-engine' })
 
 interface BalanceMiddlewareMessage {
   peerId: string,
@@ -29,6 +31,7 @@ export class SettlementEngine {
   }
 
   async start (): Promise<void> {
+    logger.info('starting settlement engine...')
     this.started = true
     // TODO: Handle case where redis status isn't connected
 
@@ -38,6 +41,7 @@ export class SettlementEngine {
   private startPolling = async (): Promise<void> => {
     return new Promise(async (resolve) => {
       await this.process(this.streamKey)
+      // TODO Move to a set polling time and get more items off the queue
       this.polling = setImmediate(() => this.startPolling())
       this.polling.unref()
       resolve()
@@ -45,6 +49,7 @@ export class SettlementEngine {
   }
 
   async shutdown (): Promise<string> {
+    logger.info('shutting down settlement engine...')
     clearImmediate(this.polling)
     return this.redis.quit()
   }
@@ -66,20 +71,27 @@ export class SettlementEngine {
   }
 
   getBalance (peerId: string): bigint {
-    const prevbalance = this.peerBalances.get(peerId)
-    if (!prevbalance) throw new Error(`Balance has not been set for peerId=${peerId}`)
-    return prevbalance
+    const prevBalance = this.peerBalances.get(peerId)
+    if (!prevBalance) throw new Error(`Balance has not been set for peerId=${peerId}`)
+    return prevBalance
   }
 
   async updateBalance (peerId: string, delta: bigint) {
-    const prevbalance = this.getBalance(peerId)
-    const newBalance = prevbalance + delta
+    const prevBalance = this.getBalance(peerId)
+    const newBalance = prevBalance + delta
     const limits = this.getBalanceLimits(peerId)
     const isNewBalanceOutsideLimits = newBalance < limits.min || newBalance > limits.max
-    const prevBalanceOutsideLimits = prevbalance < limits.min || prevbalance > limits.max
+    const prevBalanceOutsideLimits = prevBalance < limits.min || prevBalance > limits.max
 
-    if (isNewBalanceOutsideLimits) await this.redis.set(`${peerId}:balance:enabled`, false)
-    if (prevBalanceOutsideLimits && !isNewBalanceOutsideLimits) await this.redis.set(`${peerId}:balance:enabled`, true)
+    // Peer is outside balance limit => disable them
+    if (isNewBalanceOutsideLimits) {
+      logger.info('peer has exceeded balance limit, disabling peer', { peerId })
+      await this.redis.set(`${peerId}:balance:enabled`, false)
+    }
+    if (prevBalanceOutsideLimits && !isNewBalanceOutsideLimits) {
+      logger.info('peer is back within balance limit, enabling peer', { peerId })
+      await this.redis.set(`${peerId}:balance:enabled`, true)
+    }
 
     this.peerBalances.set(peerId, newBalance)
   }
@@ -134,6 +146,7 @@ export class SettlementEngine {
       }
 
       default: {
+        logger.error('Unknown message type in incoming balance stream')
         throw new Error('Unidentified message type.')
       }
     }
@@ -161,6 +174,7 @@ export class SettlementEngine {
       }
 
       default: {
+        logger.error('Unknown message type in incoming balance stream')
         throw new Error('Unidentified message type.')
       }
     }

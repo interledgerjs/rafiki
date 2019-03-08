@@ -1,7 +1,8 @@
 import { IlpPrepare, IlpReply, Errors } from 'ilp-packet'
 import { Rule, IlpRequestHandler } from '../types/rule'
 const { InsufficientTimeoutError } = Errors
-
+import { log } from '../winston'
+const logger = log.child({ component: 'reduce-expiry-rule' })
 export interface ReduceExpiryRuleServices {
   minOutgoingExpirationWindow: number,
   minIncomingExpirationWindow: number,
@@ -33,6 +34,7 @@ export class ReduceExpiryRule extends Rule {
     const sourceExpiryTime = request.expiresAt.getTime()
 
     if (sourceExpiryTime < Date.now()) {
+      logger.verbose('incoming packet has already expired', { request })
       throw new InsufficientTimeoutError('source transfer has already expired. sourceExpiry=' + request.expiresAt.toISOString() + ' currentTime=' + (new Date().toISOString()))
     }
 
@@ -41,6 +43,7 @@ export class ReduceExpiryRule extends Rule {
     const destinationExpiryTime = Math.min(expectedDestinationExpiryTime, maxHoldTime)
 
     if (destinationExpiryTime < Date.now() + minExpirationWindow) {
+      logger.verbose('incoming packet expires too soon to complete payment', { request })
       throw new InsufficientTimeoutError('source transfer expires too soon to complete payment. actualSourceExpiry=' + request.expiresAt.toISOString() + ' requiredSourceExpiry=' + (new Date(Date.now() + 2 * minExpirationWindow).toISOString()) + ' currentTime=' + (new Date().toISOString()))
     }
 

@@ -1,14 +1,13 @@
 import InvalidJsonBodyError from '../errors/invalid-json-body-error'
 import { constantCase } from 'change-case'
-import createLogger from 'ilp-logger'
 import { Config as ConfigSchemaTyping } from '../schemas/ConfigTyping'
-const log = createLogger('config')
+import { log } from '../winston'
 const schema = require('../schemas/Config.json')
 const {
   extractDefaultsFromSchema
 } = require('../lib/utils')
 import Ajv = require('ajv')
-
+const logger = log.child({ component: 'config' })
 const ajv = new Ajv()
 
 const ENV_PREFIX = 'CONNECTOR_'
@@ -78,7 +77,7 @@ export default class Config extends ConfigSchemaTyping {
             try {
               config[key] = JSON.parse(envValue)
             } catch (err) {
-              log.error('unable to parse config. key=%s', envKey)
+              logger.error('unable to parse config. key=%s', envKey)
             }
             break
           case 'boolean':
@@ -95,7 +94,7 @@ export default class Config extends ConfigSchemaTyping {
     }
 
     for (const key of unrecognizedEnvKeys) {
-      log.warn('unrecognized environment variable. key=%s', key)
+      logger.warn('unrecognized environment variable. key=%s', key)
     }
 
     this.validate(config)

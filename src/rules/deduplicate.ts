@@ -3,7 +3,7 @@ import { log } from '../winston'
 import { createHash } from 'crypto'
 import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeEnvelope } from 'ilp-packet'
 import { Rule, IlpRequestHandler } from '../types/rule'
-const logger = log.child({ component: 'deduplicate-middleware' })
+const logger = log.child({ component: 'deduplicate-rule' })
 
 // Where in the ILP packet does the static data begin (i.e. the data that is not modified hop-to-hop)
 const STATIC_DATA_OFFSET = 25 // 8 byte amount + 17 byte expiry date

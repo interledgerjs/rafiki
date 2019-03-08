@@ -2,7 +2,7 @@ import { createHash } from 'crypto'
 import { isFulfill, IlpPrepare, IlpReply, Errors } from 'ilp-packet'
 import { Rule, IlpRequestHandler } from '../types/rule'
 import { log } from '../winston'
-const logger = log.child({ component: 'validate-fulfillment-middleware' })
+const logger = log.child({ component: 'validate-fulfillment-rule' })
 const { WrongConditionError } = Errors
 
 export class ValidateFulfillmentRule extends Rule {
