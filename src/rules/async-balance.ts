@@ -11,6 +11,10 @@ export interface AsyncBalanceRuleServices {
   redisInstance: Redis.Redis
 }
 
+/**
+ * Pushes prepare/reject/fulfill packets onto a redis 'balance' stream. Relies on a redis based settlement engine to set flags for each peer
+ * to tell it whether there is enough liquidity. If there isn't then it throws an InsufficientLiquidity error.
+ */
 export class AsyncBalanceRule extends Rule {
   private peer: PeerInfo
   private redis: Redis.Redis

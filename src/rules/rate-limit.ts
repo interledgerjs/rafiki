@@ -17,6 +17,9 @@ export interface RateLimitRuleServices {
   stats: Stats
 }
 
+/**
+ * Throttles throughput based on the number of requests per minute.
+ */
 export class RateLimitRule extends Rule {
   constructor ({ peerInfo, bucket, stats }: RateLimitRuleServices) {
     super({

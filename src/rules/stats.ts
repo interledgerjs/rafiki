@@ -8,6 +8,9 @@ export interface StatsRuleServices {
   stats: Stats
 }
 
+/**
+ * The stats rule tracks the number of fulfilled/rejected/failed to send packets on the incoming and outgoing pipelines.
+ */
 export class StatsRule extends Rule {
   constructor ({ stats, peerInfo }: StatsRuleServices) {
     super({

@@ -11,6 +11,11 @@ export interface HeartbeatRuleServices {
   onFailedHeartbeat: () => void,
   heartbeatInterval?: number
 }
+
+/**
+ * Sends a peer.heartbeat message using a prescribed endpoint at a specified interval. Calls the onFailedHeartbeat function if the sending throws an error
+ * otherwise onSuccessfullHeartbeat is called.
+ */
 export class HeartbeatRule extends Rule {
 
   heartbeat: NodeJS.Timeout

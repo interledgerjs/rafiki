@@ -9,6 +9,9 @@ export interface MaxPacketAmountRuleService {
   maxPacketAmount?: bigint,
 }
 
+/**
+ * @throws {AmountTooLargeError} Throws if the request amount is greater than the prescribed max packet amount.
+ */
 export class MaxPacketAmountRule extends Rule {
   constructor ({ maxPacketAmount }: MaxPacketAmountRuleService) {
     super({

@@ -8,6 +8,9 @@ export interface ReduceExpiryRuleServices {
   maxHoldWindow: number
 }
 
+/**
+ * Reduces the expiry of the. This is done on the incoming and outgoing pipelines so it can be adjusted per peer.
+ */
 export class ReduceExpiryRule extends Rule {
 
   constructor ({ minIncomingExpirationWindow, minOutgoingExpirationWindow, maxHoldWindow }: ReduceExpiryRuleServices) {
@@ -29,6 +32,13 @@ export class ReduceExpiryRule extends Rule {
     })
   }
 
+  /**
+   * Calculates a new expiry time for the prepare based on the minimum expiration and maximum hold time windows.
+   * @param request The incoming prepare packet
+   * @param minExpirationWindow The amount to reduce the request's expiry by in milliseconds
+   * @param maxHoldWindow The maximum time window (in milliseconds) that the connector is willing to place funds on hold while waiting for the outcome of a transaction
+   * @throws {InsufficientTimeoutError} Throws if the new expiry time is less than the minimum expiration time window or the prepare has already expired.
+   */
   getDestinationExpiry (request: IlpPrepare, minExpirationWindow: number, maxHoldWindow: number): Date {
     const sourceExpiryTime = request.expiresAt.getTime()
 

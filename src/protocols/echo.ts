@@ -11,6 +11,9 @@ export interface EchoProtocolServices {
   minMessageWindow: number
 }
 
+/**
+ * Intercepts and handles messages addressed to the connector otherwise forwards it onto next.
+ */
 export class EchoProtocol extends Rule {
   constructor ({ getOwnAddress, minMessageWindow }: EchoProtocolServices) {
     super({

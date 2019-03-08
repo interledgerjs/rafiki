@@ -9,6 +9,9 @@ export interface IldcpProtocolServices {
   getOwnAddress: () => string
 }
 
+/**
+ * Intercepts and handles peer.config messages otherwise passes the request onto next.
+ */
 export class IldcpProtocol extends Rule {
   constructor ({ getPeerInfo, getOwnAddress }: IldcpProtocolServices) {
     super({
