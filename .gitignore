@@ -7,3 +7,4 @@ build
 
 # Generated typings for schemas should not be checked in
 /src/schemas/*.ts
+!/schemas/index.ts
