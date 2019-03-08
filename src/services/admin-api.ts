@@ -5,7 +5,8 @@ import Ajv = require('ajv')
 import { App } from '../app'
 import { SettlementEngine } from './settlement-engine'
 const ajv = new Ajv()
-const validateBalanceUpdate = ajv.compile(require('../schemas/BalanceUpdate.json'))
+import * as balanceUpdateSchema from '../schemas/BalanceUpdate.json'
+const validateBalanceUpdate = ajv.compile(balanceUpdateSchema)
 
 export interface AdminApiOptions {
   host?: string,
