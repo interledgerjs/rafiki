@@ -20,6 +20,9 @@ export interface AlertRuleServices {
   createAlert: (triggeredBy: string, message: string) => void
 }
 
+/**
+ * Creates alerts for reject packets caused by insufficient liquidity or an exceeded maximum balance.
+ */
 export class AlertRule extends Rule {
   constructor ({ createAlert }: AlertRuleServices) {
     super({
