@@ -2,7 +2,7 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { App, EndpointInfo } from '../src/app'
+import { App } from '../src/app'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 
@@ -12,6 +12,7 @@ import { PeerInfo } from '../src/types/peer';
 import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
 import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
+import { EndpointInfo } from '../src';
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -71,7 +72,7 @@ describe('Test App', function () {
   }
 
   beforeEach(async () => {
-    app = new App({ilpAddress: 'test.harry', port: 8083})
+    app = new App({ilpAddress: 'test.harry', http2Port: 8083})
     await app.start()
     await app.addPeer(peerInfo, {
       type: 'http',
@@ -123,7 +124,7 @@ describe('Test App', function () {
     })
 
     it('disposes of packet caches', async function () {
-      const packetCacheSpies = Array.from(app.packetCacheMap.values()).map(cache => sinon.spy(cache, 'dispose'))
+      const packetCacheSpies = Array.from(app['_packetCacheMap'].values()).map(cache => sinon.spy(cache, 'dispose'))
 
       await app.shutdown()
 
@@ -168,7 +169,7 @@ describe('Test App', function () {
     })
 
     it('inherits address from parent if you do not have an address', async function () {
-      const newApp = new App({ port: 8082 })
+      const newApp = new App({ http2Port: 8082 })
       await newApp.start()
       const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
         const ildcpResponse: IldcpResponse = {
