@@ -14,37 +14,29 @@ import { AlertRule, Alerts } from './rules/alert'
 import { TokenBucket } from './lib/token-bucket'
 import { Stats } from './services/stats'
 import { ReduceExpiryRule } from './rules/reduce-expiry'
-import { Http2Server, createServer } from 'http2'
-import { Http2Endpoint } from './endpoints/http2'
+import { EndpointInfo, EndpointManager } from './endpoints'
 
-import { serializeIlpReject, IlpReply, IlpPrepare } from 'ilp-packet'
-import pathToRegexp from 'path-to-regexp'
+import { IlpReply, IlpPrepare } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
+import { createServer, Http2Server } from 'http2'
 
 const logger = log.child({ component: 'App' })
+
 export interface AppOptions {
   ilpAddress: string
-  port: number,
-}
-
-export interface EndpointInfo {
-  type: string,
-  url: string
+  http2Port: number,
 }
 
 export class App {
 
-  connector: Connector
-  stats: Stats
-  alerts: Alerts
-  packetCacheMap: Map<string, PacketCache>
-  rateLimitBucketMap: Map<string, TokenBucket>
-  throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
-  server: Http2Server
-  port: number
-  endpointsMap: Map<string, Http2Endpoint>
-  businessRulesMap: Map<string, Rule[]>
+  private _packetCacheMap: Map<string, PacketCache>
+  private _rateLimitBucketMap: Map<string, TokenBucket>
+  private _throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
+  private _http2Server: Http2Server
+  private _http2ServerPort: number
+  private _endpointManager: EndpointManager
+  private _businessRulesMap: Map<string, Rule[]>
 
   /**
    * Instantiates an http2 server which handles posts to ilp/:peerId and passes the packet on to the appropriate peer's endpoint.
@@ -55,70 +47,30 @@ export class App {
     this.connector = new Connector()
     this.stats = new Stats()
     this.alerts = new Alerts()
-    this.packetCacheMap = new Map()
-    this.rateLimitBucketMap = new Map()
-    this.throughputBucketsMap = new Map()
-    this.endpointsMap = new Map()
-    this.businessRulesMap = new Map()
+    this._packetCacheMap = new Map()
+    this._rateLimitBucketMap = new Map()
+    this._throughputBucketsMap = new Map()
+    this._businessRulesMap = new Map()
 
     this.connector.setOwnAddress(opts.ilpAddress)
 
-    this.port = opts.port
-    this.server = createServer()
-
-    // Could possible bind on the incoming sessions (TCP connection) rather than streams
-    // TODO Cleanup
-    this.server.on('stream', async (stream, headers, flags) => {
-      const method = headers[':method']
-      const path = headers[':path']
-
-      logger.silly('incoming http2 stream', { path, method })
-      const peerId = this._matchPathToPeerId(path)
-
-      if (peerId && method === 'POST') {
-        // Get the incoming data
-        let chunks: Array<Buffer> = []
-        stream.on('data', (chunk: Buffer) => {
-          chunks.push(chunk)
-        })
-        stream.on('end', async () => {
-          let packet = Buffer.concat(chunks)
-          let response = await this.handleIncomingPacket(peerId, packet)
-          stream.end(response)
-        })
-        stream.on('error', (error) => logger.debug('error on incoming stream', { error }))
-      } else {
-        stream.respond({ ':status': 404 })
-        stream.end()
-      }
+    this._http2ServerPort = opts.http2Port
+    this._http2Server = createServer()
+    this._endpointManager = new EndpointManager({
+      http2Server: this._http2Server
     })
+
   }
 
-  async start () {
+  public async start () {
     logger.info('starting connector....')
-    logger.info('starting HTTP2 server on port ' + this.port)
-    this.server.listen(this.port)
+    logger.info('starting HTTP2 server on port ' + this._http2ServerPort)
+    this._http2Server.listen(this._http2ServerPort)
   }
 
-  /**
-   * Find endpoint and drop packet onto it if found
-   * @param peerId id of the peer
-   * @param data Buffer filled with the received packet
-   */
-  private async handleIncomingPacket (peerId: string, data: Buffer) {
-    const endpoint = this.endpointsMap.get(peerId)
-    if (endpoint) {
-      return endpoint.handlePacket(data)
-    } else {
-      logger.info('endpoint not found for incoming packet', { peerId })
-      return serializeIlpReject({
-        code: 'T01', // TODO probably should be another error code
-        data: Buffer.from(''),
-        message: 'Peer not found',
-        triggeredBy: this.connector.getOwnAddress() || ''
-      })
-    }
-  }
+  public connector: Connector
+  public stats: Stats
+  public alerts: Alerts
 
   /**
    * Instantiates the business rules specified in the peer information and attaches it to a pipeline. Creates a wrapper endpoint which connects the pipeline to
@@ -126,11 +78,12 @@ export class App {
    * @param peerInfo Peer information
    * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
    */
-  async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
+  public async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
     logger.info('adding new peer: ' + peerInfo.id, { peerInfo, endpointInfo })
-    const rulesInstances: Rule[] = this._createRule(peerInfo)
-    this.businessRulesMap.set(peerInfo.id, rulesInstances)
-    const endpoint = this.createEndpoint(endpointInfo)
+    const rulesInstances: Rule[] = this._createRules(peerInfo)
+    this._businessRulesMap.set(peerInfo.id, rulesInstances)
+    logger.info('creating new endpoint for peer', { endpointInfo })
+    const endpoint = this._endpointManager.createEndpoint(peerInfo.id, endpointInfo)
 
     // create incoming and outgoing pipelines for business rules
     const combinedRule = pipeline(...rulesInstances)
@@ -149,21 +102,15 @@ export class App {
     }
     await this.connector.addPeer(peerInfo, wrapperEndpoint, false) // TODO: add logic to determine whether address should be inherited.
 
-    rulesInstances.forEach(mw => mw.startup())
-
-    this.endpointsMap.set(peerInfo.id, endpoint)
+    rulesInstances.forEach(rule => rule.startup())
   }
 
-  async removePeer (peerId: string) {
+  public async removePeer (peerId: string) {
     logger.info('Removing peer: ' + peerId, { peerId })
-    const endpoint = this.endpointsMap.get(peerId)
-    if (endpoint) {
-      endpoint.close()
-    }
-    this.packetCacheMap.delete(peerId)
-    this.rateLimitBucketMap.delete(peerId)
-    this.throughputBucketsMap.delete(peerId)
-    this.endpointsMap.delete(peerId)
+    this._endpointManager.closeEndpoints(peerId)
+    this._packetCacheMap.delete(peerId)
+    this._rateLimitBucketMap.delete(peerId)
+    this._throughputBucketsMap.delete(peerId)
     await this.connector.removePeer(peerId)
     Array.from(this.getRules(peerId)).forEach(rule => rule.shutdown())
   }
@@ -171,31 +118,19 @@ export class App {
   /**
    * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's protocols.
    */
-  async shutdown () {
+  public async shutdown () {
     logger.info('Shutting down app...')
     this.connector.getPeerList().forEach((peerId: string) => this.removePeer(peerId))
-    Array.from(this.packetCacheMap.values()).forEach(cache => cache.dispose())
-    this.packetCacheMap.clear()
-    this.rateLimitBucketMap.clear()
-    this.throughputBucketsMap.clear()
-    this.server.close()
-    this.endpointsMap.clear()
+    Array.from(this._packetCacheMap.values()).forEach(cache => cache.dispose())
+    this._packetCacheMap.clear()
+    this._rateLimitBucketMap.clear()
+    this._throughputBucketsMap.clear()
+    this._endpointManager.closeAll()
+    this._http2Server.close()
   }
 
-  getRules (peerId: string): Rule[] {
-    return this.businessRulesMap.get(peerId) || []
-  }
-
-  private createEndpoint (endpointInfo: EndpointInfo) {
-    const { type, url } = endpointInfo
-    switch (type) {
-      case ('http'):
-        logger.info('adding new Http2 endpoint for peer', { endpointInfo })
-        return new Http2Endpoint({ url })
-      default:
-        logger.warn('Endpoint type specified not support', { endpointInfo })
-        throw new Error('Endpoint type not supported')
-    }
+  public getRules (peerId: string): Rule[] {
+    return this._businessRulesMap.get(peerId) || []
   }
 
   /**
@@ -203,7 +138,7 @@ export class App {
    * @param peerInfo Peer information
    * @returns An array of rules
    */
-  private _createRule (peerInfo: PeerInfo): Rule[] {
+  private _createRules (peerInfo: PeerInfo): Rule[] {
 
     logger.verbose('Creating rules for peer', { peerInfo })
 
@@ -221,17 +156,17 @@ export class App {
           return new ReduceExpiryRule({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow })
         case('rateLimit'):
           const rateLimitBucket: TokenBucket = createRateLimitBucketForPeer(peerInfo)
-          this.rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
+          this._rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
           return new RateLimitRule({ peerInfo, stats: this.stats, bucket: rateLimitBucket })
         case('maxPacketAmount'):
           return new MaxPacketAmountRule({ maxPacketAmount: rule.maxPacketAmount })
         case('throughput'):
           const throughputBuckets = createThroughputLimitBucketsForPeer(peerInfo)
-          this.throughputBucketsMap.set(peerInfo.id, throughputBuckets)
+          this._throughputBucketsMap.set(peerInfo.id, throughputBuckets)
           return new ThroughputRule(throughputBuckets)
         case('deduplicate'):
           const cache = new PacketCache(rule as PacketCacheOptions || {}) // Could make this a global cache to allow for checking across different peers?
-          this.packetCacheMap.set(peerInfo.id, cache)
+          this._packetCacheMap.set(peerInfo.id, cache)
           return new DeduplicateRule({ cache })
         case('validateFulfillment'):
           return new ValidateFulfillmentRule()
@@ -245,13 +180,6 @@ export class App {
     }
 
     return peerInfo.rules.map(instantiateRule)
-  }
-
-  private _matchPathToPeerId (path: string | undefined) {
-    if (!path) return null
-    let re = pathToRegexp('/ilp/:peerId')
-    const result = re.exec(path)
-    return result ? result[1] : null
   }
 
 }

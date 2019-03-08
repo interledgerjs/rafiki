@@ -61,7 +61,7 @@ const start = async () => {
 
   const app = new App({
     ilpAddress: ILP_ADDRESS,
-    port: HTTP2_SERVER_PORT
+    http2Port: HTTP2_SERVER_PORT
   })
   const settlementEngine = new SettlementEngine({ streamKey: SETTLEMENT_BALANCE_STREAM_KEY, redisClient:  new Redis({ host: SETTLEMENT_REDIS_HOST, port: SETTLEMENT_REDIS_PORT }) })
   const adminApi = new AdminApi({ host: ADMIN_API_HOST, port: ADMIN_API_PORT }, { app, settlementEngine })
