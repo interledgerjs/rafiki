@@ -13,7 +13,7 @@ const assert = Object.assign(Chai.assert, sinon.assert)
 const ECHO_DATA_PREFIX = Buffer.from('ECHOECHOECHOECHO', 'ascii')
 const minMessageWindow = 1000
 
-describe('Echo middleware', async function () {
+describe('Echo protocol', async function () {
 
   const echoRule = new EchoProtocol({ getOwnAddress: () => 'test.connie.alice', minMessageWindow })
   const fulfillPacket = {

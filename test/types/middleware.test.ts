@@ -59,53 +59,53 @@ describe('Rule', function () {
 
     it('adds startup logic', async function () {
       assert.equal(counter, 0)
-      const middleware = new Rule({
+      const rule = new Rule({
         startup: async () => {
           counter = 100
         },
       })
-      await startSendStop(middleware)
+      await startSendStop(rule)
       assert.equal(counter, 100)
     })
 
     it('adds shutdown logic', async function () {
       assert.equal(counter, 0)
-      const middleware = new Rule({
+      const rule = new Rule({
         shutdown: async () => {
           counter = 999
         },
       })
-      await startSendStop(middleware)
+      await startSendStop(rule)
       assert.equal(counter, 999)
     })
 
     it('adds process function to incoming pipeline', async function () {
       assert.equal(counter, 0)
-      const middleware = new Rule({
+      const rule = new Rule({
         processIncoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter++
           return next(request)
         }
       })
-      await startSendStop(middleware)
+      await startSendStop(rule)
       assert.equal(counter, 1)
     })
 
     it('adds process function to outgoing pipeline', async function () {
       assert.equal(counter, 0)
-      const middleware = new Rule({
+      const rule = new Rule({
         processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter++
           return next(request)
         }
       })
-      await startSendStop(middleware)
+      await startSendStop(rule)
       assert.equal(counter, 1)
     })
 
     it('adds incoming and outgoing processing', async function () {
       assert.equal(counter, 0)
-      const middleware = new Rule({
+      const rule = new Rule({
         processIncoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter++
           counter++
@@ -116,13 +116,13 @@ describe('Rule', function () {
           return next(request)
         }
       })
-      await startSendStop(middleware)
+      await startSendStop(rule)
       assert.equal(counter, 1)
     })
 
     it('adds startup/shutdown and incoming/outgoing processing', async function () {
       assert.equal(counter, 0)
-      const middleware = new Rule({
+      const rule = new Rule({
         startup: async () => {
           counter = 100
         },
@@ -138,7 +138,7 @@ describe('Rule', function () {
           counter -= 50
         },
       })
-      await startSendStop(middleware)
+      await startSendStop(rule)
       assert.equal(counter, 69)
     })
 

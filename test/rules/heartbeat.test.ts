@@ -20,7 +20,7 @@ describe('Heartbeat Rule', function () {
   }
   const rejectPacket: IlpReject = {
     message: 'test',
-    triggeredBy: 'test middleware',
+    triggeredBy: 'test protocols',
     code: 'Test',
     data: Buffer.alloc(0)
   }
