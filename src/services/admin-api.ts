@@ -1,3 +1,4 @@
+import { log } from './../winston'
 import { Server, IncomingMessage, ServerResponse } from 'http'
 import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
 import { InvalidJsonBodyError } from '../errors/invalid-json-body-error'
@@ -8,6 +9,7 @@ import * as balanceUpdateSchema from '../schemas/BalanceUpdate.json'
 
 const ajv = new Ajv()
 const validateBalanceUpdate = ajv.compile(balanceUpdateSchema)
+const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
   host?: string,
@@ -59,8 +61,7 @@ export class AdminApi {
     const adminApiHost = this.host || '0.0.0.0'
     const adminApiPort = this.port || 7780
 
-    // TODO: add logging
-    // log.info('admin api listening. host=%s port=%s', adminApiHost, adminApiPort)
+    logger.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
     this.server = new Server()
     this.server.listen(adminApiPort, adminApiHost)
     this.server.on('request', (req, res) => {
@@ -138,6 +139,7 @@ export class AdminApi {
       throw new InvalidJsonBodyError('invalid balance update: error=' + firstError.message + ' dataPath=' + firstError.dataPath, err.errors || [])
     }
     const { peerId, amountDiff } = _data as BalanceUpdate
+    logger.verbose('updating balance for peer', { peerId, amountDiff })
     const limit = this.settlementEngine.getBalanceLimits(peerId)
     await this.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
 
@@ -154,6 +156,7 @@ export class AdminApi {
 
     // TODO use ajv to validate _data
     if (!peerInfo || !endpointInfo) throw new Error('invalid arguments. need peerInfo and endpointInfo')
+    logger.verbose('adding peer', { peerInfo })
     await this.app.addPeer(peerInfo, endpointInfo)
   }
 

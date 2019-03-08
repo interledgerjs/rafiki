@@ -4,7 +4,7 @@ import { TokenBucket } from '../lib/token-bucket'
 import { PeerInfo } from '../types/peer'
 import { Stats } from '../services/stats'
 import { log } from '../winston'
-const logger = log.child({ component: 'rate-limit-middleware' })
+const logger = log.child({ component: 'rate-limit-rule' })
 
 const { RateLimitedError } = Errors
 
@@ -22,7 +22,7 @@ export class RateLimitRule extends Rule {
     super({
       processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (!bucket.take()) {
-          logger.warn(`rate limited a packet`, { bucket, request })
+          logger.warn(`rate limited a packet`, { bucket, request, peerId: peerInfo.id })
           stats.rateLimitedPackets.increment(peerInfo, {})
           throw new RateLimitedError('too many requests, throttling.')
         }

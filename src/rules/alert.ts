@@ -3,7 +3,7 @@ import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill } from 'ilp-
 import { RequestHandler } from '../types/request-stream'
 import { Rule } from '../types/rule'
 
-const logger = log.child({ component: 'alert-middleware' })
+const logger = log.child({ component: 'alert-rule' })
 const { T04_INSUFFICIENT_LIQUIDITY } = IlpPacketErrors.codes
 
 export interface Alert {
