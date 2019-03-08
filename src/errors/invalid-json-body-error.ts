@@ -1,9 +1,9 @@
-import BaseError = require('extensible-error')
+import ExtensibleError from 'extensible-error'
 import { ErrorObject } from 'ajv'
 
 import { Errors } from 'ilp-packet'
 
-export default class InvalidJsonBodyError extends BaseError {
+export class InvalidJsonBodyError extends ExtensibleError {
   public ilpErrorCode: string
   public httpErrorCode: number = 400
   protected validationErrors: ErrorObject[]

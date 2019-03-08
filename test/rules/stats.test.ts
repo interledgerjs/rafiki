@@ -1,7 +1,7 @@
 import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { StatsRule } from '../../src/rules/stats'
 import { IlpPrepare } from 'ilp-packet';
 import { Stats }from '../../src/services/stats';

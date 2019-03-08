@@ -40,15 +40,13 @@ export class Connector {
   }
 
 /**
- * Connects the business middleware and protocol middleware (for this connector implementation: heartbeat, Ildcp and ccp) into a duplex pipeline.
- * The write section of the incoming channel is then attached to the endpoint and the read section to sendIlpPacket. The write section of the outgoing
- * channel is attached to the send function of the endpoint. The outgoing channel is then stored for future use. Should the endpoint be unable to send
- * a packet, the peer's route is removed from the routing table. The entire middleware stack is started up. It will get the address from the ILDCP
- * middleware if the inheritAddressFrom input is true.
+ * Instantiates and connects the protocol middleware (specfied in peer info) into a duplex pipeline. Connects the supplied endpoint to the pipeline
+ * and the pipeline to the sendIlpPacket function. Asks the ildcp protocol to get the address if the inheritAddressFrom is true. Registers the peer
+ * with the route manager and only adds it as a route if the peer is a child. The protocol middleware is also started up.
  *
  * @param peerInfo Peer information
  * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
- * @param middleware The business logic middleware that is to be added to the protocol middleware for the peer
+ * @param inheritAddressFrom Should you inherit your address from this peer. Defaulted to false.
  */
   async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, inheritAddressFrom: boolean = false) {
     logger.info('adding peer', { peerInfo })
@@ -141,6 +139,10 @@ export class Connector {
     return this.getOwnAddress() + '.' + id
   }
 
+  /**
+   * The 'self' peer  represents the connector and handles all packets addressed to it. There is no endpoint at the end of the pipeline and
+   * only the Echo protocol is applied to the pipeline.
+   */
   private addSelfPeer () {
     const selfPeerId = 'self'
     this.routeManager.addPeer(selfPeerId, 'local')

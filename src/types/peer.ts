@@ -32,8 +32,10 @@ export type Relation = 'parent' | 'child' | 'peer' | 'local'
 //   ilpAddressSegment?: string
 // }
 
+export type PeerRelation = 'parent' | 'peer' | 'child'
+
 export interface PeerInfo {
-  relation: 'parent' | 'peer' | 'child',
+  relation: PeerRelation,
   id: string,
   assetCode: string,
   assetScale: number,

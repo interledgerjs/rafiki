@@ -1,7 +1,7 @@
 import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { PluginEndpoint } from '../../src/legacy/plugin-endpoint'
 import { PluginInstance } from '../../src/legacy/plugin';
 import { Endpoint } from '../../src/types/endpoint';

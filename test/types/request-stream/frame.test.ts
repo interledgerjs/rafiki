@@ -1,6 +1,6 @@
 import 'mocha'
 import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { deserializeMessageFrame, isMessageFrame, serializeMessageFrame } from '../../../src/types/request-stream/frame'
 const { assert, expect } = Chai
 Chai.use(chaiAsPromised)
