@@ -80,8 +80,12 @@ export class Connector {
     protocolMiddleware.forEach(mw => mw.startup())
 
     if (inheritAddressFrom) {
-      const ildcpMiddleware = protocolMiddleware.find(mw => mw.constructor.name === 'IldcpMiddleware')
-      this.setOwnAddress(await (ildcpMiddleware as IldcpProtocol).getAddressFrom(endpoint))
+      const ildcpProtocol = protocolMiddleware.find(mw => mw.constructor.name === 'IldcpProtocol')
+      if (!ildcpProtocol) {
+        logger.error('Ildcp protocol needs to be added in order to inherit address.')
+        throw new Error('Ildcp protocol needs to be added in order to inherit address.')
+      }
+      this.setOwnAddress(await (ildcpProtocol as IldcpProtocol).getAddressFrom(endpoint))
     }
 
     // only add route for children. The rest are populated from route update.

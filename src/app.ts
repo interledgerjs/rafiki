@@ -24,7 +24,7 @@ import { Endpoint } from './types/endpoint'
 
 const logger = log.child({ component: 'App' })
 export interface AppOptions {
-  ilpAddress: string
+  ilpAddress?: string
   port: number,
 }
 
@@ -61,7 +61,7 @@ export class App {
     this.endpointsMap = new Map()
     this.businessRulesMap = new Map()
 
-    this.connector.setOwnAddress(opts.ilpAddress)
+    this.connector.setOwnAddress(opts.ilpAddress || 'unknown')
 
     this.port = opts.port
     this.server = createServer()
@@ -122,7 +122,8 @@ export class App {
 
   /**
    * Instantiates the business rules specified in the peer information and attaches it to a pipeline. Creates a wrapper endpoint which connects the pipeline to
-   * the original endpoint. This is then passed into the connector's addPeer. The business rules are then started and the original endpoint stored.
+   * the original endpoint. This is then passed into the connector's addPeer. The business rules are then started and the original endpoint stored. Tells connector
+   * to inherit address from the peer if it is a parent and you do not have an address.
    * @param peerInfo Peer information
    * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
    */
@@ -147,7 +148,16 @@ export class App {
         return wrapperEndpoint
       }
     }
-    await this.connector.addPeer(peerInfo, wrapperEndpoint, false) // TODO: add logic to determine whether address should be inherited.
+
+    const haveAddress = this.connector.getOwnAddress() !== 'unknown'
+    let inheritAddress = false
+    if (peerInfo.relation === 'parent' && !haveAddress) {
+      inheritAddress = true
+    } else if (peerInfo.relation === 'parent' && haveAddress) {
+      logger.warn(`Already have an address. Will not inherit from peerId=${peerInfo.id}.`)
+    }
+
+    await this.connector.addPeer(peerInfo, wrapperEndpoint, inheritAddress) // TODO: add logic to determine whether address should be inherited.
 
     rulesInstances.forEach(mw => mw.startup())
 

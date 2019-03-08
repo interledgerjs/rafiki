@@ -11,6 +11,7 @@ import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, seria
 import { PeerInfo } from '../src/types/peer';
 import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
+import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -47,10 +48,26 @@ describe('Test App', function () {
       name: 'ildcp'
     }],
   }
-
   const endpointInfo: EndpointInfo = {
     type: 'http',
     'url': 'http://localhost:1234'
+  }
+
+  const parentEndpointInfo = {
+    type: 'http',
+    url: 'http://localhost:8085'
+  }
+  const parentInfo: PeerInfo = {
+    id: 'bob',
+    assetCode: 'XRP',
+    assetScale: 9,
+    relation: 'parent',
+    rules: [{
+      name: 'errorHandler'
+    }],
+    protocols: [{
+      name: 'ildcp'
+    }],
   }
 
   beforeEach(async () => {
@@ -148,6 +165,48 @@ describe('Test App', function () {
       await app.addPeer(peerInfo, endpointInfo)
 
       sinon.assert.calledOnce(startSpy)
+    })
+
+    it('inherits address from parent if you do not have an address', async function () {
+      const newApp = new App({ port: 8082 })
+      await newApp.start()
+      const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
+        const ildcpResponse: IldcpResponse = {
+          assetCode: 'USD',
+          assetScale: 2,
+          clientAddress: 'test.alice.fred'
+        } 
+        response.end(serializeIldcpResponse(ildcpResponse))
+      })
+      const newAppClient = connect('http://localhost:8082')
+      parentServer.listen(8085)
+      
+      assert.equal(newApp.connector.getOwnAddress(), 'unknown')
+  
+      await newApp.addPeer(parentInfo, parentEndpointInfo)
+  
+      assert.equal('test.alice.fred', newApp.connector.getOwnAddress())
+      newApp.shutdown()
+      parentServer.close()
+      newAppClient.close()
+    })
+  
+    it('does not inherit address if you already have one', async function () {
+      assert.equal('test.harry', app.connector.getOwnAddress())
+      const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
+        const ildcpResponse: IldcpResponse = {
+          assetCode: 'USD',
+          assetScale: 2,
+          clientAddress: 'test.bob.fred'
+        } 
+        response.end(serializeIldcpResponse(ildcpResponse))
+      })
+      parentServer.listen(8085)
+      
+      await app.addPeer(parentInfo, parentEndpointInfo)
+  
+      assert.equal('test.harry', app.connector.getOwnAddress())
+      parentServer.close()
     })
   })
 
