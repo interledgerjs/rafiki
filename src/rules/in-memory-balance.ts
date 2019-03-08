@@ -4,7 +4,7 @@ import { IlpPrepare, Errors, isFulfill } from 'ilp-packet'
 import { Stats } from '../services/stats'
 import { log } from '../winston'
 import { MAX_UINT_64, STATIC_FULFILLMENT, MIN_INT_64 } from '../constants'
-const logger = log.child({ component: 'balance-middleware' })
+const logger = log.child({ component: 'in-memory-balance-rule' })
 
 const { InsufficientLiquidityError } = Errors
 
@@ -34,7 +34,7 @@ class Balance {
   add (amount: bigint) {
     const newBalance = this.balance + amount
     if (newBalance > this.maximum) {
-      logger.error('rejected balance update. oldBalance=%s newBalance=%s amount=%s', this.balance, newBalance, amount)
+      logger.error('rejected balance update', { oldBalance: this.balance, newBalance, amount })
       throw new InsufficientLiquidityError('exceeded maximum balance.')
     }
 
@@ -44,7 +44,7 @@ class Balance {
   subtract (amount: bigint) {
     const newBalance = this.balance - amount
     if (newBalance < this.minimum) {
-      logger.error('rejected balance update. oldBalance=%s newBalance=%s amount=%s', this.balance, newBalance, amount)
+      logger.error('rejected balance update', { oldBalance: this.balance, newBalance, amount })
       throw new Error(`insufficient funds. oldBalance=${this.balance} proposedBalance=${newBalance}`)
     }
 
@@ -102,9 +102,9 @@ export class InMemoryBalanceRule extends Rule {
         maximum
       })
 
-      logger.info('initializing balance for account. account.id=%s minimumBalance=%s maximumBalance=%s', peerInfo.id, minimum, maximum)
+      logger.info('initializing in memory balance for peer', { peerId: peerInfo.id, minimum, maximum })
     } else {
-      logger.warn('(!!!) balance middleware NOT enabled for account, this account can spend UNLIMITED funds. account.id=%s')
+      logger.warn(`(!!!) balance middleware NOT enabled for peer, this peer can spend UNLIMITED funds peerId=${peerInfo.id}`)
     }
   }
 
@@ -138,7 +138,7 @@ export class InMemoryBalanceRule extends Rule {
 
     // Increase balance on prepare
     this.balance.add(BigInt(amount))
-    logger.info('balance increased due to incoming ilp prepare. account.id=%s amount=%s newBalance=%s', this.peer.id, amount, this.balance.getValue())
+    logger.silly('balance increased due to incoming ilp prepare', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
 
     // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
     // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
@@ -149,7 +149,7 @@ export class InMemoryBalanceRule extends Rule {
     } catch (err) {
       // Refund on error
       this.balance.subtract(BigInt(amount))
-      logger.info('incoming packet refunded due to error. account.id=%s amount=%s newBalance=%s', this.peer.id, amount, this.balance.getValue())
+      logger.debug('incoming packet refunded due to error', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
       this.stats.incomingDataPacketValue.increment(this.peer, { result: 'failed' }, + amount)
@@ -162,7 +162,7 @@ export class InMemoryBalanceRule extends Rule {
     } else {
       // Refund on reject
       this.balance.subtract(BigInt(amount))
-      logger.info('incoming packet refunded due to ilp reject. account.id=%s amount=%s newBalance=%s', this.peer.id, amount, this.balance.getValue())
+      logger.debug('incoming packet refunded due to ilp reject', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
 
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
@@ -192,7 +192,7 @@ export class InMemoryBalanceRule extends Rule {
     try {
       result = await next(request)
     } catch (err) {
-      logger.error('outgoing packet not applied due to error. account.id=%s amount=%s newBalance=%s', peer.id, amount, balance.getValue())
+      logger.debug('outgoing packet not applied due to error', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
       this.stats.outgoingDataPacketValue.increment(peer, { result: 'failed' }, + amount)
       throw err
     }
@@ -201,12 +201,12 @@ export class InMemoryBalanceRule extends Rule {
       // Decrease balance on prepare
       balance.subtract(BigInt(amount))
       this.maybeSettle().catch(e => logger.error(e))
-      logger.info('balance decreased due to outgoing ilp fulfill. account.id=%s amount=%s newBalance=%s', peer.id, amount, balance.getValue())
+      logger.silly('balance decreased due to outgoing ilp fulfill', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(peer, {}, balance.getValue().toNumber())
       this.stats.outgoingDataPacketValue.increment(peer, { result: 'fulfilled' }, + amount)
     } else {
-      logger.info('outgoing packet not applied due to ilp reject. account.id=%s amount=%s newBalance=%s', peer.id, amount, balance.getValue())
+      logger.debug('outgoing packet not applied due to ilp reject', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
       this.stats.outgoingDataPacketValue.increment(peer, { result: 'rejected' }, + amount)
     }
 
@@ -224,14 +224,14 @@ export class InMemoryBalanceRule extends Rule {
   private _getBalance (): Balance {
     const balance = this.balance
     if (!balance) {
-      throw new Error('account not found. account.id=' + this.peer.id)
+      throw new Error('peer not found. peerId=' + this.peer.id)
     }
     return balance
   }
 
   modifyBalance (amountDiff: bigint): bigint {
     const balance = this.balance
-    logger.info('modifying balance account.id=%s amount=%s', this.peer.id, amountDiff.toString())
+    logger.info('modifying balance', { peerId: this.peer.id, amountDif: amountDiff.toString() })
     if (amountDiff < 0) {
       this.maybeSettle().catch(e => { logger.error(e) })
     }
@@ -253,7 +253,7 @@ export class InMemoryBalanceRule extends Rule {
     if (!settle) return
 
     const settleAmount = bnSettleTo - balance.getValue()
-    logger.info('settlement triggered. account.id=%s balance=%s settleAmount=%s', this.peer.id, balance.getValue(), settleAmount)
+    logger.info('settlement triggered', { peerId: this.peer.id, balance: balance.getValue(), settleAmount })
 
     // TODO: should send peer.settle and update balance if successful
     await this.sendMoney(settleAmount.toString())
@@ -262,7 +262,7 @@ export class InMemoryBalanceRule extends Rule {
         if (!err || typeof err !== 'object') {
           err = new Error('Non-object thrown: ' + e)
         }
-        logger.error('error occurred during settlement. account.id=%s settleAmount=%s errInfo=%s', this.peer.id, settleAmount, err.stack ? err.stack : err)
+        logger.error('error occurred during settlement', { peerId: this.peer.id, settleAmount, err: err.stack ? err.stack : err })
       })
   }
 

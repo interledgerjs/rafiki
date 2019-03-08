@@ -1,3 +1,5 @@
+import { log } from '../winston'
+const logger = log.child({ component: 'token-bucket' })
 export class TokenBucket {
   private _lastTime: number
   private _left: bigint
@@ -21,8 +23,7 @@ export class TokenBucket {
 
     // this debug statement is commented out for performance, uncomment when
     // debugging rate limit middleware
-    //
-    // log.debug('took token from bucket. accountId=%s remaining=%s', accountId, bucket.left)
+    // logger.silly('took token from bucket',{ left: this._left })
 
     if (this._left < count) {
       return false

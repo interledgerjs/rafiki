@@ -4,7 +4,8 @@ import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpReply, deseria
 import { ClientHttp2Session, connect, constants } from 'http2'
 import { IlpRequestHandler } from '../types/rule'
 import Http2Client from 'ilp-plugin-http/build/lib/http2' // TODO remove this dependency
-
+import { log } from '../winston'
+const logger = log.child({ component: 'http2-endpoint' })
 export interface HttpEndpointOpts {
   url: string
 }
@@ -54,6 +55,7 @@ export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
       const packet = deserializeIlpPrepare(prepare)
       return serializeIlpReply(await this._handler(packet))
     } else {
+      logger.error('No handler set for endpoint')
       throw new Error('Handler has not been set')
     }
   }

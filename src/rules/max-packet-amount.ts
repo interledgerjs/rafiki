@@ -1,7 +1,7 @@
 import { Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
 import { Rule, IlpRequestHandler } from '../types/rule'
 import { log } from '../winston'
-const logger = log.child({ component: 'expire-middleware' })
+const logger = log.child({ component: 'expire-rule' })
 
 const { AmountTooLargeError } = Errors
 
