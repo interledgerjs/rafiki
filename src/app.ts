@@ -86,7 +86,7 @@ export class App {
           let response = await this.handleIncomingPacket(peerId, packet)
           stream.end(response)
         })
-        stream.on('error', (error) => logger.error('stream error', { error }))
+        stream.on('error', (error) => logger.debug('error on incoming stream', { error }))
       } else {
         stream.respond({ ':status': 404 })
         stream.end()
@@ -204,7 +204,10 @@ export class App {
    * @returns An array of rules
    */
   private _createRule (peerInfo: PeerInfo): Rule[] {
-    // TODO: Global/Config might be needed
+
+    logger.verbose('Creating rules for peer', { peerInfo })
+
+    // Global/Config might be needed
     const globalMinExpirationWindow = 35000
     const globalMaxHoldWindow = 35000
 

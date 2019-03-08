@@ -2,6 +2,8 @@ import { IlpPrepare, IlpReply, IlpFulfill } from 'ilp-packet'
 import { Rule, IlpRequestHandler } from '../types/rule'
 import { Reader, Writer } from 'oer-utils'
 import { InvalidPacketError } from 'ilp-packet/dist/src/errors'
+import { log } from '../winston'
+const logger = log.child({ component: 'echo-protocol' })
 
 const MINIMUM_ECHO_PACKET_DATA_LENGTH = 16 + 1
 const ECHO_DATA_PREFIX = Buffer.from('ECHOECHOECHOECHO', 'ascii')
@@ -33,14 +35,13 @@ export class EchoProtocol extends Rule {
           reader.skip(ECHO_DATA_PREFIX.length)
           const type = reader.readUInt8Number()
 
-          // TODO: add logging
-          // log.trace('responding to ping. sourceAccount=%s sourceAddress=%s cond=%s', sourceAccount, sourceAddress, parsedPacket.executionCondition.slice(0, 9).toString('base64'))
-
           if (0 === type) {
             const sourceAddress = reader.readVarOctetString().toString('ascii')
             const writer = new Writer()
             writer.write(ECHO_DATA_PREFIX)
             writer.writeUInt8(0x01)
+
+            logger.verbose('responding to echo packet', { sourceAddress })
 
             return this.incoming.write({
               amount: amount,
@@ -50,8 +51,7 @@ export class EchoProtocol extends Rule {
               data: writer.getBuffer()
             })
           } else {
-            // TODO: add logging
-            // log.error('received unexpected echo response.')
+            logger.error('received unexpected echo response.')
             throw new Error('received unexpected echo response.')
           }
         }

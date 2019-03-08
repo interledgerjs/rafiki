@@ -3,7 +3,7 @@ import { PeerInfo } from '../types/peer'
 import { TokenBucket } from '../lib/token-bucket'
 import { Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
 import { log } from '../winston'
-const logger = log.child({ component: 'throughput-middleware' })
+const logger = log.child({ component: 'throughput-rule' })
 const { InsufficientLiquidityError } = Errors
 
 const DEFAULT_REFILL_PERIOD = 1000 // 1 second

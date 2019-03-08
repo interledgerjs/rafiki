@@ -1,7 +1,7 @@
 import { Rule, IlpRequestHandler } from '../types/rule'
 import { IlpPrepare, IlpReply, errorToIlpReject, isFulfill, isReject } from 'ilp-packet'
 import { log } from '../winston'
-const logger = log.child({ component: 'error-handler-middleware' })
+const logger = log.child({ component: 'error-handler-rule' })
 
 export interface ErrorHandlerRuleServices {
   getOwnIlpAddress: () => string

@@ -2,6 +2,8 @@ import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill, IlpFulfill 
 import { RequestHandler } from '../types/request-stream'
 import { Rule } from '../types/rule'
 import { Endpoint } from '../types/endpoint'
+import { log } from '../winston'
+const logger = log.child({ component: 'heartbeat-rule' })
 
 const DEFAULT_HEARTBEAT_INTERVAL = 30 * 1000
 
@@ -29,7 +31,7 @@ export class HeartbeatRule extends Rule {
         const { destination, data } = request
 
         if (destination === 'peer.heartbeat') {
-
+          logger.debug('received incoming heartbeat')
           return {
             fulfillment: data.slice(0, 32),
             data
@@ -41,6 +43,7 @@ export class HeartbeatRule extends Rule {
       startup: async () => {
         this.heartbeat = setInterval(async () => {
           try {
+            logger.debug('sending heartbeat')
             const reply = await this.endpoint.sendOutgoingRequest({
               amount: '0',
               executionCondition: Buffer.alloc(0),
@@ -48,9 +51,11 @@ export class HeartbeatRule extends Rule {
               expiresAt: new Date(Date.now() + 2000),
               data: Buffer.alloc(0)
             })
+            logger.debug('heartbeat successful')
 
             this.onSuccessfulHeartbeat()
           } catch (e) {
+            logger.debug('heartbeat failed')
             this.onFailedHeartbeat()
           }
         }, this.interval)

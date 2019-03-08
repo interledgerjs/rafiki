@@ -8,6 +8,9 @@ import { CcpProtocol } from './protocols/ccp'
 import { IldcpProtocol } from './protocols/ildcp'
 import { EchoProtocol } from './protocols/echo'
 import { PeerUnreachableError } from 'ilp-packet/dist/src/errors'
+import { log } from './winston'
+
+const logger = log.child({ component: 'connector' })
 
 const { codes } = Errors
 export class Connector {
@@ -18,6 +21,7 @@ export class Connector {
   peerRules: Map<string, Rule[]> = new Map()
 
   constructor () {
+
     this.addSelfPeer()
 
     // TODO add default route config
@@ -45,6 +49,7 @@ export class Connector {
  * @param inheritAddressFrom Should you inherit your address from this peer. Defaulted to false.
  */
   async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, inheritAddressFrom: boolean = false) {
+    logger.info('adding peer', { peerInfo })
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation)
     const protocolMiddleware = this._createProtocols(peerInfo)
     this.peerRules.set(peerInfo.id, protocolMiddleware)
@@ -92,6 +97,7 @@ export class Connector {
   }
 
   async removePeer (id: string): Promise<void> {
+    logger.info('removing peer', { peerId: id })
     const peerMiddleware = this.getPeerRules(id)
     if (peerMiddleware) peerMiddleware.forEach(mw => mw.shutdown())
     this.peerRules.delete(id)
@@ -103,12 +109,18 @@ export class Connector {
     const nextHop = this.routingTable.nextHop(destination)
     const handler = this.outgoingIlpPacketHandlerMap.get(nextHop)
 
-    if (!handler) throw new Error(`No handler set for ${nextHop}`)
+    if (!handler) {
+      logger.error('Handler not found for specified nextHop', { nextHop })
+      throw new Error(`No handler set for ${nextHop}`)
+    }
+
+    logger.silly('sending outgoing ILP Packet', { destination, nextHop })
 
     return handler(packet)
   }
 
   setOwnAddress (address: string) {
+    logger.info('setting own address', { address })
     this.address = address
     this.routingTable.setOwnAddress(address) // Tricky: This needs to be here for now to append to path of forwarding routing table
     this.routeManager.addRoute({
@@ -184,7 +196,7 @@ export class Connector {
     if (peer) {
       return peer.getRelation()
     } else {
-      console.log('peer not found')
+      logger.verbose('peer not found to determine peer relation', { peerId })
     }
   }
 
@@ -197,6 +209,8 @@ export class Connector {
   }
 
   private _createProtocols (peerInfo: PeerInfo): Rule[] {
+
+    logger.verbose('creating protocols for peer', { peerInfo })
 
     const instantiateProtocol = (protocol: ProtocolConfig): Rule => {
       switch (protocol.name) {
@@ -218,6 +232,7 @@ export class Connector {
             getOwnAddress: this.getOwnAddress.bind(this)
           })
         default:
+          logger.error(`Protocol ${protocol.name} is not supported`, { peerInfo })
           throw new Error(`Protocol ${protocol.name} undefined`)
       }
     }
