@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import * as winston from 'winston'
 import { App } from './app'
 import { AdminApi } from './services/admin-api'
