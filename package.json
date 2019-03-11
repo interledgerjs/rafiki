@@ -8,14 +8,16 @@
   "main": "build/src/start.js",
   "types": "build/src/index.d.ts",
   "files": [
+    "build/src/**/*.json",
     "build/src/**/*.js",
     "build/src/**/*.js.map",
     "build/src/**/*.d.ts",
     "build/doc"
   ],
   "scripts": {
+    "start": "npm run build && node ./build/src/start.js",
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "build": "npm run clean && npm run schema-to-tsd && tsc && npm run copy-schemas",
+    "build": "npm run schema-to-tsd && tsc && npm run copy-schemas",
     "copy-schemas": "mkdir -p ./build/src/schemas && cp ./src/schemas/*.json ./build/src/schemas",
     "lint": "tslint --project .",
     "lintFix": "tslint --project . --fix",
