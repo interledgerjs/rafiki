@@ -1,6 +1,6 @@
 {
   "name": "@interledger/rafiki",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.3",
   "description": "A modular ILP connector with stand-alone settlement engine and router",
   "engines": {
     "node": ">=10.13"
