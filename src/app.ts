@@ -28,6 +28,9 @@ export interface AppOptions {
   http2Port: number,
 }
 
+/**
+ * An instance of a Rafiki app
+ */
 export class App {
 
   private _packetCacheMap: Map<string, PacketCache>

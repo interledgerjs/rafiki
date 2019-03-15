@@ -28,7 +28,7 @@
     "test": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register --require ./test/logger 'test/{,!(integration)/**}/*.test.ts'",
     "test:integration": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register 'test/integration/**/*.test.ts'",
     "test:all": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register 'test/**/*.test.ts'",
-    "doc": "typedoc --options typedoc.js src/index.ts",
+    "doc": "typedoc --options typedoc.js src",
     "codecov": "codecov",
     "preversion": "npm run lint && npm test",
     "prepublishOnly": "rm -Rf ./build/test && npm run lint && npm test && npm run doc"

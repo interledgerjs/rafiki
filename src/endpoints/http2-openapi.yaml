@@ -1,0 +1,273 @@
+openapi: 3.0.0
+info:
+  description: |
+    A simple API for peering with an ILP connector over HTTP.
+  version: "1.0.0"
+  title: ILP Peering API
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/adrianhopebailie/Interledger/1.0.0
+  - url: 'https://hostname:<port>/'
+tags:
+  - name: interledger
+    description: The Interledger protocol
+    externalDocs:
+      description: Find out more
+      url: 'http:/interledger.org'
+paths:
+  /ilp/{peerId}:
+    parameters:
+      - in: path
+        name: peerId
+        schema:
+          type: string
+          pattern: '^[0-9A-Za-z]+$'
+        description: The peer ID of the peer posting the packet
+        required: true
+    post:
+      tags:
+        - interledger
+      summary: Send an ILP Prepare packet to the peer and get back either an ILP Fulfill or ILP Reject
+      operationId: receiveIlpPrepare
+
+      parameters:
+        - in: header
+          name: ilp-destination
+          description: The `destiantion` header of the ILP packet. Parsed as an ILP address.
+          schema:
+            type: string
+            pattern: '(?=^.{1,1023}$)^(g|private|example|peer|self|test[1-3]?|local)([.][a-zA-Z0-9_~-]+)+$'
+        - in: header
+          name: ilp-amount
+          description: The `amount` header of the ILP packet (UInt64)
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 10
+        - in: header
+          name: ilp-expiry
+          description: The `expiresAt` header of the ILP packet (UInt64)
+          schema:
+            type: string
+            pattern: '^[0-9]{17}$'
+        - in: header
+          name: ilp-condition
+          description: The 'expires at' header of the ILP packet (UInt64)
+          schema:
+            type: string
+            format: byte
+            
+      requestBody:
+          content:
+            application/ilp+octet-stream:
+              schema:
+                type: string
+                format: binary            
+            application/ilp-prepare+octet-stream:
+              schema:
+                type: string
+                format: binary
+      responses:
+        '200':
+          description: success
+          headers:
+            'ilp-fulfillment': 
+              description: The `fulfillment` header of an ILP Fulfill packet
+              schema:
+                type: string
+                format: byte
+            'ilp-reject-code': 
+              description: The `code` header of an ILP Reject packet
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/IlpFinalErrorCode'
+                  - $ref: '#/components/schemas/IlpTemporaryErrorCode'
+                  - $ref: '#/components/schemas/IlpRelativeErrorCode'
+            'ilp-reject-trigger': 
+              description: The `triggeredBy` header of an ILP Reject packet
+              schema:
+                type: string
+                pattern: '(?=^.{1,1023}$)^(g|private|example|peer|self|test[1-3]?|local)([.][a-zA-Z0-9_~-]+)+$'
+            'ilp-reject-message': 
+              description: The `message` header of an ILP Reject packet
+              schema:
+                type: string
+                pattern: '(?=^.{1,1023}$)^(g|private|example|peer|self|test[1-3]?|local)([.][a-zA-Z0-9_~-]+)+$'
+            
+        '403':
+          description: unauthorized peer
+
+  '/peer/{id}':
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: '^[0-9A-Z-a-z]+$'
+        description: The peer ID
+        required: true
+
+    get:
+      tags:
+        - peer
+      summary: Get peer by id
+      description: Get the details of an existing peer
+      operationId: getPeerById
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Peer'
+        '400':
+          description: invalid id
+        '404':
+          description: not found
+
+    post:
+      tags:
+        - peer
+      summary: |
+        Create a peer connection for the given peer. 
+      operationId: updatePeeer
+      parameters:
+        - name: peerId
+          in: path
+          description: ID of peer that needs to be updated
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '405':
+          description: Invalid input
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Peer'
+    delete:
+      tags:
+        - peer
+      summary: Deletes a peer
+      operationId: deletePeer
+      responses:
+        '400':
+          description: invalid id
+        '404':
+          description: not found
+
+  /peer/login:
+    get:
+      tags:
+        - user
+      summary: Logs the peer into the system
+      operationId: loginPeer
+      parameters:
+        - name: username
+          in: query
+          description: The user name for login
+          required: true
+          schema:
+            type: string
+        - name: password
+          in: query
+          description: The password for login in clear text
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the peer
+              schema:
+                type: integer
+                format: int32
+            X-Expires-After:
+              description: date in UTC when session token expires
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Invalid peerId/password supplied
+  /peer/logout:
+    get:
+      tags:
+        - user
+      summary: Logs out current logged in peer session
+      operationId: logoutUser
+      responses:
+        default:
+          description: successful operation
+
+
+components:
+  schemas:
+    Peer:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: '^[0-9A-Za-z]+$'
+          description: The peer ID
+        relation:
+          type: string
+          enum: [parent, peer, child]
+          description: The relationship between the peer and this connector
+        assetCode: 
+            type: string
+            pattern: '^[A-Z]{3}$'
+            description: The asset code of the settlement asset used between the peers
+        assetScale: 
+            type: integer
+            description: The scale of amounts used in ILP packets exchanged between the peers
+        endpoint:
+            type: string
+            format: url
+            description: The URL of the peer's HTTP endpoint
+    IlpFinalErrorCode:
+      type: string
+      enum: [ F00, F02, F03, F04, F05, F06, F07, F08, F99 ]
+      description: >
+        Final errors indicate that the payment is invalid and should not be retried unless the details are changed.
+          * F00 - Bad Request: Generic sender error.
+          * F01 - Invalid Packet: The ILP packet was syntactically invalid.
+          * F02 - Unreachable: There was no way to forward the payment, because the destination ILP address was wrong or the connector does not have a route to the destination.
+          * F03 - Invalid Amount: The amount is invalid, for example it contains more digits of precision than are available on the destination ledger or the amount is greater than the total amount of the given asset in existence.
+          * F04 - Insufficient Destination Amount: The receiver deemed the amount insufficient, for example you tried to pay a $100 invoice with $10.
+          * F05 - Wrong Condition: The receiver generated a different condition and cannot fulfill the payment.
+          * F06 - Unexpected Payment: The receiver was not expecting a payment like this (the data and destination address don't make sense in that combination, for example if the receiver does not understand the transport protocol used)
+          * F07 - Cannot Receive: The receiver (beneficiary) is unable to accept this payment due to a constraint. For example, the payment would put the receiver above its maximum account balance.
+          * F08 _ Amount Too Large: The packet amount is higher than the maximum a connector is willing to forward. Senders MAY send another packet with a lower amount. Connectors that produce this error SHOULD encode the amount they received and their maximum in the data to help senders determine how much lower the packet amount should be.
+          * F99 - Application Error: Reserved for application layer protocols. Applications MAY use names other than Application Error.
+    IlpTemporaryErrorCode:
+      type: string
+      enum: [ T00, T01, T02, T03, T04, T05, T99 ]
+      description: >
+        Temporary errors indicate a failure on the part of the receiver or an intermediary system that is unexpected or likely to be resolved soon. Senders SHOULD retry the same payment again, possibly after a short delay.
+          * T00 - Internal Error: A generic unexpected exception. This usually indicates a bug or unhandled error case.
+          * T01 - Peer Unreachable: The connector has a route or partial route to the destination but was unable to reach the next connector. Try again later.
+          * T02 - Peer Busy: The next connector is rejecting requests due to overloading. If a connector gets this error, they SHOULD retry the payment through a different route or respond to the sender with a T03 - Connector Busy error.
+          * T03 - Connector Busy: The connector is rejecting requests due to overloading. Try again later.
+          * T04 - Insufficient Liquidity: The connector would like to fulfill your request, but either the sender or a connector does not currently have sufficient balance or bandwidth. Try again later.
+          * T05 - Rate Limited: The sender is sending too many payments and is being rate-limited by a ledger or connector. If a connector gets this error because they are being rate-limited, they SHOULD retry the payment through a different route or respond to the sender with a T03 - Connector Busy error.
+          * T99 - Application Error: Reserved for application layer protocols. Applications MAY use names other than Application Error.
+    IlpRelativeErrorCode:
+      type: string
+      enum: [ R00, R01, R02, R99 ]
+      description: >
+        Relative errors indicate that the payment did not have enough of a margin in terms of money or time. However, it is impossible to tell whether the sender did not provide enough error margin or the path suddenly became too slow or illiquid. The sender MAY retry the payment with a larger safety margin.
+          * R00 - Transfer Timed Out: The transfer timed out, meaning the next party in the chain did not respond. This could be because you set your timeout too low or because something look longer than it should. The sender MAY try again with a higher expiry, but they SHOULD NOT do this indefinitely or a malicious connector could cause them to tie up their money for an unreasonably long time.
+          * R01 - Insufficient Source Amount: The amount received by a connector in the path was too little to forward (zero or less). Either the sender did not send enough money or the exchange rate changed. The sender MAY try again with a higher amount, but they SHOULD NOT do this indefinitely or a malicious connector could steal money from them.
+          * R02 - Insufficient Timeout: The connector could not forward the payment, because the timeout was too low to subtract its safety margin. The sender MAY try again with a higher expiry, but they SHOULD NOT do this indefinitely or a malicious connector could cause them to tie up their money for an unreasonably long time.
+          * R99 - Application Error: Reserved for application layer protocols. Applications MAY use names other than Application Error.

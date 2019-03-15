@@ -6,7 +6,7 @@
 [![CircleCI](https://circleci.com/gh/interledgerjs/rafiki.svg?style=shield)](https://circleci.com/gh/interledgerjs/rafiki)
 [![codecov](https://codecov.io/gh/interledgerjs/rafiki/branch/master/graph/badge.svg)](https://codecov.io/gh/interledgerjs/rafiki)
 
-![](./images/rafiki.jpeg)
+![rafiki](./media/rafiki.jpeg)
 
 _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/29271134-rafiki?p=poster)_
 
@@ -37,7 +37,7 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
 
 > More details coming soon, some major differences from `ilp-connector` below:
 
-<img style="float: center;" src="./images/architecture.png">
+![architecture](./media/architecture.png)
 
  - Stand-alone routing table and route manager
  - Stand-alone settlement engine
