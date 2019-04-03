@@ -1,21 +1,26 @@
 {
   "name": "@interledger/rafiki",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.1-beta.4",
   "description": "A modular ILP connector with stand-alone settlement engine and router",
   "engines": {
     "node": ">=10.13"
   },
-  "main": "build/src/start.js",
+  "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
+  "bin": {
+    "rafiki": "build/src/start.js"
+  },
   "files": [
+    "build/src/**/*.json",
     "build/src/**/*.js",
     "build/src/**/*.js.map",
     "build/src/**/*.d.ts",
     "build/doc"
   ],
   "scripts": {
+    "start": "npm run build && node ./build/src/start.js",
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "build": "npm run clean && npm run schema-to-tsd && tsc && npm run copy-schemas",
+    "build": "npm run schema-to-tsd && tsc && npm run copy-schemas",
     "copy-schemas": "mkdir -p ./build/src/schemas && cp ./src/schemas/*.json ./build/src/schemas",
     "lint": "tslint --project .",
     "lintFix": "tslint --project . --fix",
@@ -23,7 +28,7 @@
     "test": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register --require ./test/logger 'test/{,!(integration)/**}/*.test.ts'",
     "test:integration": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register 'test/integration/**/*.test.ts'",
     "test:all": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register 'test/**/*.test.ts'",
-    "doc": "typedoc --options typedoc.js src/index.ts",
+    "doc": "typedoc --options typedoc.js src",
     "codecov": "codecov",
     "preversion": "npm run lint && npm test",
     "prepublishOnly": "rm -Rf ./build/test && npm run lint && npm test && npm run doc"
@@ -35,6 +40,7 @@
   "author": "Interledger Team <info@interledger.org>",
   "license": "Apache-2.0",
   "dependencies": {
+    "@types/ioredis": "^4.0.9",
     "ajv": "^6.9.1",
     "change-case": "^3.1.0",
     "extensible-error": "^1.0.2",
@@ -53,8 +59,6 @@
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/chai-as-promised": "^7.1.0",
-    "@types/debug": "^0.0.31",
-    "@types/ioredis": "^4.0.9",
     "@types/mocha": "^5.2.5",
     "@types/mock-require": "^2.0.0",
     "@types/sinon": "^5.0.7",

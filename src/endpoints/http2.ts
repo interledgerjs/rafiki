@@ -1,7 +1,7 @@
 import { Endpoint } from '../types/endpoint'
 import { RequestHandler } from '../types/request-stream'
-import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpReply, deserializeIlpPrepare, serializeIlpReply, isFulfill } from 'ilp-packet'
-import { ClientHttp2Session, connect, constants } from 'http2'
+import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpReply, deserializeIlpPrepare, serializeIlpReply } from 'ilp-packet'
+import { ServerHttp2Stream } from 'http2'
 import { IlpRequestHandler } from '../types/rule'
 import Http2Client from 'ilp-plugin-http/build/lib/http2' // TODO remove this dependency
 import { log } from '../winston'
@@ -15,7 +15,6 @@ export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
   private client: Http2Client
   private path: string
   private origin: string
-  private protocol: string
 
   private _handler: IlpRequestHandler
 
@@ -24,7 +23,6 @@ export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
 
     this.path = url.pathname
     this.origin = url.origin
-    this.protocol = url.protocol.substring(0, url.protocol.length - 1)
 
     // Setup connection to the other side
     this.client = new Http2Client(this.origin, {
@@ -50,14 +48,24 @@ export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
     return this
   }
 
-  public async handlePacket (prepare: Buffer): Promise<Buffer> {
-    if (this._handler) {
-      const packet = deserializeIlpPrepare(prepare)
-      return serializeIlpReply(await this._handler(packet))
-    } else {
-      logger.error('No handler set for endpoint')
-      throw new Error('Handler has not been set')
-    }
+  public handleIncomingStream (stream: ServerHttp2Stream) {
+    let chunks: Array<Buffer> = []
+    stream.on('data', (chunk: Buffer) => {
+      chunks.push(chunk)
+    })
+    stream.on('end', async () => {
+      let packet = Buffer.concat(chunks)
+      try {
+        const prepare = deserializeIlpPrepare(packet)
+        let response = serializeIlpReply(await this._handler(prepare))
+        stream.end(response)
+      } catch (e) {
+        logger.error('No handler set for endpoint')
+        stream.respond({ ':status': 500 })
+        stream.end()
+      }
+    })
+    stream.on('error', (error) => logger.debug('error on incoming stream', { error }))
   }
 
   close () {
