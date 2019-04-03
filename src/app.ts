@@ -110,7 +110,7 @@ export class App {
 
   public async removePeer (peerId: string) {
     logger.info('Removing peer: ' + peerId, { peerId })
-    this._endpointManager.closeEndpoints(peerId)
+    await this._endpointManager.closeEndpoints(peerId)
     this._packetCacheMap.delete(peerId)
     this._rateLimitBucketMap.delete(peerId)
     this._throughputBucketsMap.delete(peerId)

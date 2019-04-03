@@ -66,4 +66,8 @@ export class PluginEndpoint implements Endpoint<IlpPrepare, IlpReply> {
     return this
   }
 
+  public close () {
+    return this._plugin.disconnect()
+  }
+
 }
