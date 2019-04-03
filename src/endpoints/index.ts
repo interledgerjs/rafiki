@@ -4,7 +4,7 @@ import { IlpPrepare, IlpReply } from 'ilp-packet'
 import { Http2EndpointManager } from './http2-server'
 import { Http2Server } from 'http2'
 import { PluginEndpoint } from '../legacy/plugin-endpoint'
-import { InMemoryMapStore } from '../stores/in-memory';
+import { InMemoryMapStore } from '../stores/in-memory'
 export * from './http2'
 export * from './request-stream'
 export * from './request-stream-ws'
@@ -67,7 +67,6 @@ export class EndpointManager {
         this._pluginStores.set(peerId, store)
         const PluginType = require(endpointInfo.pluginOpts.name)
         const plugin = new PluginType(pluginOpts)
-        plugin.connect()
         const endpoint = new PluginEndpoint(plugin)
         this._pluginEndpoints.set(peerId, endpoint)
         return endpoint

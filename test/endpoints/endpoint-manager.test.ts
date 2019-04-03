@@ -35,7 +35,10 @@ describe('Endpoint Manager', function () {
       }
 
       const pluginEndpoint = endpointManager.createEndpoint('bob', pluginEndpointInfo)
-      await btpClient.connect()
+      await Promise.all([
+        btpClient.connect(),
+        (pluginEndpoint as PluginEndpoint).connect()
+      ])
 
       assert.instanceOf(pluginEndpoint, PluginEndpoint)
       await endpointManager.closeEndpoints('bob')

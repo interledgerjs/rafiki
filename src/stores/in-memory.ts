@@ -1,6 +1,6 @@
 import { StoreInstance } from '../types/store'
 
-export class InMemoryMapStore implements StoreInstance  {
+export class InMemoryMapStore implements StoreInstance {
   map: Map<string, string> = new Map()
   async get (key: string): Promise<string | undefined> {
     return this.map.get(key)

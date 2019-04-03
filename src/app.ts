@@ -20,6 +20,7 @@ import { IlpReply, IlpPrepare } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { createServer, Http2Server } from 'http2'
+import { PluginEndpoint } from './legacy/plugin-endpoint'
 
 const logger = log.child({ component: 'App' })
 
@@ -104,6 +105,10 @@ export class App {
       }
     }
     await this.connector.addPeer(peerInfo, wrapperEndpoint, false) // TODO: add logic to determine whether address should be inherited.
+
+    if (endpoint instanceof PluginEndpoint) {
+      endpoint.connect().catch(() => logger.error('Plugin endpoint failed to connect'))
+    }
 
     rulesInstances.forEach(rule => rule.startup())
   }
