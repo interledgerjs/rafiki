@@ -5,6 +5,7 @@ import { Http2EndpointManager } from './http2-server'
 import { Http2Server } from 'http2'
 import { PluginEndpoint } from '../legacy/plugin-endpoint'
 import { InMemoryMapStore } from '../stores/in-memory'
+import compat from 'ilp-compat-plugin'
 export * from './http2'
 export * from './request-stream'
 export * from './request-stream-ws'
@@ -62,11 +63,13 @@ export class EndpointManager {
         if (!endpointInfo.pluginOpts) {
           throw new Error('pluginOptions needs to be specified to create a plugin endpoint')
         }
-        const store = new InMemoryMapStore()
-        const pluginOpts = Object.assign({}, endpointInfo.pluginOpts.opts, { store })
-        this._pluginStores.set(peerId, store)
+        const api = {
+          store: new InMemoryMapStore()
+        }
+        const pluginOpts = Object.assign({}, endpointInfo.pluginOpts.opts, { _store: api.store })
+        this._pluginStores.set(peerId, api.store)
         const PluginType = require(endpointInfo.pluginOpts.name)
-        const plugin = new PluginType(pluginOpts)
+        const plugin = compat(new PluginType(pluginOpts, api))
         const endpoint = new PluginEndpoint(plugin)
         this._pluginEndpoints.set(peerId, endpoint)
         return endpoint
