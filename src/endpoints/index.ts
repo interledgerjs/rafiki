@@ -4,6 +4,7 @@ import { IlpPrepare, IlpReply } from 'ilp-packet'
 import { Http2EndpointManager } from './http2-server'
 import { Http2Server } from 'http2'
 import { PluginEndpoint } from '../legacy/plugin-endpoint'
+import { InMemoryMapStore } from '../stores/in-memory';
 export * from './http2'
 export * from './request-stream'
 export * from './request-stream-ws'
@@ -30,6 +31,7 @@ export class EndpointManager {
 
   private _http2Endpoints?: Http2EndpointManager
   private _pluginEndpoints: Map<string, PluginEndpoint> = new Map()
+  private _pluginStores: Map<string, InMemoryMapStore> = new Map()
 
   constructor ({ http2Server }: EndpointManagerServices) {
     if (http2Server) {
@@ -60,8 +62,11 @@ export class EndpointManager {
         if (!endpointInfo.pluginOpts) {
           throw new Error('pluginOptions needs to be specified to create a plugin endpoint')
         }
+        const store = new InMemoryMapStore()
+        const pluginOpts = Object.assign({}, endpointInfo.pluginOpts.opts, { store })
+        this._pluginStores.set(peerId, store)
         const PluginType = require(endpointInfo.pluginOpts.name)
-        const plugin = new PluginType(endpointInfo.pluginOpts.opts)
+        const plugin = new PluginType(pluginOpts)
         plugin.connect()
         const endpoint = new PluginEndpoint(plugin)
         this._pluginEndpoints.set(peerId, endpoint)
@@ -88,6 +93,7 @@ export class EndpointManager {
       if (endpoint) {
         await endpoint.close()
         this._pluginEndpoints.delete(peerId)
+        this._pluginStores.delete(peerId)
       }
     }
   }
