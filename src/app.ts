@@ -151,7 +151,7 @@ export class App {
     logger.verbose('Creating rules for peer', { peerInfo })
 
     // Global/Config might be needed
-    const globalMinExpirationWindow = 35000
+    const globalMinExpirationWindow = 1500
     const globalMaxHoldWindow = 35000
 
     const instantiateRule = (rule: RuleConfig): Rule => {
