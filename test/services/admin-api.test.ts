@@ -8,6 +8,7 @@ import { PeerInfo } from '../../src/types/peer'
 import { App } from '../../src/app'
 import { SettlementEngine } from '../../src/services/settlement-engine'
 import { EndpointInfo } from '../../src'
+import { Redis } from 'ioredis'
 const RedisMock = require('ioredis-mock')
 
 Chai.use(chaiAsPromised)
@@ -17,20 +18,25 @@ describe('Admin Api', function () {
   let app: App
   let adminApi: AdminApi
   let settlementEngine: SettlementEngine
+  let redis: Redis
 
   beforeEach(function () {
     app = new App({ ilpAddress: 'unknown', http2Port: 8083 })
-    settlementEngine = new SettlementEngine({ streamKey: 'balance', redisClient: new RedisMock() })
+    redis = new RedisMock()
+    settlementEngine = new SettlementEngine({ streamKey: 'balance', redisClient: redis })
     adminApi = new AdminApi({},{ app, settlementEngine })
     adminApi.listen()
   })
 
   afterEach(function () {
     adminApi.shutdown()
+    app.shutdown()
   })
 
   it('starts an http server if admin api is true in config', async function (){
     try{
+      // stub redis status
+      redis.status = 'ready'
       const response = await axios.get('http://127.0.0.1:7780/health')
       assert.equal(response.data, "Status: ok")
       return
@@ -48,6 +54,30 @@ describe('Admin Api', function () {
       return
     }
     assert.fail('Did not throw a 404 for an unknown route')
+  })
+
+  describe('getHealth', function () {
+    it('returns 500 if settlement engine is not connected to redis', async function () {
+      try {
+        // stub redis status
+        redis.status = 'connecting'
+        await axios.get('http://127.0.0.1:7780/health')
+      }
+      catch  (error) {
+        assert.equal(error.response.status, 500)
+        return
+      }
+      assert.fail('Did not return expected error code')
+    })
+
+    it('returns 200 if settlement engine is connected to redis', async function () {
+      // stub redis status
+      redis.status = 'ready'
+
+      const response = await axios.get('http://127.0.0.1:7780/health')
+      
+      assert.equal(200, response.status)
+    })
   })
 
   describe('getStats', function () {
@@ -187,6 +217,39 @@ describe('Admin Api', function () {
       const endpointInfo: EndpointInfo = {
         type: 'http',
         url: 'http://localhost:8084'
+      }
+
+      const response = await axios.post('http://127.0.0.1:7780/peer', { peerInfo, endpointInfo })
+
+      assert.equal(response.status, 204)
+      sinon.assert.calledWith(addPeerSpy, peerInfo, endpointInfo)
+    })
+
+    it('can add a plugin endpoint using xrp-asym-server', async function () {
+      const addPeerSpy = sinon.spy(app, 'addPeer')
+      const peerInfo: PeerInfo = {
+        "relation": "child",
+        "id": "test",
+        "assetCode": "XRP",
+        "assetScale": 9,
+        "rules": [],
+        "protocols": [{
+          name: 'ildcp'
+        }]
+      }
+      const endpointInfo: EndpointInfo = {
+        "type": "plugin",
+        "pluginOpts": {
+            "name": "ilp-plugin-xrp-asym-server",
+            "opts": {
+              "port": "6666",
+              "address": "rKzfaLjeVZXasCSU2heTUGw9VhQmFNSd8k",
+              "secret": "snHNnoL6S67wNvydcZg9y9bFzPZwG",
+              "xrpServer": "wss://s.altnet.rippletest.net:51233",
+              "maxBalance": "100000",
+              "maxPacketAmount": "1000"
+            }
+        }
       }
 
       const response = await axios.post('http://127.0.0.1:7780/peer', { peerInfo, endpointInfo })
