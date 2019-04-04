@@ -27,6 +27,7 @@ describe('Admin Api', function () {
 
   afterEach(function () {
     adminApi.shutdown()
+    app.shutdown()
   })
 
   it('starts an http server if admin api is true in config', async function (){
@@ -187,6 +188,39 @@ describe('Admin Api', function () {
       const endpointInfo: EndpointInfo = {
         type: 'http',
         url: 'http://localhost:8084'
+      }
+
+      const response = await axios.post('http://127.0.0.1:7780/peer', { peerInfo, endpointInfo })
+
+      assert.equal(response.status, 204)
+      sinon.assert.calledWith(addPeerSpy, peerInfo, endpointInfo)
+    })
+
+    it('can add a plugin endpoint using xrp-asym-server', async function () {
+      const addPeerSpy = sinon.spy(app, 'addPeer')
+      const peerInfo: PeerInfo = {
+        "relation": "child",
+        "id": "test",
+        "assetCode": "XRP",
+        "assetScale": 9,
+        "rules": [],
+        "protocols": [{
+          name: 'ildcp'
+        }]
+      }
+      const endpointInfo: EndpointInfo = {
+        "type": "plugin",
+        "pluginOpts": {
+            "name": "ilp-plugin-xrp-asym-server",
+            "opts": {
+              "port": "6666",
+              "address": "rKzfaLjeVZXasCSU2heTUGw9VhQmFNSd8k",
+              "secret": "snHNnoL6S67wNvydcZg9y9bFzPZwG",
+              "xrpServer": "wss://s.altnet.rippletest.net:51233",
+              "maxBalance": "100000",
+              "maxPacketAmount": "1000"
+            }
+        }
       }
 
       const response = await axios.post('http://127.0.0.1:7780/peer', { peerInfo, endpointInfo })
