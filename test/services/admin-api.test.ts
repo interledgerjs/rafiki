@@ -8,6 +8,7 @@ import { PeerInfo } from '../../src/types/peer'
 import { App } from '../../src/app'
 import { SettlementEngine } from '../../src/services/settlement-engine'
 import { EndpointInfo } from '../../src'
+import { Redis } from 'ioredis'
 const RedisMock = require('ioredis-mock')
 
 Chai.use(chaiAsPromised)
@@ -17,10 +18,12 @@ describe('Admin Api', function () {
   let app: App
   let adminApi: AdminApi
   let settlementEngine: SettlementEngine
+  let redis: Redis
 
   beforeEach(function () {
     app = new App({ ilpAddress: 'unknown', http2Port: 8083 })
-    settlementEngine = new SettlementEngine({ streamKey: 'balance', redisClient: new RedisMock() })
+    redis = new RedisMock()
+    settlementEngine = new SettlementEngine({ streamKey: 'balance', redisClient: redis })
     adminApi = new AdminApi({},{ app, settlementEngine })
     adminApi.listen()
   })
@@ -32,6 +35,8 @@ describe('Admin Api', function () {
 
   it('starts an http server if admin api is true in config', async function (){
     try{
+      // stub redis status
+      redis.status = 'ready'
       const response = await axios.get('http://127.0.0.1:7780/health')
       assert.equal(response.data, "Status: ok")
       return
@@ -49,6 +54,30 @@ describe('Admin Api', function () {
       return
     }
     assert.fail('Did not throw a 404 for an unknown route')
+  })
+
+  describe('getHealth', function () {
+    it('returns 500 if settlement engine is not connected to redis', async function () {
+      try {
+        // stub redis status
+        redis.status = 'connecting'
+        await axios.get('http://127.0.0.1:7780/health')
+      }
+      catch  (error) {
+        assert.equal(error.response.status, 500)
+        return
+      }
+      assert.fail('Did not return expected error code')
+    })
+
+    it('returns 200 if settlement engine is connected to redis', async function () {
+      // stub redis status
+      redis.status = 'ready'
+
+      const response = await axios.get('http://127.0.0.1:7780/health')
+      
+      assert.equal(200, response.status)
+    })
   })
 
   describe('getStats', function () {
