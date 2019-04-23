@@ -4,33 +4,44 @@ import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { SettlementAdminApi } from '../../src/services/settlement-admin-api/settlement-admin-api'
 import axios from 'axios'
-import { JSONBalanceSummary } from '../../src'
+import { App, PeerInfo, EndpointInfo } from '../../src'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('Settlement Admin Api', function () {
+  let app: App
   let settlementAdminApi: SettlementAdminApi
-  let accountId: string | undefined
-  let amountDiff: bigint | undefined
-  const updateAccountBalance = (id: string, diff: bigint) => {
-    accountId = id
-    amountDiff = diff
+  const peerInfo: PeerInfo = {
+    id: 'alice',
+    assetCode: 'XRP',
+    assetScale: 9,
+    relation: 'child',
+    rules: [{
+      name: 'errorHandler'
+    }, {
+      name: 'balance',
+      minimum: '-10',
+      maximum: '200'
+    }],
+    protocols: [{
+      name: 'ildcp'
+    }],
   }
-  const getAccountBalance = (id: string): JSONBalanceSummary => {
-    return {
-      balance: '1000',
-      minimum: '0',
-      maximum: '100'
-    }
+  const endpointInfo: EndpointInfo = {
+    type: 'http',
+    'url': 'http://localhost:1234'
   }
 
-  beforeEach(function () {
-    settlementAdminApi = new SettlementAdminApi({}, { updateAccountBalance, getAccountBalance })
+  beforeEach(async function () {
+    app = new App({
+      ilpAddress: 'test.rafiki',
+      http2Port: 8443
+    })
+    await app.addPeer(peerInfo, endpointInfo)
+    settlementAdminApi = new SettlementAdminApi({}, { updateAccountBalance: app.updateBalance, getAccountBalance: app.getBalance})
     settlementAdminApi.listen()
-    accountId = undefined
-    amountDiff = undefined
   })
 
   afterEach(function () {
@@ -51,20 +62,34 @@ describe('Settlement Admin Api', function () {
 
       assert.equal(response.status, 200)
       assert.deepEqual(response.data, {
-        balance: '1000',
+        balance: '0',
         timestamp: Math.floor(START_DATE / 1000)
       })
       this.clock.restore()
     })
+
+    it('requires accountId', async function () {
+      try {
+        await axios.post('http://localhost:4000/accounts//updateBalance', { amountDiff: '100' })
+      } catch (error) {
+        assert.equal(error.response.status, 404)
+        return
+      }
+
+      assert.fail('Did not throw expected error')
+    })
   })
 
   describe('post accounts/{accountID}/updateBalance', function () {
-    it('calls the updateAccountBalance service', async function () {
+    it('updates the balance on the app', async function () {
       const response = await axios.post('http://localhost:4000/accounts/alice/updateBalance', { amountDiff: '100' })
   
-      assert.equal(accountId, 'alice')
-      assert.equal(amountDiff, 100n) // amountDiff must be converted to a bigint
       assert.equal(response.status, 200)
+      assert.deepEqual(app.getBalance('alice'), {
+        balance: '100',
+        minimum: '-10',
+        maximum: '200'
+      })
     })
 
     it('requires amountDiff to be a string', async function () {

@@ -146,7 +146,7 @@ export class App {
     return this._businessRulesMap.get(peerId) || []
   }
 
-  public getBalance (peerId: string): JSONBalanceSummary {
+  public getBalance = (peerId: string): JSONBalanceSummary => {
     const balance = this._balanceMap.get(peerId)
 
     if (!balance) {

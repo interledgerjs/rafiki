@@ -3,7 +3,7 @@
 import * as winston from 'winston'
 import { App } from './app'
 import { AdminApi } from './services/admin-api'
-import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api';
+import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 
 // Logging
 const formatter = winston.format.printf(({ service, level, message, component, timestamp }) => {
