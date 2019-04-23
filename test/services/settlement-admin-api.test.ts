@@ -4,41 +4,58 @@ import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { SettlementAdminApi } from '../../src/services/settlement-admin-api/settlement-admin-api'
 import axios from 'axios'
-import { Threshold } from '../../src/types/threshold';
+import { JSONBalanceSummary } from '../../src'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
+const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('Settlement Admin Api', function () {
   let settlementAdminApi: SettlementAdminApi
   let accountId: string | undefined
   let amountDiff: bigint | undefined
-  let thresholds: Threshold[] | undefined
   const updateAccountBalance = (id: string, diff: bigint) => {
     accountId = id
     amountDiff = diff
   }
-  const updateAccountThresholds = (id: string, thresholdsArray: Threshold[]) => {
-    accountId = id
-    thresholds = thresholdsArray
+  const getAccountBalance = (id: string): JSONBalanceSummary => {
+    return {
+      balance: '1000',
+      minimum: '0',
+      maximum: '100'
+    }
   }
 
   beforeEach(function () {
-    settlementAdminApi = new SettlementAdminApi({}, { updateAccountBalance, updateAccountThresholds })
-    settlementAdminApi.connect()
+    settlementAdminApi = new SettlementAdminApi({}, { updateAccountBalance, getAccountBalance })
+    settlementAdminApi.listen()
     accountId = undefined
     amountDiff = undefined
-    thresholds = undefined
   })
 
   afterEach(function () {
-    settlementAdminApi.disconnect()
+    settlementAdminApi.shutdown()
   })
 
   it('health returns 200', async function () {
     const response = await axios.get('http://localhost:4000/health')
 
     assert.equal(response.status, 200)
+  })
+
+  describe('get accounts/{accountID}/balance', function () {
+    it('returns an object which has balance and timestamp keys', async function () {
+      this.clock = sinon.useFakeTimers(START_DATE)
+
+      const response = await axios.get('http://localhost:4000/accounts/alice/balance')
+
+      assert.equal(response.status, 200)
+      assert.deepEqual(response.data, {
+        balance: '1000',
+        timestamp: Math.floor(START_DATE / 1000)
+      })
+      this.clock.restore()
+    })
   })
 
   describe('post accounts/{accountID}/updateBalance', function () {
@@ -74,65 +91,4 @@ describe('Settlement Admin Api', function () {
     })
   })
 
-  describe('put accounts/{accountId}/thresholds', function () {
-    it('calls the updateAccountThreshold service', async function () {
-      const response = await axios.put('http://localhost:4000/accounts/alice/thresholds', { thresholds: [
-        {
-          label: 'presettlement',
-          balance: '-2000'
-        },
-        {
-          label: 'settlement',
-          balance: '-1000'
-        }
-      ]})
-  
-      assert.equal(accountId, 'alice')
-      assert.deepEqual(thresholds, [
-        {
-          label: 'presettlement',
-          balance: -2000n
-        },
-        {
-          label: 'settlement',
-          balance: -1000n
-        }
-      ])
-      assert.equal(response.status, 200)
-    })
-
-    it('thresholds must be an array', async function () {
-      try {
-        await axios.put('http://localhost:4000/accounts/alice/thresholds', { thresholds: {
-          label: 'presettlement',
-          balance: '-2000'
-        }})
-      } catch (error) {
-        assert.equal(error.response.status, 422)
-        return
-      }
-  
-      assert.fail('Did not throw expected exception.')
-    })
-
-    it('entry in thresholds must have label and balance key', async function () {
-      try {
-        await axios.put('http://localhost:4000/accounts/alice/thresholds', { thresholds: [
-          {
-            label: 'presettlement'
-          },
-          {
-            balance: '-2000'
-          }
-        ]})
-      } catch (error) {
-        assert.equal(error.response.status, 422)
-        assert.equal(error.response.data.errors['thresholds[1].label'].msg, 'threshold label must be a string')
-        assert.equal(error.response.data.errors['thresholds[0].balance'].msg, 'threshold balance must be a string')
-        return
-      }
-  
-      assert.fail('Did not throw expected exception.')
-    })
-  })
 })

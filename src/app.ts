@@ -21,7 +21,7 @@ import { pipeline, RequestHandler } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { createServer, Http2Server } from 'http2'
 import { PluginEndpoint } from './legacy/plugin-endpoint'
-import { Balance, InMemoryBalance } from './types'
+import { Balance, InMemoryBalance, JSONBalanceSummary } from './types'
 import { MIN_INT_64, MAX_INT_64 } from './constants'
 import { BalanceRule } from './rules'
 
@@ -146,6 +146,32 @@ export class App {
     return this._businessRulesMap.get(peerId) || []
   }
 
+  public getBalance (peerId: string): JSONBalanceSummary {
+    const balance = this._balanceMap.get(peerId)
+
+    if (!balance) {
+      throw new Error(`Cannot find balance for peerId=${peerId}`)
+    }
+
+    return balance.toJSON()
+  }
+
+  public getBalances = () => {
+    let balances = {}
+    this._balanceMap.forEach((value, key) => balances[key] = value.toJSON())
+    return balances
+  }
+
+  public updateBalance = (peerId: string, amountDiff: bigint): void => {
+    const balance = this._balanceMap.get(peerId)
+
+    if (!balance) {
+      throw new Error(`Cannot find balance for peerId=${peerId}`)
+    }
+
+    balance.update(amountDiff)
+  }
+
   /**
    * Creates the business rules specified in the peer information. Custom rules should be added to the list.
    * @param peerInfo Peer information
@@ -187,26 +213,22 @@ export class App {
           return new StatsRule({ stats: this.stats, peerInfo })
         case('alert'):
           return new AlertRule({ createAlert: (triggeredBy: string, message: string) => this.alerts.createAlert(peerInfo.id, triggeredBy, message) })
+        case('balance'):
+          if (!rule.minimum && !rule.maximum) {
+            logger.warn(`(!!!) balance bounds NOT defined for peer, this peer can spend UNLIMITED funds peerId=${peerInfo.id}`)
+          }
+          const minimum = rule.minimum ? BigInt(rule.minimum) : MIN_INT_64
+          const maximum = rule.maximum ? BigInt(rule.maximum) : MAX_INT_64
+          logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum, maximum, initialBalance: 0n })
+          const balance = new InMemoryBalance({ initialBalance: 0n, minimum, maximum }) // In future can get from a balance service
+          this._balanceMap.set(peerInfo.id, balance)
+          return new BalanceRule({ peerInfo, stats: this.stats, balance })
         default:
           throw new Error('Rule identifier undefined')
       }
     }
 
-    const rules = peerInfo.rules.map(instantiateRule)
-
-    // Always instantiate balance rule
-    const balanceRuleDefinition = peerInfo.rules.filter(rule => rule.name === 'balance')[0]
-    if (!balanceRuleDefinition) {
-      logger.warn(`(!!!) balance rule NOT defined for peer, this peer can spend UNLIMITED funds peerId=${peerInfo.id}`)
-    }
-    const minimum = balanceRuleDefinition && balanceRuleDefinition.minimum ? BigInt(balanceRuleDefinition.minumum) : MIN_INT_64
-    const maximum = balanceRuleDefinition && balanceRuleDefinition.maximum ? BigInt(balanceRuleDefinition.maximum) : MAX_INT_64
-    logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum, maximum, initialBalance: 0n })
-    const balance = new InMemoryBalance({ initialBalance: 0n, minimum, maximum }) // In future can get from a balance service
-    this._balanceMap.set(peerInfo.id, balance)
-    rules.push(new BalanceRule({ peerInfo, stats: this.stats, balance }))
-
-    return rules
+    return peerInfo.rules.map(instantiateRule)
   }
 
 }

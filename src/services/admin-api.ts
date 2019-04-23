@@ -1,10 +1,7 @@
 import { log } from './../winston'
 import { Server, IncomingMessage, ServerResponse } from 'http'
-import { BalanceUpdate } from '../schemas/BalanceUpdateTyping'
-import { InvalidJsonBodyError } from '../errors/invalid-json-body-error'
 import Ajv from 'ajv'
 import { App } from '../app'
-import { SettlementEngine } from './settlement-engine'
 import * as balanceUpdateSchema from '../schemas/BalanceUpdate.json'
 
 const ajv = new Ajv()
@@ -17,8 +14,7 @@ export interface AdminApiOptions {
 }
 
 export interface AdminApiServices {
-  app: App,
-  settlementEngine: SettlementEngine
+  app: App
 }
 
 interface Route {
@@ -30,21 +26,18 @@ interface Route {
 
 export class AdminApi {
   private app: App
-  private settlementEngine: SettlementEngine
   private server?: Server
   private routes: Route[]
   private host: string
   private port: number
 
-  constructor ({ host, port }: AdminApiOptions, { app, settlementEngine }: AdminApiServices) {
+  constructor ({ host, port }: AdminApiOptions, { app }: AdminApiServices) {
     this.app = app
-    this.settlementEngine = settlementEngine
     this.routes = [
       { method: 'GET', match: '/health$', fn: this.getHealth.bind(this) },
       { method: 'GET', match: '/stats$', fn: this.getStats },
       { method: 'GET', match: '/alerts$', fn: this.getAlerts },
       { method: 'GET', match: '/balance$', fn: this.getBalances },
-      { method: 'POST', match: '/balance$', fn: this.updateBalance },
       { method: 'POST', match: '/peer$', fn: this.addPeer },
       { method: 'GET', match: '/peer$', fn: this.getPeer }
     ]
@@ -126,28 +119,7 @@ export class AdminApi {
   }
 
   private async getBalances () {
-    return this.settlementEngine.getStatus()
-  }
-
-  private async updateBalance (url: string, _data: object) {
-    try {
-      validateBalanceUpdate(_data)
-    } catch (err) {
-      const firstError = (err.errors &&
-        err.errors[0]) ||
-        { message: 'unknown validation error', dataPath: '' }
-      throw new InvalidJsonBodyError('invalid balance update: error=' + firstError.message + ' dataPath=' + firstError.dataPath, err.errors || [])
-    }
-    const { peerId, amountDiff } = _data as BalanceUpdate
-    logger.verbose('updating balance for peer', { peerId, amountDiff })
-    const limit = this.settlementEngine.getBalanceLimits(peerId)
-    await this.settlementEngine.updateBalance(peerId, BigInt(amountDiff))
-
-    return {
-      'balance': this.settlementEngine.getBalance(peerId).toString(),
-      'minimum': limit.min.toString(),
-      'maximum': limit.max.toString()
-    }
+    return this.app.getBalances()
   }
 
   private async addPeer (url: string, _data: object) {
@@ -164,14 +136,7 @@ export class AdminApi {
     return this.app.connector.getPeerList()
   }
 
-  /**
-   * Checks that settlement engine is connected to redis
-   */
   private async getHealth () {
-    if (this.settlementEngine.redis.status === 'ready') {
-      return 'Status: ok'
-    }
-
-    throw new Error('Settlement engine is not connected to redis.')
+    return 'Status: ok'
   }
 }

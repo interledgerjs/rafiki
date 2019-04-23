@@ -12,14 +12,16 @@ export interface BalanceOpts {
   maximum?: bigint
 }
 
+export interface JSONBalanceSummary {
+  balance: string
+  minimum: string
+  maximum: string
+}
+
 export interface Balance {
   update: (amount: bigint) => void
   getValue: () => bigint
-  toJSON: () => {
-    balance: string,
-    minimum: string,
-    maximum: string
-  }
+  toJSON: () => JSONBalanceSummary
 }
 
 export class InMemoryBalance implements Balance {
@@ -53,7 +55,7 @@ export class InMemoryBalance implements Balance {
     return this.balance
   }
 
-  toJSON () {
+  toJSON (): JSONBalanceSummary {
     return {
       balance: this.balance.toString(),
       minimum: this.minimum.toString(),

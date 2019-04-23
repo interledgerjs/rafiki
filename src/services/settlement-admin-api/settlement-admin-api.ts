@@ -1,9 +1,9 @@
 import Express from 'express'
 import { log } from '../../winston'
 import { Server } from 'http'
-import { Threshold } from '../../types/threshold'
 import * as AccountBalanceController from './controllers/accountBalanceController'
-import * as AccountThresholdsController from './controllers/accountThresholdsController'
+import { param } from 'express-validator/check'
+import { JSONBalanceSummary } from '../../types'
 
 const logger = log.child({ component: 'settlement-admin-api' })
 
@@ -14,7 +14,7 @@ export interface SettlementAdminApiOptions {
 
 export interface AdminApiServices {
   updateAccountBalance: (id: string, amountDiff: bigint) => void
-  updateAccountThresholds: (id: string, thresholds: Threshold[]) => void
+  getAccountBalance: (id: string) => JSONBalanceSummary
 }
 export class SettlementAdminApi {
 
@@ -22,22 +22,22 @@ export class SettlementAdminApi {
   private _host: string
   private _port: number
   private _updateAccountBalanceService: (id: string, amountDiff: bigint) => void
-  private _updateAccountThresholdsService: (id: string, thresholds: Threshold[]) => void
+  private _getAccountBalanceService: (id: string) => JSONBalanceSummary
 
-  constructor ({ host, port }: SettlementAdminApiOptions, { updateAccountBalance, updateAccountThresholds }: AdminApiServices) {
+  constructor ({ host, port }: SettlementAdminApiOptions, { updateAccountBalance, getAccountBalance }: AdminApiServices) {
     this._host = host || '127.0.0.1'
     this._port = port || 4000
     this._updateAccountBalanceService = updateAccountBalance
-    this._updateAccountThresholdsService = updateAccountThresholds
+    this._getAccountBalanceService = getAccountBalance
   }
 
-  connect () {
+  listen () {
     const expressApp = this._createExpressApp()
     this._server = expressApp.listen(this._port, this._host)
     logger.info(`Listening on host: ${this._host} and port: ${this._port}.`)
   }
 
-  disconnect () {
+  shutdown () {
     logger.info('Stopping server.')
     if (this._server) {
       this._server.close()
@@ -52,10 +52,10 @@ export class SettlementAdminApi {
     const expressApp = Express()
     expressApp.use(Express.json())
     expressApp.get('/health', this._health.bind(this))
-    expressApp.post('/accounts/:accountId/updateBalance', AccountBalanceController.validationRules(), AccountBalanceController.create)
-    expressApp.put('/accounts/:accountId/thresholds', AccountThresholdsController.validationRules(), AccountThresholdsController.update)
+    expressApp.get('/accounts/:accountId/balance', [ param('accountId').exists() ], AccountBalanceController.show)
+    expressApp.post('/accounts/:accountId/updateBalance', AccountBalanceController.validationRules(), AccountBalanceController.update)
     expressApp.locals.updateAccountBalance = this._updateAccountBalanceService
-    expressApp.locals.updateAccountThresholds = this._updateAccountThresholdsService
+    expressApp.locals.getAccountBalance = this._getAccountBalanceService
 
     return expressApp
   }

@@ -3,8 +3,8 @@ import { PeerInfo } from '../types/peer'
 import { IlpPrepare, isFulfill } from 'ilp-packet'
 import { Stats } from '../services/stats'
 import { log } from '../winston'
-import { STATIC_FULFILLMENT, MIN_INT_64 } from '../constants'
-import { InMemoryBalance, Balance } from '../types'
+import { STATIC_FULFILLMENT } from '../constants'
+import { Balance } from '../types'
 const logger = log.child({ component: 'in-memory-balance-rule' })
 
 export interface BalanceRuleServices {

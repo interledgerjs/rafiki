@@ -164,4 +164,118 @@ describe('Test App', function () {
     })
   })
 
+  describe('getBalance',function() {
+    it('throws error if peer id is undefined', async function () {
+      try {
+        app.getBalance('unknown')
+      } catch (error) {
+        assert.equal(error.message, 'Cannot find balance for peerId=unknown')
+        return
+      }
+
+      assert.fail('Did not throw expected error')
+    })
+
+    it('returns a balance json summary for a valid peer id', async function () {
+      const peerInfo: PeerInfo = {
+        id: 'drew',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'child',
+        rules: [{
+          name: 'errorHandler'
+        }, {
+          name: 'balance',
+          minimum: '-10',
+          maximum: '10'
+        }],
+        protocols: [{
+          name: 'ildcp'
+        }],
+      }
+      await app.addPeer(peerInfo, endpointInfo)
+
+      const balance = app.getBalance('drew')
+
+      assert.deepEqual(balance, {
+        balance: '0',
+        minimum: '-10',
+        maximum: '10'
+      })
+    })
+  })
+
+  describe('updateBalance',function() {
+    it('throws error if peer id is undefined', async function () {
+      try {
+        app.updateBalance('unknown', 100n)
+      } catch (error) {
+        assert.equal(error.message, 'Cannot find balance for peerId=unknown')
+        return
+      }
+
+      assert.fail('Did not throw expected error')
+    })
+
+    it('updates balance for a valid peer id', async function () {
+      const peerInfo: PeerInfo = {
+        id: 'drew',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'child',
+        rules: [{
+          name: 'errorHandler'
+        }, {
+          name: 'balance',
+          minimum: '-10',
+          maximum: '200'
+        }],
+        protocols: [{
+          name: 'ildcp'
+        }],
+      }
+      await app.addPeer(peerInfo, endpointInfo)
+
+      app.updateBalance('drew', 100n)
+      
+      assert.deepEqual(app.getBalance('drew'), {
+        balance: '100',
+        minimum: '-10',
+        maximum: '200'
+      })
+    })
+  })
+
+  describe('getBalances', function () {
+    it('returns object of balance summaries keyed by peerId', async function () {
+      const peerInfo: PeerInfo = {
+        id: 'drew',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'child',
+        rules: [{
+          name: 'errorHandler'
+        }, {
+          name: 'balance',
+          minimum: '-10',
+          maximum: '10'
+        }],
+        protocols: [{
+          name: 'ildcp'
+        }],
+      }
+      await app.addPeer(peerInfo, endpointInfo)
+
+      const balances = app.getBalances()
+
+      assert.deepEqual(balances, {
+        'drew': {
+          balance: '0',
+          minimum: '-10',
+          maximum: '10'
+        }
+      })
+    })
+  })
+
 })
