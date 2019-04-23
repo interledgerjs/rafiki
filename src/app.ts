@@ -21,6 +21,9 @@ import { pipeline, RequestHandler } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { createServer, Http2Server } from 'http2'
 import { PluginEndpoint } from './legacy/plugin-endpoint'
+import { Balance, InMemoryBalance } from './types'
+import { MIN_INT_64, MAX_INT_64 } from './constants'
+import { BalanceRule } from './rules'
 
 const logger = log.child({ component: 'App' })
 
@@ -41,6 +44,7 @@ export class App {
   private _http2ServerPort: number
   private _endpointManager: EndpointManager
   private _businessRulesMap: Map<string, Rule[]>
+  private _balanceMap: Map<string, Balance>
 
   /**
    * Instantiates an http2 server which handles posts to ilp/:peerId and passes the packet on to the appropriate peer's endpoint.
@@ -55,6 +59,7 @@ export class App {
     this._rateLimitBucketMap = new Map()
     this._throughputBucketsMap = new Map()
     this._businessRulesMap = new Map()
+    this._balanceMap = new Map()
 
     this.connector.setOwnAddress(opts.ilpAddress)
 
@@ -187,7 +192,21 @@ export class App {
       }
     }
 
-    return peerInfo.rules.map(instantiateRule)
+    const rules = peerInfo.rules.map(instantiateRule)
+
+    // Always instantiate balance rule
+    const balanceRuleDefinition = peerInfo.rules.filter(rule => rule.name === 'balance')[0]
+    if (!balanceRuleDefinition) {
+      logger.warn(`(!!!) balance rule NOT defined for peer, this peer can spend UNLIMITED funds peerId=${peerInfo.id}`)
+    }
+    const minimum = balanceRuleDefinition && balanceRuleDefinition.minimum ? BigInt(balanceRuleDefinition.minumum) : MIN_INT_64
+    const maximum = balanceRuleDefinition && balanceRuleDefinition.maximum ? BigInt(balanceRuleDefinition.maximum) : MAX_INT_64
+    logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum, maximum, initialBalance: 0n })
+    const balance = new InMemoryBalance({ initialBalance: 0n, minimum, maximum }) // In future can get from a balance service
+    this._balanceMap.set(peerInfo.id, balance)
+    rules.push(new BalanceRule({ peerInfo, stats: this.stats, balance }))
+
+    return rules
   }
 
 }

@@ -6,16 +6,18 @@ Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 import { IlpPrepare, IlpReject, IlpFulfill } from 'ilp-packet';
 import { PeerInfo } from '../../src/types/peer';
-import { InMemoryBalanceRule } from '../../src/rules/in-memory-balance'
+import { BalanceRule } from '../../src/rules/balance'
 import { Stats } from '../../src/services/stats';
 import { setPipelineReader } from '../../src/types/rule';
 import { MAX_UINT_64 } from '../../src/constants';
+import { InMemoryBalance } from '../../src';
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('Balance Rule', function () {
-    let balanceRule: InMemoryBalanceRule
+    let balanceRule: BalanceRule
     let stats: Stats
+    let balance: InMemoryBalance
 
     const peerInfo: PeerInfo = {
       id: 'harry',
@@ -25,7 +27,7 @@ describe('Balance Rule', function () {
       rules: [
         {
           name: 'balance',
-          minimum: 0n,
+          minimum: -50n,
           maximum: MAX_UINT_64,
           settleThreshold: MAX_UINT_64,
           settleTo: 0n
@@ -36,7 +38,8 @@ describe('Balance Rule', function () {
 
     beforeEach( async function () {
       stats = new Stats()
-      balanceRule = new InMemoryBalanceRule({ peerInfo, stats })
+      balance = new InMemoryBalance({minimum: peerInfo.rules[0]['minimum'], maximum: peerInfo.rules[0]['maximum']})
+      balanceRule = new BalanceRule({ peerInfo, stats, balance })
     })
 
     describe('instantiation', function () {
@@ -134,77 +137,4 @@ describe('Balance Rule', function () {
       })
     })
 
-    describe('settlement', function() {
-
-      it.skip('sending a packet that reduces balance to within threshold should trigger settlement ', async function(done) {
-        const peerInfo: PeerInfo = {
-          id: 'harry',
-          relation: 'peer',
-          assetScale: 9,
-          assetCode: 'XRP',
-          rules: [
-            {
-              name: 'balance',
-              minimum: -25n,
-              maximum: 25n,
-              settleThreshold: 10n,
-              settleTo: 0n
-            }
-          ],
-          protocols: []
-        }
-        balanceRule = new InMemoryBalanceRule({ peerInfo, stats })
-
-        const preparePacket: IlpPrepare = {
-          amount: '16',
-          executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
-          expiresAt: new Date(START_DATE + 2000),
-          destination: 'g.harry',
-          data: Buffer.alloc(0)
-        }
-        const fulfillPacket: IlpFulfill = {
-          fulfillment: Buffer.from(''),
-          data: Buffer.from('')
-        }
-
-        const sendOutgoing = setPipelineReader('outgoing', balanceRule, async (packet) => {
-          if(packet.destination == 'peer.settle') {
-            done()
-          }
-          return fulfillPacket
-        })
-
-        await sendOutgoing(preparePacket)
-      })
-
-      it('does not forward on peer.settle messages on incoming pipeline', async function () {
-        const preparePacket: IlpPrepare = {
-          amount: '49',
-          executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
-          expiresAt: new Date(START_DATE + 2000),
-          destination: 'peer.settle',
-          data: Buffer.alloc(0)
-        }
-        
-        const sendOutgoing = setPipelineReader('incoming', balanceRule, async () => Promise.reject())
-
-        await sendOutgoing(preparePacket)
-      })
-
-      it('modifies the balance by the amount on incoming peer.settle packet', async function () {
-        const preparePacket: IlpPrepare = {
-          amount: '49',
-          executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
-          expiresAt: new Date(START_DATE + 2000),
-          destination: 'peer.settle',
-          data: Buffer.alloc(0)
-        }
-        
-        const sendOutgoing = setPipelineReader('incoming', balanceRule, async () => Promise.reject())
-
-        await sendOutgoing(preparePacket)
-        assert.equal(balanceRule.getStatus().balance, '-49')
-      })
-
-    })
 })
