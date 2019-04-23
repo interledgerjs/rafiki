@@ -6,7 +6,6 @@ import { AdminApi } from '../../src/services/admin-api'
 import axios from 'axios'
 import { PeerInfo } from '../../src/types/peer'
 import { App } from '../../src/app'
-import { SettlementEngine } from '../../src/services/settlement-engine'
 import { EndpointInfo } from '../../src'
 
 Chai.use(chaiAsPromised)
