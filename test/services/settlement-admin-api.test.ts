@@ -5,6 +5,7 @@ import chaiAsPromised from 'chai-as-promised'
 import { SettlementAdminApi } from '../../src/services/settlement-admin-api/settlement-admin-api'
 import axios from 'axios'
 import { App, PeerInfo, EndpointInfo } from '../../src'
+import { IlpPrepare, serializeIlpPrepare, IlpFulfill } from 'ilp-packet';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -28,6 +29,10 @@ describe('Settlement Admin Api', function () {
     protocols: [{
       name: 'ildcp'
     }],
+    settlement: {
+      url: 'http://test.settlement/ilp',
+      ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+    }
   }
   const endpointInfo: EndpointInfo = {
     type: 'http',

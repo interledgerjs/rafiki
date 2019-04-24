@@ -32,7 +32,11 @@ describe('Connector', function () {
       {
         name: 'ildcp'
       }
-    ]
+    ],
+    settlement: {
+      url: 'http://test.settlement/ilp',
+      ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+    }
   }
   const preparePacket = {
     amount: '52',
@@ -198,7 +202,11 @@ describe('Connector', function () {
         assetScale: 2,
         assetCode: 'USD',
         rules: [],
-        protocols: []
+        protocols: [],
+        settlement: {
+          url: 'http://test.settlement/ilp',
+          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+        }
       }
       const bobFulfillPacket = {
         fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
@@ -225,7 +233,11 @@ describe('Connector', function () {
         assetScale: 2,
         assetCode: 'USD',
         rules: [],
-        protocols: []
+        protocols: [],
+        settlement: {
+          url: 'http://test.settlement/ilp',
+          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+        }
       }
       const bobEndpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
       await connector.addPeer(bobPeerInfo, bobEndpoint)

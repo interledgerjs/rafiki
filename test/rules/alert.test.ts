@@ -21,7 +21,11 @@ describe('Alert Rule', function () {
       assetScale: 9,
       assetCode: 'XRP',
       rules: [],
-      protocols: []
+      protocols: [],
+      settlement: {
+        url: 'http://test.settlement/ilp',
+        ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+      }
     } 
 
     beforeEach( async function () {

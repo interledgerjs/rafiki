@@ -33,7 +33,11 @@ describe('Balance Rule', function () {
           settleTo: 0n
         }
       ],
-      protocols: []
+      protocols: [],
+      settlement: {
+        url: 'http://test.settlement/ilp',
+        ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+      }
     }
 
     beforeEach( async function () {
@@ -43,7 +47,14 @@ describe('Balance Rule', function () {
     })
 
     describe('instantiation', function () {
+      it('creates account on the settlement engine', async function () {
+        const addAccountStub = sinon.stub(balanceRule.settlementEngineInterface, 'addAccount').resolves()
 
+        await balanceRule.startup()
+
+        sinon.assert.calledOnce(addAccountStub)
+        sinon.assert.calledWith(addAccountStub, peerInfo)
+      })
     })
 
     describe('incoming packets', function () {
@@ -90,6 +101,28 @@ describe('Balance Rule', function () {
         await sendOutgoing(preparePacket)
         assert.equal(balanceRule.getStatus().balance, '0')
       })
+
+      it('passes peer.settle messages onto settlement engine', async function () {
+        const mockSettlementMessage: IlpPrepare = {
+          amount: '49',
+          executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
+          expiresAt: new Date(START_DATE + 2000),
+          destination: 'peer.settle',
+          data: Buffer.alloc(0)
+        }
+        const fulfillPacket: IlpFulfill = {
+          fulfillment: Buffer.from(''),
+          data: Buffer.from('')
+        }
+        const incoming = setPipelineReader('incoming', balanceRule, async () => fulfillPacket)
+        const handleMessageSpy = sinon.stub(balanceRule.settlementEngineInterface, 'handleMessage')
+
+        await incoming(mockSettlementMessage)
+
+        sinon.assert.calledWith(handleMessageSpy, peerInfo.id, mockSettlementMessage)
+      })
+
+      it('returns a fulfill for peer.settle messages ?')
     })
 
     describe('outgoing packets', function () {

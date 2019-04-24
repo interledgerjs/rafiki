@@ -30,7 +30,11 @@ describe('Rate Limit Rule', function () {
         capacity: 3n
       }
     ],
-    protocols: []
+    protocols: [],
+    settlement: {
+      url: 'http://test.settlement/ilp',
+      ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+    }
   }
   const preparePacket: IlpPrepare = {
     amount: '49',

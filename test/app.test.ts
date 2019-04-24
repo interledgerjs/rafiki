@@ -47,6 +47,10 @@ describe('Test App', function () {
     protocols: [{
       name: 'ildcp'
     }],
+    settlement: {
+      url: 'http://test.settlement/ilp',
+      ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+    }
   }
 
   const endpointInfo: EndpointInfo = {
@@ -192,6 +196,10 @@ describe('Test App', function () {
         protocols: [{
           name: 'ildcp'
         }],
+        settlement: {
+          url: 'http://test.settlement/ilp',
+          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+        }
       }
       await app.addPeer(peerInfo, endpointInfo)
 
@@ -233,6 +241,10 @@ describe('Test App', function () {
         protocols: [{
           name: 'ildcp'
         }],
+        settlement: {
+          url: 'http://test.settlement/ilp',
+          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+        }
       }
       await app.addPeer(peerInfo, endpointInfo)
 
@@ -263,6 +275,10 @@ describe('Test App', function () {
         protocols: [{
           name: 'ildcp'
         }],
+        settlement: {
+          url: 'http://test.settlement/ilp',
+          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
+        }
       }
       await app.addPeer(peerInfo, endpointInfo)
 

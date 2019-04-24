@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { Rule, IlpRequestHandler, RuleRequestHandler } from '../types/rule'
 import { PeerInfo } from '../types/peer'
 import { IlpPrepare, isFulfill } from 'ilp-packet'
@@ -17,15 +18,18 @@ export class BalanceRule extends Rule {
   private stats: Stats
   private balance: Balance
   private peer: PeerInfo
+  public settlementEngineInterface: SettlementEngineInterface
 
   constructor ({ peerInfo, stats, balance }: BalanceRuleServices) {
     super({})
     this.peer = peerInfo
     this.stats = stats
     this.balance = balance
+    this.settlementEngineInterface = new SettlementEngineInterface(peerInfo.settlement.url)
   }
 
   protected _startup = async () => {
+    this.settlementEngineInterface.addAccount(this.peer)
 
     // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
     // this.stats.balance.setValue(this.peer, {}, this.balance.getValue())
@@ -38,8 +42,9 @@ export class BalanceRule extends Rule {
     // Handle peer.settle
     if (destination.startsWith('peer.settle')) {
 
-      this.modifyBalance(BigInt('-' + amount))
+      this.settlementEngineInterface.handleMessage(this.peer.id, request)
 
+      // TODO: what should the response be ?
       return {
         fulfillment: STATIC_FULFILLMENT,
         data: Buffer.allocUnsafe(0)
@@ -134,14 +139,24 @@ export class BalanceRule extends Rule {
     return this.balance.toJSON()
   }
 
-  modifyBalance (amountDiff: bigint): bigint {
-    const balance = this.balance
-    logger.info('modifying balance', { peerId: this.peer.id, amountDif: amountDiff.toString() })
-    balance.update(amountDiff)
+}
 
-    // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
-    // this.stats.balance.setValue(this.peer, {}, balance.getValue().toNumber())
+class SettlementEngineInterface {
+  private _url: string
 
-    return balance.getValue()
+  constructor (url: string) {
+    this._url = url
+  }
+
+  addAccount (peerInfo: PeerInfo) {
+    logger.info('Creating account on settlement engine.', { accountId: peerInfo.id, ledgerAddress: peerInfo.settlement.ledgerAddress, assetScale: peerInfo.assetScale })
+    axios.put(`${this._url}/accounts`, { id: peerInfo.id, ledgerAddress: peerInfo.settlement.ledgerAddress, assetScale: peerInfo.assetScale }).catch(error => {
+      logger.error('Failed to create account on settlement engine.', { response: error.response })
+    })
+  }
+
+  handleMessage (accountId: string, packet: IlpPrepare) {
+    logger.debug('Forwarding packet onto settlement engine', { accountId, packet })
+    // axios.post(`${this._url}/accounts/${accountId}/ilp`, { ...packet })
   }
 }
