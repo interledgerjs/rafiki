@@ -56,7 +56,7 @@ export class App {
     this._throughputBucketsMap = new Map()
     this._businessRulesMap = new Map()
 
-    this.connector.setOwnAddress(opts.ilpAddress || 'unknown')
+    if (opts.ilpAddress) this.connector.addOwnAddress(opts.ilpAddress)
 
     this._http2ServerPort = opts.http2Port
     this._http2Server = createServer()
@@ -106,15 +106,7 @@ export class App {
       }
     }
 
-    const haveAddress = this.connector.getOwnAddress() !== 'unknown'
-    let inheritAddress = false
-    if (peerInfo.relation === 'parent' && !haveAddress) {
-      inheritAddress = true
-    } else if (peerInfo.relation === 'parent' && haveAddress) {
-      logger.warn(`Already have an address. Will not inherit from peerId=${peerInfo.id}.`)
-    }
-
-    await this.connector.addPeer(peerInfo, wrapperEndpoint, inheritAddress) // TODO: add logic to determine whether address should be inherited.
+    await this.connector.addPeer(peerInfo, wrapperEndpoint)
 
     if (endpoint instanceof PluginEndpoint) {
       endpoint.connect().catch(() => logger.error('Plugin endpoint failed to connect'))
