@@ -134,7 +134,7 @@ describe('ILDCP Rule', function () {
       try{
         await ildcpRule.getAddressFrom(parentEndpoint)
       } catch (e) {
-        assert.equal(e.message, "no ilp address configured")
+        assert.equal(e.message, "Failed to get ILDCP address from parent.")
         return
       }
       assert.fail()

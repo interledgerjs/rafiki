@@ -25,7 +25,7 @@ import { PluginEndpoint } from './legacy/plugin-endpoint'
 const logger = log.child({ component: 'App' })
 
 export interface AppOptions {
-  ilpAddress: string
+  ilpAddress?: string
   http2Port: number,
 }
 
@@ -56,7 +56,7 @@ export class App {
     this._throughputBucketsMap = new Map()
     this._businessRulesMap = new Map()
 
-    this.connector.setOwnAddress(opts.ilpAddress)
+    if (opts.ilpAddress) this.connector.addOwnAddress(opts.ilpAddress)
 
     this._http2ServerPort = opts.http2Port
     this._http2Server = createServer()
@@ -78,7 +78,8 @@ export class App {
 
   /**
    * Instantiates the business rules specified in the peer information and attaches it to a pipeline. Creates a wrapper endpoint which connects the pipeline to
-   * the original endpoint. This is then passed into the connector's addPeer. The business rules are then started and the original endpoint stored.
+   * the original endpoint. This is then passed into the connector's addPeer. The business rules are then started and the original endpoint stored. Tells connector
+   * to inherit address from the peer if it is a parent and you do not have an address.
    * @param peerInfo Peer information
    * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
    */
@@ -104,7 +105,8 @@ export class App {
         return wrapperEndpoint
       }
     }
-    await this.connector.addPeer(peerInfo, wrapperEndpoint, false) // TODO: add logic to determine whether address should be inherited.
+
+    await this.connector.addPeer(peerInfo, wrapperEndpoint)
 
     if (endpoint instanceof PluginEndpoint) {
       endpoint.connect().catch(() => logger.error('Plugin endpoint failed to connect'))

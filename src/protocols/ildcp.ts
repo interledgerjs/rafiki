@@ -54,8 +54,8 @@ export class IldcpProtocol extends Rule {
     })
 
     if (clientAddress === 'unknown') {
-      logger.error('failed to get ILDCP address from parent')
-      throw new Error('no ilp address configured')
+      logger.error('Failed to get ILDCP address from parent.')
+      throw new Error('Failed to get ILDCP address from parent.')
     }
 
     logger.info('received ILDCP address from parent', { address: clientAddress })

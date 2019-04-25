@@ -11,6 +11,7 @@ import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, seria
 import { PeerInfo } from '../src/types/peer';
 import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
+import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
 import { EndpointInfo } from '../src';
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
@@ -48,10 +49,43 @@ describe('Test App', function () {
       name: 'ildcp'
     }],
   }
-
   const endpointInfo: EndpointInfo = {
     type: 'http',
     'url': 'http://localhost:1234'
+  }
+
+  const parentEndpointInfo = {
+    type: 'http',
+    url: 'http://localhost:8085'
+  }
+  const parentInfo: PeerInfo = {
+    id: 'bob',
+    assetCode: 'XRP',
+    assetScale: 9,
+    relation: 'parent',
+    rules: [{
+      name: 'errorHandler'
+    }],
+    protocols: [{
+      name: 'ildcp'
+    }],
+  }
+  const parent2Info: PeerInfo = {
+    id: 'drew',
+    assetCode: 'XRP',
+    assetScale: 9,
+    relation: 'parent',
+    relationWeight: 600,
+    rules: [{
+      name: 'errorHandler'
+    }],
+    protocols: [{
+      name: 'ildcp'
+    }],
+  }
+  const parent2EndpointInfo = {
+    type: 'http',
+    url: 'http://localhost:8086'
   }
 
   beforeEach(async () => {
@@ -149,6 +183,67 @@ describe('Test App', function () {
       await app.addPeer(peerInfo, endpointInfo)
 
       sinon.assert.calledOnce(startSpy)
+    })
+
+    it('inherits address from parent and uses default parent', async function () {
+      const newApp = new App({ http2Port: 8082 })
+      await newApp.start()
+      const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
+        const ildcpResponse: IldcpResponse = {
+          assetCode: 'USD',
+          assetScale: 2,
+          clientAddress: 'test.alice.fred'
+        } 
+        response.end(serializeIldcpResponse(ildcpResponse))
+      })
+      const newAppClient = connect('http://localhost:8082')
+      parentServer.listen(8085)
+      
+      assert.equal(newApp.connector.getOwnAddress(), 'unknown')
+  
+      await newApp.addPeer(parentInfo, parentEndpointInfo)
+  
+      assert.equal('test.alice.fred', newApp.connector.getOwnAddress())
+      newApp.shutdown()
+      parentServer.close()
+      newAppClient.close()
+    })
+
+    it('inherits addresses from multiple parents', async function () {
+      // parent 2 will have a higher relation weighting than parent 1. So when getOwnAdress is called, the address from parent 2 should be returned. But getOwnAddresses should return an array of addresses.
+      const newApp = new App({ http2Port: 8082 })
+      await newApp.start()
+      const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
+        const ildcpResponse: IldcpResponse = {
+          assetCode: 'USD',
+          assetScale: 2,
+          clientAddress: 'test.alice.fred'
+        } 
+        response.end(serializeIldcpResponse(ildcpResponse))
+      })
+      const parent2Server = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
+        const ildcpResponse: IldcpResponse = {
+          assetCode: 'USD',
+          assetScale: 2,
+          clientAddress: 'test.drew.fred'
+        } 
+        response.end(serializeIldcpResponse(ildcpResponse))
+      })
+      const newAppClient = connect('http://localhost:8082')
+      parentServer.listen(8085)
+      parent2Server.listen(8086)
+      
+      assert.equal(newApp.connector.getOwnAddress(), 'unknown')
+  
+      await newApp.addPeer(parentInfo, parentEndpointInfo)
+      await newApp.addPeer(parent2Info, parent2EndpointInfo)
+  
+      assert.equal(newApp.connector.getOwnAddress(), 'test.drew.fred')
+      assert.deepEqual(newApp.connector.getOwnAddresses(), ['test.drew.fred', 'test.alice.fred'])
+      newApp.shutdown()
+      parentServer.close()
+      parent2Server.close()
+      newAppClient.close()
     })
   })
 
