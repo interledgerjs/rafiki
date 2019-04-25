@@ -151,7 +151,7 @@ export class Connector {
     const selfPeerId = 'self'
     this.routeManager.addPeer(selfPeerId, 'local')
     const protocolMiddleware = [
-      new EchoProtocol({ getOwnAddress: this.getOwnAddress.bind(this), minMessageWindow: 30000 }) // TODO need to fix the hard coded value
+      new EchoProtocol({ getOwnAddress: this.getOwnAddress.bind(this), minMessageWindow: 1500 }) // TODO need to fix the hard coded value
     ]
 
     this.peerRules.set(selfPeerId, [...protocolMiddleware])

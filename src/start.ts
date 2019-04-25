@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import * as winston from 'winston'
 import { App } from './app'
 import { AdminApi } from './services/admin-api'
@@ -69,8 +71,9 @@ const start = async () => {
   await app.start()
   adminApi.listen()
 }
-
-start().catch(e => {
-  const errInfo = (e && typeof e === 'object' && e.stack) ? e.stack : e
-  winston.error(errInfo)
-})
+if (!module.parent) {
+  start().catch(e => {
+    const errInfo = (e && typeof e === 'object' && e.stack) ? e.stack : e
+    winston.error(errInfo)
+  })
+}

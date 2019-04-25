@@ -20,6 +20,7 @@ import { IlpReply, IlpPrepare } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { createServer, Http2Server } from 'http2'
+import { PluginEndpoint } from './legacy/plugin-endpoint'
 
 const logger = log.child({ component: 'App' })
 
@@ -28,6 +29,9 @@ export interface AppOptions {
   http2Port: number,
 }
 
+/**
+ * An instance of a Rafiki app
+ */
 export class App {
 
   private _packetCacheMap: Map<string, PacketCache>
@@ -112,12 +116,16 @@ export class App {
 
     await this.connector.addPeer(peerInfo, wrapperEndpoint, inheritAddress) // TODO: add logic to determine whether address should be inherited.
 
+    if (endpoint instanceof PluginEndpoint) {
+      endpoint.connect().catch(() => logger.error('Plugin endpoint failed to connect'))
+    }
+
     rulesInstances.forEach(rule => rule.startup())
   }
 
   public async removePeer (peerId: string) {
     logger.info('Removing peer: ' + peerId, { peerId })
-    this._endpointManager.closeEndpoints(peerId)
+    await this._endpointManager.closeEndpoints(peerId)
     this._packetCacheMap.delete(peerId)
     this._rateLimitBucketMap.delete(peerId)
     this._throughputBucketsMap.delete(peerId)
@@ -153,7 +161,7 @@ export class App {
     logger.verbose('Creating rules for peer', { peerInfo })
 
     // Global/Config might be needed
-    const globalMinExpirationWindow = 35000
+    const globalMinExpirationWindow = 1500
     const globalMaxHoldWindow = 35000
 
     const instantiateRule = (rule: RuleConfig): Rule => {

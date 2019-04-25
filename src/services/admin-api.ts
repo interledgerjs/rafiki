@@ -40,7 +40,7 @@ export class AdminApi {
     this.app = app
     this.settlementEngine = settlementEngine
     this.routes = [
-      { method: 'GET', match: '/health$', fn: async () => 'Status: ok' },
+      { method: 'GET', match: '/health$', fn: this.getHealth.bind(this) },
       { method: 'GET', match: '/stats$', fn: this.getStats },
       { method: 'GET', match: '/alerts$', fn: this.getAlerts },
       { method: 'GET', match: '/balance$', fn: this.getBalances },
@@ -162,5 +162,16 @@ export class AdminApi {
 
   private async getPeer () {
     return this.app.connector.getPeerList()
+  }
+
+  /**
+   * Checks that settlement engine is connected to redis
+   */
+  private async getHealth () {
+    if (this.settlementEngine.redis.status === 'ready') {
+      return 'Status: ok'
+    }
+
+    throw new Error('Settlement engine is not connected to redis.')
   }
 }
