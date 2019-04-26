@@ -12,7 +12,7 @@ import { PeerInfo } from '../src/types/peer';
 import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
 import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
-import { EndpointInfo } from '../src';
+import { EndpointInfo, Config } from '../src'
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -87,9 +87,11 @@ describe('Test App', function () {
     type: 'http',
     url: 'http://localhost:8086'
   }
+  const config = new Config()
+  config.loadFromOpts({ ilpAddress: 'test.harry', http2ServerPort: 8083, peers: {} })
 
   beforeEach(async () => {
-    app = new App({ilpAddress: 'test.harry', http2Port: 8083})
+    app = new App(config)
     await app.start()
     await app.addPeer(peerInfo, {
       type: 'http',
@@ -186,7 +188,9 @@ describe('Test App', function () {
     })
 
     it('inherits address from parent and uses default parent', async function () {
-      const newApp = new App({ http2Port: 8082 })
+      const config = new Config()
+      config.loadFromOpts({ http2ServerPort: 8082, peers: {} })
+      const newApp = new App(config)
       await newApp.start()
       const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
         const ildcpResponse: IldcpResponse = {
@@ -211,7 +215,9 @@ describe('Test App', function () {
 
     it('inherits addresses from multiple parents', async function () {
       // parent 2 will have a higher relation weighting than parent 1. So when getOwnAdress is called, the address from parent 2 should be returned. But getOwnAddresses should return an array of addresses.
-      const newApp = new App({ http2Port: 8082 })
+      const config = new Config()
+      config.loadFromOpts({ http2ServerPort: 8082, peers: {} })
+      const newApp = new App(config)
       await newApp.start()
       const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
         const ildcpResponse: IldcpResponse = {

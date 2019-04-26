@@ -9,6 +9,7 @@ import { App } from '../../src/app'
 import { SettlementEngine } from '../../src/services/settlement-engine'
 import { EndpointInfo } from '../../src'
 import { Redis } from 'ioredis'
+import { Config } from '../../src'
 const RedisMock = require('ioredis-mock')
 
 Chai.use(chaiAsPromised)
@@ -19,9 +20,10 @@ describe('Admin Api', function () {
   let adminApi: AdminApi
   let settlementEngine: SettlementEngine
   let redis: Redis
+  const config = new Config()
 
   beforeEach(function () {
-    app = new App({ ilpAddress: 'unknown', http2Port: 8083 })
+    app = new App(config)
     redis = new RedisMock()
     settlementEngine = new SettlementEngine({ streamKey: 'balance', redisClient: redis })
     adminApi = new AdminApi({},{ app, settlementEngine })

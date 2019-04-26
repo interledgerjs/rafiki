@@ -5,21 +5,16 @@ import { App } from './app'
 import { AdminApi } from './services/admin-api'
 import { SettlementEngine } from './services/settlement-engine'
 import Redis from 'ioredis'
+import { Config } from './index'
 
 // Logging
 const formatter = winston.format.printf(({ service, level, message, component, timestamp }) => {
   return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}`
 })
 
-const ILP_ADDRESS = process.env.ILP_ADDRESS || ''
-const HTTP2_SERVER_PORT = Number(process.env.HTTP2_SERVER_PORT) || 8443
-
 const SETTLEMENT_BALANCE_STREAM_KEY = process.env.SETTLEMENT_BALANCE_STREAM_KEY || 'balance'
 const SETTLEMENT_REDIS_HOST = process.env.SETTLEMENT_REDIS_HOST || '0.0.0.0'
 const SETTLEMENT_REDIS_PORT = Number(process.env.SETTLEMENT_REDIS_PORT) || 6379
-
-const ADMIN_API_HOST = process.env.ADMIN_API_HOST || '0.0.0.0'
-const ADMIN_API_PORT = Number(process.env.ADMIN_API_PORT) || 7780
 
 winston.configure({
   level: process.env.LOG_LEVEL || 'info',
@@ -61,15 +56,17 @@ const start = async () => {
     }
   })
 
-  const app = new App({
-    ilpAddress: ILP_ADDRESS,
-    http2Port: HTTP2_SERVER_PORT
-  })
+  const config = new Config()
+  config.loadFromEnv()
+  const app = new App(config)
   const settlementEngine = new SettlementEngine({ streamKey: SETTLEMENT_BALANCE_STREAM_KEY, redisClient:  new Redis({ host: SETTLEMENT_REDIS_HOST, port: SETTLEMENT_REDIS_PORT }) })
-  const adminApi = new AdminApi({ host: ADMIN_API_HOST, port: ADMIN_API_PORT }, { app, settlementEngine })
+  const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app, settlementEngine })
 
   await app.start()
   adminApi.listen()
+
+  // load peers from config
+  Object.keys(config.peers || {}).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))
 }
 if (!module.parent) {
   start().catch(e => {
