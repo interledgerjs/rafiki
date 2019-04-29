@@ -41,7 +41,7 @@ export class Connector {
 
 /**
  * Instantiates and connects the protocol middleware (specfied in peer info) into a duplex pipeline. Connects the supplied endpoint to the pipeline
- * and the pipeline to the sendIlpPacket function. Asks the ildcp protocol to get the address if the inheritAddressFrom is true. Registers the peer
+ * and the pipeline to the sendIlpPacket function. Asks the ildcp protocol to get the address peer is a parent. Registers the peer
  * with the route manager and only adds it as a route if the peer is a child. The protocol middleware is also started up.
  *
  * @param peerInfo Peer information

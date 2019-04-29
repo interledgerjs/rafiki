@@ -21,13 +21,9 @@ import { pipeline, RequestHandler } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { createServer, Http2Server } from 'http2'
 import { PluginEndpoint } from './legacy/plugin-endpoint'
+import { Config } from './services'
 
 const logger = log.child({ component: 'App' })
-
-export interface AppOptions {
-  ilpAddress?: string
-  http2Port: number,
-}
 
 /**
  * An instance of a Rafiki app
@@ -38,15 +34,15 @@ export class App {
   private _rateLimitBucketMap: Map<string, TokenBucket>
   private _throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
   private _http2Server: Http2Server
-  private _http2ServerPort: number
   private _endpointManager: EndpointManager
   private _businessRulesMap: Map<string, Rule[]>
+  private _config: Config
 
   /**
    * Instantiates an http2 server which handles posts to ilp/:peerId and passes the packet on to the appropriate peer's endpoint.
    * @param opts Options for the application
    */
-  constructor (opts: AppOptions) {
+  constructor (opts: Config) {
 
     this.connector = new Connector()
     this.stats = new Stats()
@@ -55,10 +51,10 @@ export class App {
     this._rateLimitBucketMap = new Map()
     this._throughputBucketsMap = new Map()
     this._businessRulesMap = new Map()
+    this._config = opts
 
-    if (opts.ilpAddress) this.connector.addOwnAddress(opts.ilpAddress)
+    if (opts.ilpAddress !== 'unknown') this.connector.addOwnAddress(opts.ilpAddress) // config loads ilpAddress as 'unknown' by default
 
-    this._http2ServerPort = opts.http2Port
     this._http2Server = createServer()
     this._endpointManager = new EndpointManager({
       http2Server: this._http2Server
@@ -68,8 +64,8 @@ export class App {
 
   public async start () {
     logger.info('starting connector....')
-    logger.info('starting HTTP2 server on port ' + this._http2ServerPort)
-    this._http2Server.listen(this._http2ServerPort)
+    logger.info('starting HTTP2 server on port ' + this._config.http2ServerPort)
+    this._http2Server.listen(this._config.http2ServerPort)
   }
 
   public connector: Connector
@@ -152,10 +148,6 @@ export class App {
 
     logger.verbose('Creating rules for peer', { peerInfo })
 
-    // Global/Config might be needed
-    const globalMinExpirationWindow = 1500
-    const globalMaxHoldWindow = 35000
-
     const instantiateRule = (rule: RuleConfig): Rule => {
       switch (rule.name) {
         case('errorHandler'):
@@ -163,7 +155,7 @@ export class App {
         case('expire'):
           return new ExpireRule()
         case('reduceExpiry'):
-          return new ReduceExpiryRule({ minIncomingExpirationWindow: 0.5 * globalMinExpirationWindow, minOutgoingExpirationWindow: 0.5 * globalMinExpirationWindow, maxHoldWindow: globalMaxHoldWindow })
+          return new ReduceExpiryRule({ minIncomingExpirationWindow: 0.5 * this._config.minExpirationWindow, minOutgoingExpirationWindow: 0.5 * this._config.minExpirationWindow, maxHoldWindow: this._config.maxHoldWindow })
         case('rateLimit'):
           const rateLimitBucket: TokenBucket = createRateLimitBucketForPeer(peerInfo)
           this._rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
