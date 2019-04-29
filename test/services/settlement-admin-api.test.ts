@@ -4,8 +4,7 @@ import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { SettlementAdminApi } from '../../src/services/settlement-admin-api/settlement-admin-api'
 import axios from 'axios'
-import { App, PeerInfo, EndpointInfo } from '../../src'
-import { IlpPrepare, serializeIlpPrepare, IlpFulfill } from 'ilp-packet';
+import { App, PeerInfo, EndpointInfo, Config } from '../../src'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -14,6 +13,7 @@ const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 describe('Settlement Admin Api', function () {
   let app: App
   let settlementAdminApi: SettlementAdminApi
+  let config: Config
   const peerInfo: PeerInfo = {
     id: 'alice',
     assetCode: 'XRP',
@@ -40,10 +40,8 @@ describe('Settlement Admin Api', function () {
   }
 
   beforeEach(async function () {
-    app = new App({
-      ilpAddress: 'test.rafiki',
-      http2Port: 8443
-    })
+    config = new Config()
+    app = new App(config)
     await app.addPeer(peerInfo, endpointInfo)
     settlementAdminApi = new SettlementAdminApi({}, { updateAccountBalance: app.updateBalance, getAccountBalance: app.getBalance})
     settlementAdminApi.listen()

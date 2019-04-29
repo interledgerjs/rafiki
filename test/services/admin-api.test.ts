@@ -7,6 +7,7 @@ import axios from 'axios'
 import { PeerInfo } from '../../src/types/peer'
 import { App } from '../../src/app'
 import { EndpointInfo } from '../../src'
+import { Config } from '../../src'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -14,9 +15,10 @@ describe('Admin Api', function () {
 
   let app: App
   let adminApi: AdminApi
-
+  const config = new Config()
+  
   beforeEach(function () {
-    app = new App({ ilpAddress: 'unknown', http2Port: 8083 })
+    app = new App(config)
     adminApi = new AdminApi({},{ app })
     adminApi.listen()
   })

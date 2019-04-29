@@ -3,7 +3,7 @@ import { pipeline } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { IlpPrepare, IlpReply, Errors } from 'ilp-packet'
 import { Rule, setPipelineReader } from './types/rule'
-import { PeerInfo, Relation, ProtocolConfig } from './types/peer'
+import { PeerInfo, Relation, ProtocolConfig, RelationWeights } from './types/peer'
 import { CcpProtocol } from './protocols/ccp'
 import { IldcpProtocol } from './protocols/ildcp'
 import { EchoProtocol } from './protocols/echo'
@@ -13,11 +13,11 @@ import { log } from './winston'
 const logger = log.child({ component: 'connector' })
 
 const { codes } = Errors
+
 export class Connector {
   routingTable: RoutingTable = new RoutingTable()
   routeManager: RouteManager = new RouteManager(this.routingTable)
   outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
-  address?: string
   peerRules: Map<string, Rule[]> = new Map()
 
   constructor () {
@@ -41,14 +41,13 @@ export class Connector {
 
 /**
  * Instantiates and connects the protocol middleware (specfied in peer info) into a duplex pipeline. Connects the supplied endpoint to the pipeline
- * and the pipeline to the sendIlpPacket function. Asks the ildcp protocol to get the address if the inheritAddressFrom is true. Registers the peer
+ * and the pipeline to the sendIlpPacket function. Asks the ildcp protocol to get the address peer is a parent. Registers the peer
  * with the route manager and only adds it as a route if the peer is a child. The protocol middleware is also started up.
  *
  * @param peerInfo Peer information
  * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
- * @param inheritAddressFrom Should you inherit your address from this peer. Defaulted to false.
  */
-  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>, inheritAddressFrom: boolean = false) {
+  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>) {
     logger.info('adding peer', { peerInfo })
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation)
     const protocolMiddleware = this._createProtocols(peerInfo)
@@ -79,9 +78,13 @@ export class Connector {
 
     protocolMiddleware.forEach(mw => mw.startup())
 
-    if (inheritAddressFrom) {
-      const ildcpMiddleware = protocolMiddleware.find(mw => mw.constructor.name === 'IldcpMiddleware')
-      this.setOwnAddress(await (ildcpMiddleware as IldcpProtocol).getAddressFrom(endpoint))
+    if (peerInfo.relation === 'parent') {
+      const ildcpProtocol = protocolMiddleware.find(mw => mw.constructor.name === 'IldcpProtocol')
+      if (!ildcpProtocol) {
+        logger.error('Ildcp protocol needs to be added in order to inherit address.')
+        throw new Error('Ildcp protocol needs to be added in order to inherit address.')
+      }
+      this.addOwnAddress(await (ildcpProtocol as IldcpProtocol).getAddressFrom(endpoint), peerInfo.relationWeight || RelationWeights.parent)
     }
 
     // only add route for children. The rest are populated from route update.
@@ -119,24 +122,33 @@ export class Connector {
     return handler(packet)
   }
 
-  setOwnAddress (address: string) {
+  addOwnAddress (address: string, weight: number = 500) {
     logger.info('setting own address', { address })
-    this.address = address
     this.routingTable.setOwnAddress(address) // Tricky: This needs to be here for now to append to path of forwarding routing table
     this.routeManager.addRoute({
       prefix: address,
       peer: 'self',
       path: [],
-      weight: 500
+      weight
     })
   }
 
-  getOwnAddress (): string | undefined {
-    return this.address
+  getOwnAddress (): string {
+    const addresses = this.getOwnAddresses()
+    return addresses.length > 0 ? addresses[0] : 'unknown'
   }
 
-  getPeerAddress (id: string): string {
-    return this.getOwnAddress() + '.' + id
+  /**
+   * @returns string[] Array of addresses ordered by highest weighting first.
+   */
+  getOwnAddresses (): string[] {
+    const selfPeer = this.routeManager.getPeer('self')
+
+    return selfPeer ? selfPeer['routes']['prefixes'].sort((a: string, b: string) => selfPeer['routes']['items'][b]['weight'] - selfPeer['routes']['items'][a]['weight']) : []
+  }
+
+  removeAddress (address: string): void {
+    this.routeManager.removeRoute('self', address)
   }
 
   /**
@@ -175,16 +187,16 @@ export class Connector {
     if (peer) {
       switch (peer.getRelation()) {
         case('parent'):
-          weight += 400
+          weight += RelationWeights.parent
           break
         case('peer'):
-          weight += 300
+          weight += RelationWeights.peer
           break
         case('child'):
-          weight += 200
+          weight += RelationWeights.child
           break
         case('local'):
-          weight += 100
+          weight += RelationWeights.local
           break
       }
     }
@@ -221,7 +233,7 @@ export class Connector {
             peerId: peerInfo.id,
             forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
             getPeerRelation: this.getPeerRelation.bind(this),
-            getOwnAddress: () => this.getOwnAddress() as string,
+            getOwnAddress: () => this.getOwnAddress(),
             addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
             removeRoute: this.routeManager.removeRoute.bind(this),
             getRouteWeight: this.calculateRouteWeight.bind(this)

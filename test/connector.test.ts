@@ -52,7 +52,6 @@ describe('Connector', function () {
 
   beforeEach(function () {
     connector = new Connector()
-    connector.setOwnAddress('test.connie')
   })
 
   afterEach(function () {
@@ -108,6 +107,7 @@ describe('Connector', function () {
     })
 
     it('connects the incoming data pipeline to sendIlpPacket', async function () {
+      connector.addOwnAddress('test.connie')
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
       const sendIlpPacketSpy = sinon.spy(connector, 'sendIlpPacket')
       await connector.addPeer(peerInfo, endpoint)
@@ -118,6 +118,7 @@ describe('Connector', function () {
     })
 
     it('connects outgoing data pipeline to endpoints request', async function () {
+      connector.addOwnAddress('test.connie')
       let isConnected: boolean = false
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => {
         isConnected = true
@@ -145,7 +146,7 @@ describe('Connector', function () {
       const addRouteSpy = sinon.spy(connector.routeManager, 'addRoute')
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
       
-      connector.setOwnAddress('test.connie')
+      connector.addOwnAddress('test.connie')
 
       await connector.addPeer(peerInfo, endpoint)
       
@@ -196,6 +197,7 @@ describe('Connector', function () {
 
   describe('sendIlpPacket', function () {
     it('calls the handler for the specified destination', async function () {
+      connector.addOwnAddress('test.connie')
       const bobPeerInfo: PeerInfo = {
         id: 'bob',
         relation: 'peer',
@@ -278,6 +280,7 @@ describe('Connector', function () {
   })
 
   it('throws a peer unreachable error when the endpoint fails to send outgoing packet', async function () {
+    connector.addOwnAddress('test.connie')
     const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
     endpoint.connected = false
     await connector.addPeer(peerInfo, endpoint)
@@ -291,9 +294,76 @@ describe('Connector', function () {
     assert.fail()
   })
 
-  it('setOwnAddress adds self to routing table', function () {
-    connector.setOwnAddress('g.harry')
+  describe('addOwnAddress', function () {
+    it('points address to self peer with a default weight of 500', function () {
+      connector.addOwnAddress('test.harry')
+  
+      assert.equal(connector.routingTable.nextHop('test.harry'), 'self')
+      assert.equal(connector.routingTable.getRoutingTable()['items']['test.harry'].weight, 500)
+    })
 
-    assert.equal(connector.routingTable.nextHop('g.harry'), 'self')
+    it('points address to self peer with a prescribed weighting', async function () {
+      connector.addOwnAddress('test.harry', 1000)
+  
+      assert.equal(connector.routingTable.nextHop('test.harry'), 'self')
+      assert.equal(connector.routingTable.getRoutingTable()['items']['test.harry'].weight, 1000)
+    })
+
+    it('can add multiple addresses pointing to self with different weightings', async function () {
+      connector.addOwnAddress('test.harry', 100)
+      connector.addOwnAddress('test.rafiki', 200)
+
+      assert.equal(connector.routingTable.nextHop('test.harry'), 'self')
+      assert.equal(connector.routingTable.nextHop('test.rafiki'), 'self')
+      assert.equal(connector.routingTable.getRoutingTable()['items']['test.harry'].weight, 100)
+      assert.equal(connector.routingTable.getRoutingTable()['items']['test.rafiki'].weight, 200)
+    })
+  })
+
+  describe('getOwnAddresses', async function () {
+    it('returns empty array if there are no addresses', async function () {
+      assert.deepEqual(connector.getOwnAddresses(), [])
+    })
+
+    it('returns array of addresses ordered by weighting', async function () {
+      connector.addOwnAddress('test.harry', 200)
+      connector.addOwnAddress('test.rafiki', 100)
+      
+      assert.deepEqual(connector.getOwnAddresses(), ['test.harry', 'test.rafiki'])
+    })
+  })
+
+  describe('getOwnAddress', function () {
+    it('returns highest weighted address', async function () {
+      connector.addOwnAddress('test.harry', 200)
+      connector.addOwnAddress('test.rafiki', 100)
+      
+      assert.equal(connector.getOwnAddress(), 'test.harry')
+    })
+
+    it('returns unknown if there are no addresses', async function () {      
+      assert.equal(connector.getOwnAddress(), 'unknown')
+    })
+  })
+
+  describe('removeAddress', async function () {
+    it('removes the specified address', async function () {
+      connector.addOwnAddress('test.rafiki')
+      assert.deepEqual(connector.getOwnAddresses(), ['test.rafiki'])
+
+      connector.removeAddress('test.rafiki')
+
+      assert.isEmpty(connector.getOwnAddresses())
+      assert.equal(connector.getOwnAddress(), 'unknown')
+    })
+
+    it('does nothing if address doesn\'t exist', async function () {
+      connector.addOwnAddress('test.rafiki')
+      
+      connector.removeAddress('test.harry')
+      
+      assert.deepEqual(connector.getOwnAddresses(), ['test.rafiki'])
+      assert.equal(connector.getOwnAddress(), 'test.rafiki')
+    })
   })
 })

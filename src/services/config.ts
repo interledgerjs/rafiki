@@ -2,7 +2,7 @@ import { InvalidJsonBodyError } from '../errors/invalid-json-body-error'
 import { constantCase } from 'change-case'
 import { Config as ConfigSchemaTyping } from '../schemas/ConfigTyping'
 import { log } from '../winston'
-import * as configSchema from '../schemas/Config.json'
+import configSchema from '../schemas/Config.json'
 const {
   extractDefaultsFromSchema
 } = require('../lib/utils')
@@ -26,15 +26,16 @@ export class Config extends ConfigSchemaTyping {
   //   may not be set. However, when we construct a new Config instance, we load
   //   the defaults from the schema, so these *will* always be set. These
   //   declarations make TypeScript happy.
-  public store!: string
   public quoteExpiry!: number
   public routeExpiry!: number
-  public minMessageWindow!: number
-  public maxHoldTime!: number
+  public minExpirationWindow!: number
+  public maxHoldWindow!: number
   public routeBroadcastInterval!: number
+  public http2ServerPort!: number
+  public ilpAddress!: string
 
   protected _validate: Ajv.ValidateFunction
-  protected _validateAccount: Ajv.ValidateFunction
+  protected _validatePeer: Ajv.ValidateFunction
 
   constructor () {
     super()
@@ -42,7 +43,7 @@ export class Config extends ConfigSchemaTyping {
     this.loadDefaults()
 
     this._validate = ajv.compile(configSchema)
-    this._validateAccount = ajv.compile(configSchema.properties.accounts.additionalProperties)
+    this._validatePeer = ajv.compile(configSchema.properties.peers.additionalProperties)
   }
 
   loadDefaults () {
@@ -114,12 +115,6 @@ export class Config extends ConfigSchemaTyping {
         ? this._validate.errors[0]
         : { message: 'unknown validation error', dataPath: '' }
       throw new InvalidJsonBodyError('config failed to validate. error=' + firstError.message + ' dataPath=' + firstError.dataPath, this._validate.errors || [])
-    }
-  }
-
-  validateAccount (id: string, accountInfo: any) {
-    if (!this._validateAccount(accountInfo)) {
-      throw new InvalidJsonBodyError('account config failed to validate. id=' + id, this._validateAccount.errors || [])
     }
   }
 
