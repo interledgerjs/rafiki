@@ -8,8 +8,10 @@ import Redis from 'ioredis'
 import { Config } from './index'
 
 // Logging
-const formatter = winston.format.printf(({ service, level, message, component, timestamp }) => {
-  return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}`
+// tslint:disable-next-line:valid-typeof
+const stringify = (value: any) => typeof value === 'bigint' ? value.toString() : JSON.stringify(value)
+const formatter = winston.format.printf(({ service, level, message, component, timestamp, ...metaData }) => {
+  return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}` + (metaData ? ' meta data: ' + stringify(metaData) : '')
 })
 
 const SETTLEMENT_BALANCE_STREAM_KEY = process.env.SETTLEMENT_BALANCE_STREAM_KEY || 'balance'
