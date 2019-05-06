@@ -170,4 +170,15 @@ describe('Balance Rule', function () {
       })
     })
 
+    describe('shutdown', function () {
+      it('removes account on the settlement engine', async function () {
+        const removeAccountStub = sinon.stub(balanceRule.settlementEngineInterface, 'removeAccount').resolves()
+
+        await balanceRule.shutdown()
+
+        sinon.assert.calledOnce(removeAccountStub)
+        sinon.assert.calledWith(removeAccountStub, peerInfo.id)
+      })
+    })
+
 })

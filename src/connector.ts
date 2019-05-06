@@ -233,7 +233,7 @@ export class Connector {
             peerId: peerInfo.id,
             forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
             getPeerRelation: this.getPeerRelation.bind(this),
-            getOwnAddress: () => this.getOwnAddress(),
+            getOwnAddress: this.getOwnAddress.bind(this),
             addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
             removeRoute: this.routeManager.removeRoute.bind(this),
             getRouteWeight: this.calculateRouteWeight.bind(this)

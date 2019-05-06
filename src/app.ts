@@ -58,8 +58,6 @@ export class App {
     this._balanceMap = new Map()
     this._config = opts
 
-    if (opts.ilpAddress !== 'unknown') this.connector.addOwnAddress(opts.ilpAddress) // config loads ilpAddress as 'unknown' by default
-
     this._http2Server = createServer()
     this._endpointManager = new EndpointManager({
       http2Server: this._http2Server
@@ -71,6 +69,7 @@ export class App {
     logger.info('starting connector....')
     logger.info('starting HTTP2 server on port ' + this._config.http2ServerPort)
     this._http2Server.listen(this._config.http2ServerPort)
+    if (this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) // config loads ilpAddress as 'unknown' by default
   }
 
   public connector: Connector
@@ -110,6 +109,7 @@ export class App {
     await this.connector.addPeer(peerInfo, wrapperEndpoint)
 
     if (endpoint instanceof PluginEndpoint) {
+      logger.info('Plugin endpoint connecting')
       endpoint.connect().catch(() => logger.error('Plugin endpoint failed to connect'))
     }
 
@@ -213,7 +213,7 @@ export class App {
           }
           const minimum = rule.minimum ? BigInt(rule.minimum) : MIN_INT_64
           const maximum = rule.maximum ? BigInt(rule.maximum) : MAX_INT_64
-          logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum, maximum, initialBalance: 0n })
+          logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum: minimum.toString(), maximum: maximum.toString(), initialBalance: '0' })
           const balance = new InMemoryBalance({ initialBalance: 0n, minimum, maximum }) // In future can get from a balance service
           this._balanceMap.set(peerInfo.id, balance)
           return new BalanceRule({ peerInfo, stats: this.stats, balance })

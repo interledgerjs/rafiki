@@ -58,7 +58,7 @@ export class BalanceRule extends Rule {
 
     // Increase balance on prepare
     this.balance.update(BigInt(amount))
-    logger.silly('balance increased due to incoming ilp prepare', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
+    logger.silly('balance increased due to incoming ilp prepare', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
 
     // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
     // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
@@ -69,7 +69,7 @@ export class BalanceRule extends Rule {
     } catch (err) {
       // Refund on error
       this.balance.update(BigInt(-amount))
-      logger.debug('incoming packet refunded due to error', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
+      logger.debug('incoming packet refunded due to error', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
       this.stats.incomingDataPacketValue.increment(this.peer, { result: 'failed' }, + amount)
@@ -81,7 +81,7 @@ export class BalanceRule extends Rule {
     } else {
       // Refund on reject
       this.balance.update(BigInt(-amount))
-      logger.debug('incoming packet refunded due to ilp reject', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
+      logger.debug('incoming packet refunded due to ilp reject', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
 
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
@@ -111,7 +111,7 @@ export class BalanceRule extends Rule {
     try {
       result = await next(request)
     } catch (err) {
-      logger.debug('outgoing packet not applied due to error', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
+      logger.debug('outgoing packet not applied due to error', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
       this.stats.outgoingDataPacketValue.increment(peer, { result: 'failed' }, + amount)
       throw err
     }
@@ -119,12 +119,12 @@ export class BalanceRule extends Rule {
     if (isFulfill(result)) {
       // Decrease balance on prepare
       balance.update(BigInt(-amount))
-      logger.silly('balance decreased due to outgoing ilp fulfill', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
+      logger.silly('balance decreased due to outgoing ilp fulfill', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(peer, {}, balance.getValue().toNumber())
       this.stats.outgoingDataPacketValue.increment(peer, { result: 'fulfilled' }, + amount)
     } else {
-      logger.debug('outgoing packet not applied due to ilp reject', { peerId: this.peer.id, amount, balance: this.balance.getValue() })
+      logger.debug('outgoing packet not applied due to ilp reject', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
       this.stats.outgoingDataPacketValue.increment(peer, { result: 'rejected' }, + amount)
     }
 
@@ -132,7 +132,7 @@ export class BalanceRule extends Rule {
   }
 
   protected _shutdown = async () => {
-    return
+    this.settlementEngineInterface.removeAccount(this.peer.id)
   }
 
   getStatus () {
@@ -149,9 +149,22 @@ class SettlementEngineInterface {
   }
 
   addAccount (peerInfo: PeerInfo) {
-    logger.info('Creating account on settlement engine.', { accountId: peerInfo.id, ledgerAddress: peerInfo.settlement.ledgerAddress, assetScale: peerInfo.assetScale })
-    axios.put(`${this._url}/accounts`, { id: peerInfo.id, ledgerAddress: peerInfo.settlement.ledgerAddress, assetScale: peerInfo.assetScale }).catch(error => {
+    const rule = peerInfo.rules.find(rule => rule.name === 'balance')
+    if (!rule) {
+      logger.error('Failed to create account on settlement engine for peer=' + peerInfo.id, { peerInfo: peerInfo })
+      throw new Error('Balance rule needs to be defined to add account to settlement engine')
+    }
+
+    logger.info('Creating account on settlement engine for peer=' + peerInfo.id + ' endpoint:' + `${this._url}/accounts`, { id: peerInfo.id, ledgerAddress: peerInfo.settlement.ledgerAddress, scale: peerInfo.assetScale, minimumBalance: rule.minimum, maximumBalance: rule.maximum, settlementThreshold: '5000000' })
+    axios.put(`${this._url}/accounts`, { id: peerInfo.id, ledgerAddress: peerInfo.settlement.ledgerAddress, scale: peerInfo.assetScale, minimumBalance: rule.minimum, maximumBalance: rule.maximum, settlementThreshold: '5000000' }).catch(error => {
       logger.error('Failed to create account on settlement engine.', { response: error.response })
+    })
+  }
+
+  removeAccount (id: string) {
+    logger.info('Removing account on settlement engine', { accountId: id })
+    axios.delete(`${this._url}/accounts/${id}`).catch(error => {
+      logger.error('Failed to delete account on settlement engine for peer=' + id, { accountId: id, response: error.response })
     })
   }
 

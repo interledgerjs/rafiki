@@ -7,8 +7,9 @@ import { SettlementAdminApi } from './services/settlement-admin-api/settlement-a
 import { Config } from './index'
 
 // Logging
-const formatter = winston.format.printf(({ service, level, message, component, timestamp }) => {
-  return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}`
+const stringify = (value: any) => typeof value === 'bigint' ? value.toString() : JSON.stringify(value)
+const formatter = winston.format.printf(({ service, level, message, component, timestamp, ...metaData }) => {
+  return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}` + (metaData ? ' meta data: ' + stringify(metaData) : '')
 })
 
 winston.configure({
@@ -19,13 +20,25 @@ winston.configure({
     winston.format.align(),
     formatter
   ),
-  defaultMeta: { service: 'connector' },
+  defaultMeta: { service: 'rafiki' },
   transports: [
     new winston.transports.Console()
   ]
 })
 
-const start = async () => {
+const config = new Config()
+const app = new App(config)
+const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app })
+const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app) })
+
+export const gracefulShutdown = async () => {
+  winston.debug('shutting down.')
+  await app.shutdown()
+  adminApi.shutdown()
+  settlementAdminApi.shutdown()
+  winston.debug('completed graceful shutdown.')
+}
+export const start = async () => {
 
   let shuttingDown = false
   process.on('SIGINT', async () => {
@@ -39,11 +52,7 @@ const start = async () => {
       shuttingDown = true
 
       // Graceful shutdown
-      winston.debug('shutting down.')
-      await app.shutdown()
-      adminApi.shutdown()
-      settlementAdminApi.shutdown()
-      winston.debug('completed graceful shutdown.')
+      await gracefulShutdown()
       process.exit(0)
     } catch (err) {
       const errInfo = (err && typeof err === 'object' && err.stack) ? err.stack : err
@@ -52,12 +61,7 @@ const start = async () => {
     }
   })
 
-  const config = new Config()
   config.loadFromEnv()
-  const app = new App(config)
-  const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app })
-  const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app) })
-
   await app.start()
   adminApi.listen()
   settlementAdminApi.listen()
