@@ -40,7 +40,7 @@ export class CcpProtocol extends Rule {
         getOwnAddress: getOwnAddress,
         getPeerRelation: getPeerRelation,
         routeExpiry: 0,
-        routeBroadcastInterval: 2400
+        routeBroadcastInterval: 10000
       })
     }
   }
@@ -75,11 +75,13 @@ export class CcpProtocol extends Rule {
     }
   }
 
+  // TODO: Fix to be synchronous and send a reject if attempt to do has failed
   async handleCcpRouteControlMessage (packet: IlpPrepare): Promise<IlpReply> {
     this.ccpSender.handleRouteControl(deserializeCcpRouteControlRequest(serializeIlpPrepare(packet)))
     return deserializeIlpFulfill(serializeCcpResponse())
   }
 
+  // TODO: Fix to be synchronous and send a reject if attempt to do has failed
   async handleCcpRouteUpdateMessage (packet: IlpPrepare): Promise<IlpReply> {
     this.ccpReceiver.handleRouteUpdate(deserializeCcpRouteUpdateRequest(serializeIlpPrepare(packet)))
     return deserializeIlpFulfill(serializeCcpResponse())
