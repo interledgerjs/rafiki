@@ -265,4 +265,14 @@ describe('Test App', function () {
     })
   })
 
+  describe('add route', function () {
+    it('adds the route to the connectors routing table', async function () {
+      assert.notInclude(app.connector.routingTable.getRoutingTable()['prefixes'], 'test.alice')
+
+      app.addRoute('test.alice', 'alice')
+
+      assert.include(app.connector.routingTable.getRoutingTable()['prefixes'], 'test.alice')
+    })
+  })
+
 })
