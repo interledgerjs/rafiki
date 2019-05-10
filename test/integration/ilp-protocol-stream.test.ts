@@ -4,7 +4,7 @@ import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import * as rafiki from '../../src/start'
 import getPort from 'get-port'
-import PluginHttp from 'ilp-plugin-http'
+const PluginHttp = require('ilp-plugin-http')
 import { createConnection, Server, DataAndMoneyStream } from 'ilp-protocol-stream'
 import crypto from 'crypto'
 
@@ -16,8 +16,8 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
   let port2: number
   let port3: number
   let port4: number
-  let serverPlugin: PluginHttp
-  let clientPlugin: PluginHttp
+  let serverPlugin: any
+  let clientPlugin: any
   let server: Server
   let amountReceived: number
 
@@ -200,7 +200,7 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
     ]) 
   })
 
-  it('streams successfully', async function () {    
+  it('streams successfully', async function () {
     const connection = await createConnection({
       ...server.generateAddressAndSecret(),
       plugin: clientPlugin,
