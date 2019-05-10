@@ -235,7 +235,7 @@ export class Connector {
             getPeerRelation: this.getPeerRelation.bind(this),
             getOwnAddress: this.getOwnAddress.bind(this),
             addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
-            removeRoute: this.routeManager.removeRoute.bind(this),
+            removeRoute: (peerId: string, prefix: string) => { this.routeManager.removeRoute(peerId, prefix) } ,
             getRouteWeight: this.calculateRouteWeight.bind(this)
           })
         case('ildcp'):

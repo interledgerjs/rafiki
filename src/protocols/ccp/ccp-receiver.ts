@@ -1,4 +1,4 @@
-import { Type, IlpPrepare, IlpReply, deserializeIlpPrepare } from 'ilp-packet'
+import { Type, IlpPrepare, IlpReply, deserializeIlpPrepare, isFulfill, isReject } from 'ilp-packet'
 import {
   CcpRouteControlRequest,
   CcpRouteUpdateRequest,
@@ -124,10 +124,10 @@ export class CcpReceiver {
     }
 
     this.sendData(deserializeIlpPrepare(serializeCcpRouteControlRequest(routeControl)))
-      .then(data => {
-        if (data[0] === Type.TYPE_ILP_FULFILL) {
+      .then(packet => {
+        if (isFulfill(packet)) {
           logger.silly('successfully sent route control message.')
-        } else if (data[0] === Type.TYPE_ILP_REJECT) {
+        } else if (isReject(packet)) {
           logger.debug('route control message was rejected.')
           throw new Error('route control message rejected.')
         } else {

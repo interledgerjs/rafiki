@@ -40,7 +40,10 @@ export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
   public async sendOutgoingRequest (request: IlpPrepare, sentCallback?: (() => void) | undefined): Promise<IlpReply> {
     const replyPromise = this.sendIlpPacket(serializeIlpPrepare(request))
     if (sentCallback) sentCallback()
-    return deserializeIlpReply(await replyPromise)
+    const result = await replyPromise.catch(error => {
+      logger.error('error in sending outgoing packet', error)
+    })
+    return deserializeIlpReply(result as Buffer)
   }
 
   public setIncomingRequestHandler (handler: RequestHandler<IlpPrepare, IlpReply>): this {

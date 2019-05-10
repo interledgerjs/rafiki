@@ -7,6 +7,7 @@ import { SettlementAdminApi } from './services/settlement-admin-api/settlement-a
 import { Config } from './index'
 
 // Logging
+// tslint:disable-next-line
 const stringify = (value: any) => typeof value === 'bigint' ? value.toString() : JSON.stringify(value)
 const formatter = winston.format.printf(({ service, level, message, component, timestamp, ...metaData }) => {
   return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}` + (metaData ? ' meta data: ' + stringify(metaData) : '')
