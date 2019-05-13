@@ -140,6 +140,13 @@ export class App {
   }
 
   public addRoute (targetPrefix: string, peerId: string) {
+    logger.info('adding route', { targetPrefix, peerId })
+    const peer = this.connector.routeManager.getPeer(peerId)
+    if (!peer) {
+      const msg = 'Cannot add route for unknown peerId=' + peerId
+      logger.error(msg)
+      throw new Error(msg)
+    }
     this.connector.routeManager.addRoute({
       peer: peerId,
       prefix: targetPrefix,

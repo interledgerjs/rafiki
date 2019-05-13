@@ -273,6 +273,12 @@ describe('Test App', function () {
 
       assert.include(app.connector.routingTable.getRoutingTable()['prefixes'], 'test.alice')
     })
+
+    it('throws error if specified peer does not exist', async function () {
+      assert.throws(() => {
+        app.addRoute('test.unknown.peer', 'unknownPeer')
+      }, 'Cannot add route for unknown peerId=unknownPeer')
+    })
   })
 
 })
