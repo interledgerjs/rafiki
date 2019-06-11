@@ -4,7 +4,8 @@ import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { SettlementAdminApi } from '../../src/services/settlement-admin-api/settlement-admin-api'
 import axios from 'axios'
-import { App, PeerInfo, EndpointInfo, Config } from '../../src'
+import { App, PeerInfo, EndpointInfo, Config, STATIC_FULFILLMENT, STATIC_CONDITION } from '../../src'
+import { IlpFulfill } from 'ilp-packet'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -22,9 +23,7 @@ describe('Settlement Admin Api', function () {
     rules: [{
       name: 'errorHandler'
     }, {
-      name: 'balance',
-      minimum: '-10',
-      maximum: '200'
+      name: 'balance'
     }],
     protocols: [{
       name: 'ildcp'
@@ -43,7 +42,7 @@ describe('Settlement Admin Api', function () {
     config = new Config()
     app = new App(config)
     await app.addPeer(peerInfo, endpointInfo)
-    settlementAdminApi = new SettlementAdminApi({}, { updateAccountBalance: app.updateBalance, getAccountBalance: app.getBalance})
+    settlementAdminApi = new SettlementAdminApi({}, { updateAccountBalance: app.updateBalance, getAccountBalance: app.getBalance, sendMessage: app.forwardSettlementMessage.bind(app)})
     settlementAdminApi.listen()
   })
 
@@ -57,65 +56,92 @@ describe('Settlement Admin Api', function () {
     assert.equal(response.status, 200)
   })
 
-  describe('get accounts/{accountID}/balance', function () {
-    it('returns an object which has balance and timestamp keys', async function () {
-      this.clock = sinon.useFakeTimers(START_DATE)
+  describe('receiving a settlement from SE', function () {
+    it('adjusts interledger balance by prescribed amount', async () => {
+      const data = {
+        amount: "10",
+        scale: 9
+      }
+      assert.equal(app.getBalance('alice').balance, '0')
 
-      const response = await axios.get('http://localhost:4000/accounts/alice/balance')
+      await axios.post('http://localhost:4000/accounts/alice/settlement', data)
 
-      assert.equal(response.status, 200)
-      assert.deepEqual(response.data, {
-        balance: '0',
-        timestamp: Math.floor(START_DATE / 1000)
-      })
-      this.clock.restore()
+      assert.equal(app.getBalance('alice').balance, '10')
     })
 
-    it('requires accountId', async function () {
+    it('converts between different asset scales', async () => {
+      const data = {
+        amount: "1",
+        scale: 6
+      }
+
+      await axios.post('http://localhost:4000/accounts/alice/settlement', data)
+
+      assert.equal(app.getBalance('alice').balance, '1000')
+    })
+
+    it('returns a 404 for unknown accountId', async () => {
+      const data = {
+        amount: "10",
+        scale: 6
+      }
+
       try {
-        await axios.post('http://localhost:4000/accounts//updateBalance', { amountDiff: '100' })
+        await axios.post('http://localhost:4000/accounts/bob/settlement', data)
       } catch (error) {
         assert.equal(error.response.status, 404)
         return
       }
 
-      assert.fail('Did not throw expected error')
+      assert.fail('Did not throw error')
     })
   })
 
-  describe('post accounts/{accountID}/updateBalance', function () {
-    it('updates the balance on the app', async function () {
-      const response = await axios.post('http://localhost:4000/accounts/alice/updateBalance', { amountDiff: '100' })
-  
-      assert.equal(response.status, 200)
-      assert.deepEqual(app.getBalance('alice'), {
-        balance: '100',
-        minimum: '-10',
-        maximum: '200'
-      })
-    })
+  describe('receive request to send message from SE', function () {
 
-    it('requires amountDiff to be a string', async function () {
-      try {
-        await axios.post('http://localhost:4000/accounts/alice/updateBalance', { amountDiff: 100 })
-      } catch (error) {
-        assert.equal(error.response.status, 422)
-        assert.equal(error.response.data.errors['amountDiff'].msg, 'amountDiff must be a string')
-        return
+    it('calls sendMessageService', async () => {
+      const clock = sinon.useFakeTimers()
+      const connectorSendOutgoingRequestStub = sinon.stub(app.connector, 'sendOutgoingRequest').resolves({
+        fulfillment: STATIC_FULFILLMENT,
+        data: Buffer.allocUnsafe(0)
+      } as IlpFulfill)
+      const message = {
+        type: 'config',
+        data: {
+          xrpAddress: 'rxxxxxx'
+        }
       }
 
-      assert.fail('Did not throw expected error')
+      const response = await axios.post('http://localhost:4000/accounts/alice/messages', Buffer.from(JSON.stringify(message)), { headers: { 'content-type': 'application/octet-stream' } })
+
+      assert.equal(response.status, 200)
+      assert.deepEqual(connectorSendOutgoingRequestStub.getCall(0).args[1], {
+        amount: '0',
+        destination: 'peer.settle',
+        executionCondition: STATIC_CONDITION,
+        expiresAt: new Date(Date.now() + 60000),
+        data: Buffer.from(JSON.stringify(message))
+      })
+      connectorSendOutgoingRequestStub.restore()
+      clock.restore()
     })
 
-    it('requires accountId', async function () {
+    it('returns a 404 for unknown accountId', async () => {
+      const message = {
+        type: 'config',
+        data: {
+          xrpAddress: 'rxxxxxx'
+        }
+      }
+
       try {
-        await axios.post('http://localhost:4000/accounts//updateBalance', { amountDiff: '100' })
+        await axios.post('http://localhost:4000/accounts/bob/messages', Buffer.from(JSON.stringify(message)), { headers: { 'content-type': 'application/octet-stream' } })
       } catch (error) {
         assert.equal(error.response.status, 404)
         return
       }
 
-      assert.fail('Did not throw expected error')
+      assert.fail('Did not throw error')
     })
   })
 

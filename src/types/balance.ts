@@ -12,6 +12,7 @@ export interface BalanceOpts {
   initialBalance?: bigint
   minimum?: bigint
   maximum?: bigint
+  scale?: number
 }
 
 export interface JSONBalanceSummary {
@@ -21,6 +22,7 @@ export interface JSONBalanceSummary {
 }
 
 export interface Balance {
+  scale: number
   update: (amount: bigint) => void
   getValue: () => bigint
   toJSON: () => JSONBalanceSummary
@@ -30,14 +32,17 @@ export class InMemoryBalance implements Balance {
   private balance: bigint
   private minimum: bigint
   private maximum: bigint
+  scale: number
   constructor ({
     initialBalance = 0n,
     minimum = 0n,
-    maximum = BigInt(MAX_UINT_64)
+    maximum = BigInt(MAX_UINT_64),
+    scale = 6
   }: BalanceOpts) {
     this.balance = initialBalance
     this.minimum = minimum
     this.maximum = maximum
+    this.scale = scale
   }
 
   update (amount: bigint) {

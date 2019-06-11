@@ -22,6 +22,7 @@ export class ErrorHandlerRule extends Rule {
           const response = await next(request)
 
           if (!(isFulfill(response) || isReject(response))) {
+            logger.error('handler did not return a value.', { response: JSON.stringify(response) })
             throw new Error('handler did not return a value.')
           }
 

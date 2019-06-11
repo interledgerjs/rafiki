@@ -1,7 +1,7 @@
-import axios from 'axios'
+import axios, { AxiosResponse } from 'axios'
 import { Rule, IlpRequestHandler, RuleRequestHandler } from '../types/rule'
 import { PeerInfo } from '../types/peer'
-import { IlpPrepare, isFulfill } from 'ilp-packet'
+import { IlpPrepare, isFulfill, IlpReply, IlpFulfill, IlpReject } from 'ilp-packet'
 import { Stats } from '../services/stats'
 import { log } from '../winston'
 import { STATIC_FULFILLMENT } from '../constants'
@@ -41,14 +41,9 @@ export class BalanceRule extends Rule {
 
     // Handle peer.settle
     if (destination.startsWith('peer.settle')) {
-
-      this.settlementEngineInterface.handleMessage(this.peer.id, request)
-
-      // TODO: what should the response be ?
-      return {
-        fulfillment: STATIC_FULFILLMENT,
-        data: Buffer.allocUnsafe(0)
-      }
+      const response = await this.settlementEngineInterface.handleMessage(this.peer.id, request)
+      logger.debug('response from SE after forwarding it message' + JSON.stringify(response))
+      return response
     }
 
     // Ignore zero amount packets
@@ -77,6 +72,7 @@ export class BalanceRule extends Rule {
     }
 
     if (isFulfill(result)) {
+      this.maybeSettle().catch()
       this.stats.incomingDataPacketValue.increment(this.peer, { result: 'fulfilled' }, + amount)
     } else {
       // Refund on reject
@@ -119,6 +115,7 @@ export class BalanceRule extends Rule {
     if (isFulfill(result)) {
       // Decrease balance on prepare
       balance.update(BigInt(-amount))
+      this.maybeSettle().catch()
       logger.silly('balance decreased due to outgoing ilp fulfill', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(peer, {}, balance.getValue().toNumber())
@@ -139,6 +136,27 @@ export class BalanceRule extends Rule {
     return this.balance.toJSON()
   }
 
+  private async maybeSettle (): Promise<void> {
+    const { settleThreshold, settleTo = '0' } = this.peer.settlement
+    const bnSettleThreshold = settleThreshold ? BigInt(settleThreshold) : undefined
+    const bnSettleTo = BigInt(settleTo)
+    const balance = this.balance
+
+    const settle = bnSettleThreshold && bnSettleThreshold > this.balance.getValue()
+    if (!settle) return
+
+    const settleAmount = bnSettleTo - balance.getValue()
+    logger.debug('settlement triggered for accountId=' + this.peer.id, { balance: balance.getValue().toString(), settleAmount: settleAmount.toString() })
+
+    try {
+      this.balance.update(settleAmount)
+      logger.debug('balance for accountId=' + this.peer.id + ' increased due to outgoing settlement', { settleAmount: settleAmount.toString(), newBalance: balance.getValue().toString() })
+      await this.settlementEngineInterface.doSettlement(this.peer.id, settleAmount, this.peer.assetScale)
+    } catch (error) {
+      logger.error('Could not complete settlement for accountId=' + this.peer.id, { scale: this.peer.assetScale, balance: balance.getValue().toString(), settleAmount: settleAmount.toString() })
+    }
+  }
+
 }
 
 class SettlementEngineInterface {
@@ -155,9 +173,15 @@ class SettlementEngineInterface {
       throw new Error('Balance rule needs to be defined to add account to settlement engine')
     }
 
-    logger.info('Creating account on settlement engine for peer=' + peerInfo.id + ' endpoint:' + `${this._url}/accounts`, { id: peerInfo.id, ledgerAddress: peerInfo.settlement.ledgerAddress, scale: peerInfo.assetScale, minimumBalance: rule.minimum, maximumBalance: rule.maximum, settlementThreshold: '5000000' })
-    axios.put(`${this._url}/accounts`, { id: peerInfo.id, ledgerAddress: peerInfo.settlement.ledgerAddress, scale: peerInfo.assetScale, minimumBalance: rule.minimum, maximumBalance: rule.maximum, settlementThreshold: '5000000' }).catch(error => {
-      logger.error('Failed to create account on settlement engine.', { response: error.response })
+    logger.info('Creating account on settlement engine for peer=' + peerInfo.id + ' endpoint:' + `${this._url}/accounts`)
+    axios.post(`${this._url}/accounts`, { id: peerInfo.id })
+    .then(response => {
+      logger.info('Created account on settlement engine', { response: response.status })
+    })
+    .catch(error => {
+      logger.error('Failed to create account on settlement engine. Retrying in 5s', { response: error.response })
+      const timeout = setTimeout(() => this.addAccount(peerInfo), 5000)
+      timeout.unref()
     })
   }
 
@@ -168,8 +192,34 @@ class SettlementEngineInterface {
     })
   }
 
-  handleMessage (accountId: string, packet: IlpPrepare) {
-    logger.debug('Forwarding packet onto settlement engine', { accountId, packet })
-    // axios.post(`${this._url}/accounts/${accountId}/ilp`, { ...packet })
+  async handleMessage (accountId: string, packet: IlpPrepare): Promise<IlpReply> {
+    logger.debug('Forwarding packet onto settlement engine', { accountId, packet, url: `${this._url}/accounts/${accountId}/messages` })
+    const bufferMessage = packet.data
+    try {
+      const response = await axios.post(`${this._url}/accounts/${accountId}/messages`, bufferMessage, { headers: { 'content-type': 'application/octet-stream' } })
+      const ilpFulfill: IlpFulfill = {
+        data: response.data || Buffer.from('') ,
+        fulfillment: STATIC_FULFILLMENT
+      }
+      return ilpFulfill
+    } catch (error) {
+      logger.error('Could not deliver message to SE.', { errorStatus: error.status, errorMessage: error.message })
+      const ilpReject: IlpReject = {
+        code: 'F00',
+        triggeredBy: 'peer.settle',
+        data: Buffer.allocUnsafe(0),
+        message: 'Failed to deliver message to SE'
+      }
+      return ilpReject
+    }
+  }
+
+  async doSettlement (accountId: string, amount: bigint, scale: number): Promise<AxiosResponse> {
+    const message = {
+      amount: amount.toString(),
+      scale
+    }
+
+    return axios.post(`${this._url}/accounts/${accountId}/settlement`, message)
   }
 }

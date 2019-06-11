@@ -16,15 +16,17 @@ import { Stats } from './services/stats'
 import { ReduceExpiryRule } from './rules/reduce-expiry'
 import { EndpointInfo, EndpointManager } from './endpoints'
 
-import { IlpReply, IlpPrepare } from 'ilp-packet'
+import { IlpReply, IlpPrepare, isReject } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { createServer, Http2Server } from 'http2'
 import { PluginEndpoint } from './legacy/plugin-endpoint'
 import { Config } from './services'
 import { Balance, JSONBalanceSummary, InMemoryBalance } from './types'
-import { MIN_INT_64, MAX_INT_64 } from './constants'
+import { MIN_INT_64, MAX_INT_64, STATIC_CONDITION } from './constants'
 import { BalanceRule } from './rules'
+import BigNumber from 'bignumber.js';
+import { PeerNotFoundError } from './errors/peer-not-found-error';
 
 const logger = log.child({ component: 'App' })
 
@@ -160,14 +162,42 @@ export class App {
     return balances
   }
 
-  public updateBalance = (peerId: string, amountDiff: bigint): void => {
+  public updateBalance = (peerId: string, amountDiff: bigint, scale: number): void => {
     const balance = this._balanceMap.get(peerId)
 
     if (!balance) {
-      throw new Error(`Cannot find balance for peerId=${peerId}`)
+      throw new PeerNotFoundError(peerId)
     }
 
-    balance.update(amountDiff)
+    const scaleDiff = balance.scale - scale
+    // TODO: update to check whether scaledAmountDiff is an integer
+    if (scaleDiff < 0) {
+      logger.warn('Could not adjust balance due to scale differences', { amountDiff, scale })
+      return
+    }
+
+    const scaleRatio = Math.pow(10, scaleDiff)
+    const scaledAmountDiff = amountDiff * BigInt(scaleRatio)
+
+    balance.update(scaledAmountDiff)
+  }
+
+  public forwardSettlementMessage = async (to: string, message: Buffer): Promise<Buffer> => {
+    logger.debug('Forwarding settlement message', { to, message: message.toString() })
+    const packet: IlpPrepare = {
+      amount: '0',
+      destination: 'peer.settle',
+      executionCondition: STATIC_CONDITION,
+      expiresAt: new Date(Date.now() + 60000),
+      data: message
+    }
+
+    const ilpReply = await this.connector.sendOutgoingRequest(to, packet)
+    if (isReject(ilpReply)) {
+      throw new Error('IlpPacket to settlement engine was rejected')
+    }
+
+    return ilpReply.data
   }
 
   /**
@@ -214,7 +244,7 @@ export class App {
           const minimum = rule.minimum ? BigInt(rule.minimum) : MIN_INT_64
           const maximum = rule.maximum ? BigInt(rule.maximum) : MAX_INT_64
           logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum: minimum.toString(), maximum: maximum.toString(), initialBalance: '0' })
-          const balance = new InMemoryBalance({ initialBalance: 0n, minimum, maximum }) // In future can get from a balance service
+          const balance = new InMemoryBalance({ initialBalance: 0n, minimum, maximum, scale: peerInfo.assetScale }) // In future can get from a balance service
           this._balanceMap.set(peerInfo.id, balance)
           return new BalanceRule({ peerInfo, stats: this.stats, balance })
         default:

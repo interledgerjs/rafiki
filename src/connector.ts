@@ -9,6 +9,7 @@ import { IldcpProtocol } from './protocols/ildcp'
 import { EchoProtocol } from './protocols/echo'
 import { PeerUnreachableError } from 'ilp-packet/dist/src/errors'
 import { log } from './winston'
+import { PeerNotFoundError } from './errors/peer-not-found-error';
 
 const logger = log.child({ component: 'connector' })
 
@@ -118,6 +119,19 @@ export class Connector {
     }
 
     logger.silly('sending outgoing ILP Packet', { destination, nextHop })
+
+    return handler(packet)
+  }
+
+  async sendOutgoingRequest (to: string, packet: IlpPrepare): Promise<IlpReply> {
+    const handler = this.outgoingIlpPacketHandlerMap.get(to)
+
+    if (!handler) {
+      logger.error('Handler not found for specified nextHop', { to })
+      throw new PeerNotFoundError(to)
+    }
+
+    logger.silly('sending outgoing ILP Packet', { to })
 
     return handler(packet)
   }

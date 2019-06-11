@@ -58,6 +58,7 @@ export class AdminApi {
     this.server = new Server()
     this.server.listen(adminApiPort, adminApiHost)
     this.server.on('request', (req, res) => {
+      logger.debug('Received request: ' + req.url)
       this.handleRequest(req, res).catch((e) => {
         let err = e
         if (!e || typeof e !== 'object') {
@@ -83,6 +84,7 @@ export class AdminApi {
     })
 
     const urlPrefix = (req.url || '').split('?')[0] + '$'
+    logger.debug('url prefix: ' + urlPrefix)
     const route = this.routes.find((route) =>
       route.method === req.method && urlPrefix.startsWith(route.match))
     if (!route) {

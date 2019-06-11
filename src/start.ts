@@ -30,7 +30,7 @@ winston.configure({
 const config = new Config()
 const app = new App(config)
 const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app })
-const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app) })
+const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })
 
 export const gracefulShutdown = async () => {
   winston.debug('shutting down.')

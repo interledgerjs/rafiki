@@ -13,6 +13,8 @@ export interface PeerInfo {
   settlement: {
     url: string,
     ledgerAddress: string
+    settleTo?: string
+    settleThreshold?: string
   }
 }
 export interface RuleConfig {
