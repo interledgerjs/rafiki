@@ -270,4 +270,33 @@ describe('Admin Api', function () {
       sinon.assert.calledWith(addPeerSpy, peerInfo, endpointInfo)
     })
   })
+
+  describe('getRoutes', function () {
+    it('returns the routing table', async function () {
+      const peerInfo: PeerInfo = {
+        id: 'alice',
+        assetCode: 'USD',
+        assetScale: 2,
+        relation: 'peer',
+        rules: [],
+        protocols: []
+      }
+      const endpointInfo: EndpointInfo = {
+        type: "http",
+        url: 'http://localhost:8084'
+      }
+      app.addPeer(peerInfo, endpointInfo)
+      app.addRoute('test.rafiki.alice', 'alice')
+
+      const response = await axios.get('http://127.0.0.1:7780/routes')
+      
+      assert.equal(response.status, 200)
+      assert.deepEqual(response.data, {
+        "test.rafiki.alice": {
+            "nextHop": "alice",
+            "path": []
+        }
+      })
+    })
+  })
 })

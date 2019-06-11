@@ -481,4 +481,20 @@ describe('Test App', function () {
     assert.deepEqual(response, aliceResponse.data)
     assert.isTrue(Buffer.isBuffer(response))
   })
+  describe('add route', function () {
+    it('adds the route to the connectors routing table', async function () {
+      assert.notInclude(app.connector.routingTable.getRoutingTable()['prefixes'], 'test.alice')
+
+      app.addRoute('test.alice', 'alice')
+
+      assert.include(app.connector.routingTable.getRoutingTable()['prefixes'], 'test.alice')
+    })
+
+    it('throws error if specified peer does not exist', async function () {
+      assert.throws(() => {
+        app.addRoute('test.unknown.peer', 'unknownPeer')
+      }, 'Cannot add route for unknown peerId=unknownPeer')
+    })
+  })
+
 })
