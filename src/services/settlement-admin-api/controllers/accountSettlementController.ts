@@ -10,7 +10,7 @@ export async function create (ctx: AppContext) {
 
   try {
     const updateAccountBalance = ctx.updateAccountBalance
-    updateAccountBalance(accountId, BigInt(ctx.request.body['amount']), ctx.request.body['scale'])
+    updateAccountBalance(accountId, -BigInt(ctx.request.body['amount']), ctx.request.body['scale'])
     ctx.response.status = 200
   } catch (error) {
     if (error instanceof PeerNotFoundError) {

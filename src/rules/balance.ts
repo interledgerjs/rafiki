@@ -53,7 +53,7 @@ export class BalanceRule extends Rule {
 
     // Increase balance on prepare
     this.balance.update(BigInt(amount))
-    logger.silly('balance increased due to incoming ilp prepare', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
+    logger.debug('balance increased due to incoming ilp prepare', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
 
     // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
     // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
@@ -91,7 +91,6 @@ export class BalanceRule extends Rule {
     const { amount, destination } = request
     const { peer, balance } = this
 
-    // TODO: adjust balance on success
     if (destination.startsWith('peer.settle')) {
       return next(request)
     }
@@ -116,7 +115,7 @@ export class BalanceRule extends Rule {
       // Decrease balance on prepare
       balance.update(BigInt(-amount))
       this.maybeSettle().catch()
-      logger.silly('balance decreased due to outgoing ilp fulfill', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
+      logger.debug('balance decreased due to outgoing ilp fulfill', { peerId: this.peer.id, amount, balance: this.balance.getValue().toString() })
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(peer, {}, balance.getValue().toNumber())
       this.stats.outgoingDataPacketValue.increment(peer, { result: 'fulfilled' }, + amount)
@@ -141,7 +140,7 @@ export class BalanceRule extends Rule {
     const bnSettleThreshold = settleThreshold ? BigInt(settleThreshold) : undefined
     const bnSettleTo = BigInt(settleTo)
     const balance = this.balance
-
+    logger.debug('deciding whether to settle for accountId=' + this.peer.id, { balance: balance.getValue().toString(), bnSettleThreshold: bnSettleThreshold ? bnSettleThreshold.toString() : 'undefined'})
     const settle = bnSettleThreshold && bnSettleThreshold > this.balance.getValue()
     if (!settle) return
 
@@ -153,7 +152,7 @@ export class BalanceRule extends Rule {
       logger.debug('balance for accountId=' + this.peer.id + ' increased due to outgoing settlement', { settleAmount: settleAmount.toString(), newBalance: balance.getValue().toString() })
       await this.settlementEngineInterface.doSettlement(this.peer.id, settleAmount, this.peer.assetScale)
     } catch (error) {
-      logger.error('Could not complete settlement for accountId=' + this.peer.id, { scale: this.peer.assetScale, balance: balance.getValue().toString(), settleAmount: settleAmount.toString() })
+      logger.error('Could not complete settlement for accountId=' + this.peer.id, { scale: this.peer.assetScale, balance: balance.getValue().toString(), settleAmount: settleAmount.toString(), error: error.message })
     }
   }
 
@@ -215,6 +214,7 @@ class SettlementEngineInterface {
   }
 
   async doSettlement (accountId: string, amount: bigint, scale: number): Promise<AxiosResponse> {
+    logger.debug('requesting SE to do settlement', { accountId, amount: amount.toString(), scale })
     const message = {
       amount: amount.toString(),
       scale

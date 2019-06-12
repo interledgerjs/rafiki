@@ -279,7 +279,11 @@ describe('Admin Api', function () {
         assetScale: 2,
         relation: 'peer',
         rules: [],
-        protocols: []
+        protocols: [],
+        settlement: {
+          ledgerAddress: 'rxxx',
+          url: 'http://localhost:4000'
+        }
       }
       const endpointInfo: EndpointInfo = {
         type: "http",

@@ -57,7 +57,7 @@ describe('Settlement Admin Api', function () {
   })
 
   describe('receiving a settlement from SE', function () {
-    it('adjusts interledger balance by prescribed amount', async () => {
+    it('decreases interledger balance by prescribed amount', async () => {
       const data = {
         amount: "10",
         scale: 9
@@ -66,7 +66,7 @@ describe('Settlement Admin Api', function () {
 
       await axios.post('http://localhost:4000/accounts/alice/settlement', data)
 
-      assert.equal(app.getBalance('alice').balance, '10')
+      assert.equal(app.getBalance('alice').balance, '-10')
     })
 
     it('converts between different asset scales', async () => {
