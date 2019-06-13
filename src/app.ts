@@ -25,8 +25,7 @@ import { Config } from './services'
 import { Balance, JSONBalanceSummary, InMemoryBalance } from './types'
 import { MIN_INT_64, MAX_INT_64, STATIC_CONDITION } from './constants'
 import { BalanceRule } from './rules'
-import BigNumber from 'bignumber.js';
-import { PeerNotFoundError } from './errors/peer-not-found-error';
+import { PeerNotFoundError } from './errors/peer-not-found-error'
 
 const logger = log.child({ component: 'App' })
 
@@ -256,12 +255,20 @@ export class App {
           if (!rule.minimum && !rule.maximum) {
             logger.warn(`(!!!) balance bounds NOT defined for peer, this peer can spend UNLIMITED funds peerId=${peerInfo.id}`)
           }
+          if (rule.settlement && !rule.settlement.url) {
+            logger.error('config error for peerId=' + peerInfo.id + '. Url for settlement engine needs to be a string')
+            throw new Error('config error for peerId=' + peerInfo.id + '. Url for settlement engine needs to be a string')
+          }
           const minimum = rule.minimum ? BigInt(rule.minimum) : MIN_INT_64
           const maximum = rule.maximum ? BigInt(rule.maximum) : MAX_INT_64
+          const settleTo = rule.settlement && rule.settlement.settleTo ? BigInt(rule.settlement.settleTo) : BigInt(0)
+          const settleThreshold = rule.settlement && rule.settlement.settleThreshold ? BigInt(rule.settlement.settleThreshold) : BigInt(0)
+          const url = rule.settlement && rule.settlement.url ? rule.settlement.url : ''
+          const settlementInfo = rule.settlement ? { url, settleTo, settleThreshold } : undefined
           logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum: minimum.toString(), maximum: maximum.toString(), initialBalance: '0' })
           const balance = new InMemoryBalance({ initialBalance: 0n, minimum, maximum, scale: peerInfo.assetScale }) // In future can get from a balance service
           this._balanceMap.set(peerInfo.id, balance)
-          return new BalanceRule({ peerInfo, stats: this.stats, balance })
+          return new BalanceRule({ peerInfo, stats: this.stats, balance }, settlementInfo)
         default:
           throw new Error('Rule identifier undefined')
       }

@@ -37,11 +37,7 @@ describe('ILDCP Rule', function () {
       {
         'name': 'ildcp',
       }
-    ],
-    settlement: {
-      url: 'http://test.settlement/ilp',
-      ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-    }
+    ]
   }
   beforeEach(async function () {
     ildcpServices = {

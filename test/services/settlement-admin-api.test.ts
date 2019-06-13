@@ -27,11 +27,7 @@ describe('Settlement Admin Api', function () {
     }],
     protocols: [{
       name: 'ildcp'
-    }],
-    settlement: {
-      url: 'http://test.settlement/ilp',
-      ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-    }
+    }]
   }
   const endpointInfo: EndpointInfo = {
     type: 'http',
@@ -77,7 +73,7 @@ describe('Settlement Admin Api', function () {
 
       await axios.post('http://localhost:4000/accounts/alice/settlement', data)
 
-      assert.equal(app.getBalance('alice').balance, '1000')
+      assert.equal(app.getBalance('alice').balance, '-1000')
     })
 
     it('returns a 404 for unknown accountId', async () => {

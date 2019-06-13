@@ -84,7 +84,7 @@ export class AdminApi {
       req.once('error', reject)
     })
 
-    const urlPrefix = (req.url || '').slice(0, -1).split('?')[0] + '$'
+    const urlPrefix = (req.url || '').split('?')[0] + '$'
     logger.debug('url prefix: ' + urlPrefix)
     const route = this.routes.find((route) =>
       route.method === req.method && urlPrefix.startsWith(route.match))

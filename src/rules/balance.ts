@@ -14,22 +14,34 @@ export interface BalanceRuleServices {
   balance: Balance
 }
 
+export interface SettlementInfo {
+  url: string,
+  settleTo: bigint
+  settleThreshold: bigint
+}
+
 export class BalanceRule extends Rule {
   private stats: Stats
   private balance: Balance
   private peer: PeerInfo
-  public settlementEngineInterface: SettlementEngineInterface
+  private settlementInfo?: SettlementInfo
+  public settlementEngineInterface?: SettlementEngineInterface
 
-  constructor ({ peerInfo, stats, balance }: BalanceRuleServices) {
+  constructor ({ peerInfo, stats, balance }: BalanceRuleServices, settlementInfo?: SettlementInfo) {
     super({})
     this.peer = peerInfo
     this.stats = stats
     this.balance = balance
-    this.settlementEngineInterface = new SettlementEngineInterface(peerInfo.settlement.url)
+    if (!settlementInfo) {
+      logger.warn('No settlement engine configured for peerId=' + peerInfo.id)
+    } else {
+      this.settlementInfo = settlementInfo
+      this.settlementEngineInterface = new SettlementEngineInterface(settlementInfo.url)
+    }
   }
 
   protected _startup = async () => {
-    this.settlementEngineInterface.addAccount(this.peer)
+    if (this.settlementEngineInterface) await this.settlementEngineInterface.addAccount(this.peer.id)
 
     // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
     // this.stats.balance.setValue(this.peer, {}, this.balance.getValue())
@@ -41,9 +53,20 @@ export class BalanceRule extends Rule {
 
     // Handle peer.settle
     if (destination.startsWith('peer.settle')) {
-      const response = await this.settlementEngineInterface.handleMessage(this.peer.id, request)
-      logger.debug('response from SE after forwarding it message' + JSON.stringify(response))
-      return response
+      if (this.settlementEngineInterface) {
+        const response = await this.settlementEngineInterface.receiveRequest(this.peer.id, request)
+        logger.debug('response from SE after forwarding it message' + response)
+        return response
+      } else {
+        logger.error('Cannot handle peer.settle message. No settlement engine configured for peerId=' + this.peer.id)
+        const reject: IlpReject = {
+          code: 'F00',
+          triggeredBy: 'peer.settle',
+          data: Buffer.allocUnsafe(0),
+          message: 'Failed to deliver message to SE'
+        }
+        return reject
+      }
     }
 
     // Ignore zero amount packets
@@ -128,7 +151,7 @@ export class BalanceRule extends Rule {
   }
 
   protected _shutdown = async () => {
-    this.settlementEngineInterface.removeAccount(this.peer.id)
+    if (this.settlementEngineInterface) await this.settlementEngineInterface.removeAccount(this.peer.id)
   }
 
   getStatus () {
@@ -136,21 +159,25 @@ export class BalanceRule extends Rule {
   }
 
   private async maybeSettle (): Promise<void> {
-    const { settleThreshold, settleTo = '0' } = this.peer.settlement
-    const bnSettleThreshold = settleThreshold ? BigInt(settleThreshold) : undefined
-    const bnSettleTo = BigInt(settleTo)
+    if (!this.settlementInfo || !this.settlementEngineInterface) {
+      logger.debug('Not deciding whether to settle for accountId=' + this.peer.id + '. No settlement engine configured.')
+      return
+    }
+
+    const settleTo: bigint = this.settlementInfo.settleTo
+    const settleThreshold: bigint = this.settlementInfo.settleThreshold
     const balance = this.balance
-    logger.debug('deciding whether to settle for accountId=' + this.peer.id, { balance: balance.getValue().toString(), bnSettleThreshold: bnSettleThreshold ? bnSettleThreshold.toString() : 'undefined'})
-    const settle = bnSettleThreshold && bnSettleThreshold > this.balance.getValue()
+    logger.debug('deciding whether to settle for accountId=' + this.peer.id, { balance: balance.getValue().toString(), bnSettleThreshold: settleThreshold ? settleThreshold.toString() : 'undefined' })
+    const settle = settleThreshold && settleThreshold > this.balance.getValue()
     if (!settle) return
 
-    const settleAmount = bnSettleTo - balance.getValue()
+    const settleAmount = settleTo - balance.getValue()
     logger.debug('settlement triggered for accountId=' + this.peer.id, { balance: balance.getValue().toString(), settleAmount: settleAmount.toString() })
 
     try {
+      await this.settlementEngineInterface.sendSettlement(this.peer.id, settleAmount, this.peer.assetScale)
       this.balance.update(settleAmount)
       logger.debug('balance for accountId=' + this.peer.id + ' increased due to outgoing settlement', { settleAmount: settleAmount.toString(), newBalance: balance.getValue().toString() })
-      await this.settlementEngineInterface.doSettlement(this.peer.id, settleAmount, this.peer.assetScale)
     } catch (error) {
       logger.error('Could not complete settlement for accountId=' + this.peer.id, { scale: this.peer.assetScale, balance: balance.getValue().toString(), settleAmount: settleAmount.toString(), error: error.message })
     }
@@ -165,33 +192,28 @@ class SettlementEngineInterface {
     this._url = url
   }
 
-  addAccount (peerInfo: PeerInfo) {
-    const rule = peerInfo.rules.find(rule => rule.name === 'balance')
-    if (!rule) {
-      logger.error('Failed to create account on settlement engine for peer=' + peerInfo.id, { peerInfo: peerInfo })
-      throw new Error('Balance rule needs to be defined to add account to settlement engine')
-    }
-
-    logger.info('Creating account on settlement engine for peer=' + peerInfo.id + ' endpoint:' + `${this._url}/accounts`)
-    axios.post(`${this._url}/accounts`, { id: peerInfo.id })
+  async addAccount (id: string) {
+    logger.info('Creating account on settlement engine for peer=' + id + ' endpoint:' + `${this._url}/accounts`)
+    return axios.post(`${this._url}/accounts`, { id })
     .then(response => {
       logger.info('Created account on settlement engine', { response: response.status })
     })
     .catch(error => {
-      logger.error('Failed to create account on settlement engine. Retrying in 5s', { response: error.response })
-      const timeout = setTimeout(() => this.addAccount(peerInfo), 5000)
+      logger.error('Failed to create account on settlement engine. Retrying in 5s', { accountId: id, responseStatus: error.response.status })
+      const timeout = setTimeout(() => this.addAccount(id), 5000)
       timeout.unref()
     })
   }
 
-  removeAccount (id: string) {
+  async removeAccount (id: string) {
     logger.info('Removing account on settlement engine', { accountId: id })
-    axios.delete(`${this._url}/accounts/${id}`).catch(error => {
-      logger.error('Failed to delete account on settlement engine for peer=' + id, { accountId: id, response: error.response })
+    return axios.delete(`${this._url}/accounts/${id}`).catch(error => {
+      console.log('failed to delete account' + id, 'url', `${this._url}/accounts/${id}`, 'error')
+      logger.error('Failed to delete account on settlement engine for peer=' + id, { accountId: id, responseStatus: error.response.status })
     })
   }
 
-  async handleMessage (accountId: string, packet: IlpPrepare): Promise<IlpReply> {
+  async receiveRequest (accountId: string, packet: IlpPrepare): Promise<IlpReply> {
     logger.debug('Forwarding packet onto settlement engine', { accountId, packet, url: `${this._url}/accounts/${accountId}/messages` })
     const bufferMessage = packet.data
     try {
@@ -213,7 +235,7 @@ class SettlementEngineInterface {
     }
   }
 
-  async doSettlement (accountId: string, amount: bigint, scale: number): Promise<AxiosResponse> {
+  async sendSettlement (accountId: string, amount: bigint, scale: number): Promise<AxiosResponse> {
     logger.debug('requesting SE to do settlement', { accountId, amount: amount.toString(), scale })
     const message = {
       amount: amount.toString(),

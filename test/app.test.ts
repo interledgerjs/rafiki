@@ -13,7 +13,7 @@ import { PeerInfo } from '../src/types/peer';
 import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
 import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
-import { EndpointInfo, Config, STATIC_FULFILLMENT, STATIC_CONDITION } from '../src'
+import { EndpointInfo, Config, STATIC_FULFILLMENT, STATIC_CONDITION, MAX_UINT_64, MAX_INT_64, MIN_INT_64 } from '../src'
 import { PeerNotFoundError } from '../src/errors/peer-not-found-error';
 
 const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
@@ -52,11 +52,7 @@ describe('Test App', function () {
     }],
     protocols: [{
       name: 'ildcp'
-    }],
-    settlement: {
-      url: 'http://localhost:4000',
-      ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-    }
+    }]
   }
   const endpointInfo: EndpointInfo = {
     type: 'http',
@@ -77,11 +73,7 @@ describe('Test App', function () {
     }],
     protocols: [{
       name: 'ildcp'
-    }],
-    settlement: {
-      url: 'http://localhost:4000',
-      ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-    }
+    }]
   }
   const parent2Info: PeerInfo = {
     id: 'drew',
@@ -94,11 +86,7 @@ describe('Test App', function () {
     }],
     protocols: [{
       name: 'ildcp'
-    }],
-    settlement: {
-      url: 'http://localhost:4000',
-      ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-    }
+    }]
   }
   const parent2EndpointInfo = {
     type: 'http',
@@ -312,11 +300,7 @@ describe('Test App', function () {
         }],
         protocols: [{
           name: 'ildcp'
-        }],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        }]
       }
       await app.addPeer(peerInfo, endpointInfo)
 
@@ -357,11 +341,7 @@ describe('Test App', function () {
         }],
         protocols: [{
           name: 'ildcp'
-        }],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        }]
       }
       await app.addPeer(peerInfo, endpointInfo)
 
@@ -389,11 +369,7 @@ describe('Test App', function () {
         }],
         protocols: [{
           name: 'ildcp'
-        }],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        }]
       }
       await app.addPeer(peerInfo, endpointInfo)
 
@@ -423,17 +399,18 @@ describe('Test App', function () {
         }],
         protocols: [{
           name: 'ildcp'
-        }],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        }]
       }
       await app.addPeer(peerInfo, endpointInfo)
 
       const balances = app.getBalances()
 
       assert.deepEqual(balances, {
+        'alice': {
+          balance: '0',
+          minimum: MIN_INT_64.toString(),
+          maximum: MAX_INT_64.toString()
+        },
         'drew': {
           balance: '0',
           minimum: '-10',

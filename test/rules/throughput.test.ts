@@ -40,11 +40,7 @@ describe('Throughput Rule', function () {
             incomingAmount: 100n
           }
         ],
-        protocols: [],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        protocols: []
       })
       throughputRule = new ThroughputRule(buckets)
     })
@@ -103,11 +99,7 @@ describe('Throughput Rule', function () {
             outgoingAmount: 100n
           }
         ],
-        protocols: [],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        protocols: []
       })
       throughputRule = new ThroughputRule(buckets)
     })
@@ -163,11 +155,7 @@ describe('Throughput Rule', function () {
             name: 'throughput'
           }
         ],
-        protocols: [],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        protocols: []
       })
       throughputRule = new ThroughputRule(buckets)
     })

@@ -11,7 +11,8 @@ const assert = Object.assign(Chai.assert, sinon.assert)
 describe('Connector and settlement engine linking', function () {
   let rafiki1: App
   let rafiki2: App
-  let mockSeServer: Mockttp
+  let mockSe1Server: Mockttp
+  let mockSe2Server: Mockttp
   const aliceInfo: PeerInfo = {
     id: 'alice',
     assetCode: 'XRP',
@@ -44,14 +45,13 @@ describe('Connector and settlement engine linking', function () {
         "name": "stats"
       },
       { 
-        "name": 'balance' 
+        "name": 'balance',
+        "settlement": {
+          "url": 'http://localhost:4000'
+        }
       }
     ],
-    relation: 'peer',
-    settlement: {
-      ledgerAddress: 'rxalice',
-      url: 'http://localhost:4000'
-    }
+    relation: 'peer'
   }
   const aliceEndpointInfo: EndpointInfo = {
     type: 'http',
@@ -89,14 +89,13 @@ describe('Connector and settlement engine linking', function () {
         "name": "stats"
       },
       { 
-        "name": 'balance' 
+        "name": 'balance',
+        "settlement": {
+          "url": 'http://localhost:4001'
+        }
       }
     ],
-    relation: 'peer',
-    settlement: {
-      ledgerAddress: 'rxbob',
-      url: 'http://localhost:4001'
-    }
+    relation: 'peer'
   }
   const bobEndpointInfo: EndpointInfo = {
     type: 'http',
@@ -108,24 +107,32 @@ describe('Connector and settlement engine linking', function () {
   config2.loadFromOpts({ ilpAddress: 'test.bob', http2ServerPort: 8084, peers: {} })
 
   beforeEach(async () => {
+    mockSe1Server = getLocal()
+    mockSe2Server = getLocal()
+    await mockSe1Server.start(4000)
+    await mockSe2Server.start(4001)
+    await mockSe1Server.post('/accounts').thenReply(200)
+    await mockSe2Server.post('/accounts').thenReply(200)
     rafiki1 = new App(config1)
     await rafiki1.addPeer(bobInfo, bobEndpointInfo)
     rafiki2 = new App(config2)
     await rafiki2.addPeer(aliceInfo, aliceEndpointInfo)
     await rafiki1.start()
     await rafiki2.start()
-    mockSeServer = getLocal()
-    mockSeServer.start(4000)
   })
 
   afterEach(async () => {
+    await mockSe1Server.delete('/accounts/alice').thenReply(200)
+    await mockSe2Server.delete('/accounts/bob').thenReply(200)
     rafiki1.shutdown()
     rafiki2.shutdown()
-    mockSeServer.stop()
+    await new Promise(resolve => setTimeout(() => resolve(), 100)) //wait for delete account requests to reach mock se
+    mockSe1Server.stop()
+    mockSe2Server.stop()
   })
 
   it('can send a message from one settlement engine to another', async function () {
-    const mockEndpoint = await mockSeServer.post('/accounts/alice/messages').thenReply(200, Buffer.from(''))
+    const mockEndpoint = await mockSe1Server.post('/accounts/alice/messages').thenReply(200, Buffer.from(''))
     const settlementConfigMessage = {
       type: 'config',
       data: {

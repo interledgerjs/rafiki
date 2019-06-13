@@ -156,11 +156,7 @@ describe('Admin Api', function () {
           minimum: '0',
           maximum: '400'
         }],
-        protocols: [],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        protocols: []
       }
       const aliceEndpointInfo: EndpointInfo = {
         type: 'http',
@@ -176,11 +172,7 @@ describe('Admin Api', function () {
           minimum: '0',
           maximum: '200'
         }],
-        protocols: [],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        protocols: []
       }
       const bobEndpointInfo: EndpointInfo = {
         type: 'http',
@@ -216,11 +208,7 @@ describe('Admin Api', function () {
         assetScale: 2,
         relation: 'peer',
         rules: [],
-        protocols: [],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        protocols: []
       }
       const endpointInfo: EndpointInfo = {
         type: 'http',
@@ -243,11 +231,7 @@ describe('Admin Api', function () {
         "rules": [],
         "protocols": [{
           name: 'ildcp'
-        }],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        }]
       }
       const endpointInfo: EndpointInfo = {
         "type": "plugin",
@@ -279,11 +263,7 @@ describe('Admin Api', function () {
         assetScale: 2,
         relation: 'peer',
         rules: [],
-        protocols: [],
-        settlement: {
-          ledgerAddress: 'rxxx',
-          url: 'http://localhost:4000'
-        }
+        protocols: []
       }
       const endpointInfo: EndpointInfo = {
         type: "http",

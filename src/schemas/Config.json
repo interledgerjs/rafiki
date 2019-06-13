@@ -85,27 +85,6 @@
               }
             },
             "required": ["type"]
-          },
-          "settlement": {
-            "description": "Information needed to communicate with a specified settlement engine and account details to use for settlement.",
-            "type": "object",
-            "properties": {
-              "url": { "type": "string" },
-              "ledgerAddress": { "type": "string" },
-              "settleThreshold": {
-                "description": "Balance (in this account's indivisible base units) numerically below which the connector will automatically initiate a settlement. The format is a string containing an integer (which may be prefixed with `-` to indicate a negative value) or `\"-Infinity\"`.",
-                "type": "string",
-                "pattern": "^(0|(-?[1-9][0-9]*|-Infinity))$"
-              },
-              "settleTo": {
-                "description": "Balance (in this account's indivisible base units) the connector will attempt to reach when settling. The format is an integer (which may be prefixed with `-` to indicate a negative value) as a string.",
-                "type": "string",
-                "pattern": "^(0|-?[1-9][0-9]*)$",
-                "default": "0"
-              }
-            },
-            "required": ["url", "ledgerAddress"],
-            "additionalProperties": false
           }
         },
         "required": [
@@ -115,8 +94,7 @@
           "assetScale",
           "rules",
           "protocols",
-          "endpoint",
-          "settlement"
+          "endpoint"
         ],
         "additionalProperties": false
       }

@@ -9,13 +9,7 @@ export interface PeerInfo {
   assetCode: string,
   assetScale: number,
   rules: RuleConfig[],
-  protocols: ProtocolConfig[],
-  settlement: {
-    url: string,
-    ledgerAddress: string
-    settleTo?: string
-    settleThreshold?: string
-  }
+  protocols: ProtocolConfig[]
 }
 export interface RuleConfig {
   name: string,

@@ -2,7 +2,6 @@ import createRouter, { Router, Joi } from 'koa-joi-router'
 import { create as createSettlement } from './controllers/accountSettlementController'
 import { create as sendMessage } from './controllers/accountMessageController'
 
-
 export function ApiRouter (): Router {
   const router = createRouter()
 

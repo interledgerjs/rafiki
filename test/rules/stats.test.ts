@@ -44,11 +44,7 @@ describe('Stats Rule', function () {
         assetScale: 2,
         assetCode: 'TEST',
         rules: [],
-        protocols: [],
-        settlement: {
-          url: 'http://test.settlement/ilp',
-          ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
-        }
+        protocols: []
       },
       stats
     })

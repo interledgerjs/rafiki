@@ -24,10 +24,6 @@ describe('Config', function () {
       endpoint: {
         type: 'http',
         url: 'http://localhost:8084'
-      },
-      settlement: {
-        url: 'http://test.settlement/ilp',
-        ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
       }
     },
     'eur-ledger': {
@@ -40,10 +36,6 @@ describe('Config', function () {
       endpoint: {
         type: 'http',
         url: 'http://localhost:8085'
-      },
-      settlement: {
-        url: 'http://test.settlement/ilp',
-        ledgerAddress: 'r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM'
       }
     }
   }

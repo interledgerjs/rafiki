@@ -78,10 +78,6 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
               }
             }
           }
-        },
-        "settlement": {
-          "url": "http://localhost:3000",
-          "ledgerAddress": "r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM"
         }
       },
       "client": {
@@ -134,10 +130,6 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
               }
             }
           }
-        },
-        "settlement": {
-          "url": "http://localhost:3000",
-          "ledgerAddress": "r4SJQA3bXPBK6bMBwZeRhwGRemoRX7WjeM"
         }
       }
     }
