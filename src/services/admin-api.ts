@@ -46,7 +46,8 @@ export class AdminApi {
       { method: 'GET', match: '/balance$', fn: this.getBalances },
       { method: 'POST', match: '/balance$', fn: this.updateBalance },
       { method: 'POST', match: '/peer$', fn: this.addPeer },
-      { method: 'GET', match: '/peer$', fn: this.getPeer }
+      { method: 'GET', match: '/peer$', fn: this.getPeer },
+      { method: 'GET', match: '/routes', fn: this.getRoutes }
     ]
 
     if (host) this.host = host
@@ -127,6 +128,10 @@ export class AdminApi {
 
   private async getBalances () {
     return this.settlementEngine.getStatus()
+  }
+
+  private async getRoutes () {
+    return this.app.connector.routingTable.getRoutingTable()
   }
 
   private async updateBalance (url: string, _data: object) {

@@ -1,10 +1,11 @@
 import { Rule, IlpRequestHandler, RuleRequestHandler } from '../../types/rule'
-import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet'
+import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpFulfill, IlpReject } from 'ilp-packet'
 import { deserializeCcpRouteUpdateRequest, serializeCcpResponse, deserializeCcpRouteControlRequest } from 'ilp-protocol-ccp'
 import { ForwardingRoutingTable, IncomingRoute, Relation } from 'ilp-routing'
 import { CcpSender } from './ccp-sender'
 import { CcpReceiver } from './ccp-receiver'
 import { log } from './../../winston'
+import { TemporaryApplicationError } from 'ilp-packet/dist/src/errors';
 const logger = log.child({ component: 'ccp-protocol' })
 export interface CcpMiddlewareServices {
   isSender: boolean,
@@ -75,16 +76,22 @@ export class CcpProtocol extends Rule {
     }
   }
 
-  // TODO: Fix to be synchronous and send a reject if attempt to do has failed
   async handleCcpRouteControlMessage (packet: IlpPrepare): Promise<IlpReply> {
-    this.ccpSender.handleRouteControl(deserializeCcpRouteControlRequest(serializeIlpPrepare(packet)))
-    return deserializeIlpFulfill(serializeCcpResponse())
+    try {
+      await this.ccpSender.handleRouteControl(deserializeCcpRouteControlRequest(serializeIlpPrepare(packet)))
+      return deserializeIlpFulfill(serializeCcpResponse())
+    } catch (error) {
+      throw new TemporaryApplicationError('Unable to handle CCP Route Control', Buffer.from(''))
+    }
   }
 
-  // TODO: Fix to be synchronous and send a reject if attempt to do has failed
   async handleCcpRouteUpdateMessage (packet: IlpPrepare): Promise<IlpReply> {
-    this.ccpReceiver.handleRouteUpdate(deserializeCcpRouteUpdateRequest(serializeIlpPrepare(packet)))
-    return deserializeIlpFulfill(serializeCcpResponse())
+    try {
+      await this.ccpReceiver.handleRouteUpdate(deserializeCcpRouteUpdateRequest(serializeIlpPrepare(packet)))
+      return deserializeIlpFulfill(serializeCcpResponse())
+    } catch (error) {
+      throw new TemporaryApplicationError('Unable to handle CCP Route Update', Buffer.from(''))
+    }
   }
 
   sendData (packet: IlpPrepare): Promise<IlpReply> {
