@@ -26,7 +26,6 @@ export class Config extends ConfigSchemaTyping {
   //   may not be set. However, when we construct a new Config instance, we load
   //   the defaults from the schema, so these *will* always be set. These
   //   declarations make TypeScript happy.
-  public store!: string
   public quoteExpiry!: number
   public routeExpiry!: number
   public minExpirationWindow!: number

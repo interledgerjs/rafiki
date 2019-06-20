@@ -3,8 +3,7 @@
 import * as winston from 'winston'
 import { App } from './app'
 import { AdminApi } from './services/admin-api'
-import { SettlementEngine } from './services/settlement-engine'
-import Redis from 'ioredis'
+import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { Config } from './index'
 
 // Logging
@@ -14,10 +13,6 @@ const formatter = winston.format.printf(({ service, level, message, component, t
   return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}` + (metaData ? ' meta data: ' + stringify(metaData) : '')
 })
 
-const SETTLEMENT_BALANCE_STREAM_KEY = process.env.SETTLEMENT_BALANCE_STREAM_KEY || 'balance'
-const SETTLEMENT_REDIS_HOST = process.env.SETTLEMENT_REDIS_HOST || '0.0.0.0'
-const SETTLEMENT_REDIS_PORT = Number(process.env.SETTLEMENT_REDIS_PORT) || 6379
-
 winston.configure({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
@@ -26,13 +21,25 @@ winston.configure({
     winston.format.align(),
     formatter
   ),
-  defaultMeta: { service: 'connector' },
+  defaultMeta: { service: 'rafiki' },
   transports: [
     new winston.transports.Console()
   ]
 })
 
-const start = async () => {
+const config = new Config()
+const app = new App(config)
+const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app })
+const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })
+
+export const gracefulShutdown = async () => {
+  winston.debug('shutting down.')
+  await app.shutdown()
+  adminApi.shutdown()
+  settlementAdminApi.shutdown()
+  winston.debug('completed graceful shutdown.')
+}
+export const start = async () => {
 
   let shuttingDown = false
   process.on('SIGINT', async () => {
@@ -46,10 +53,7 @@ const start = async () => {
       shuttingDown = true
 
       // Graceful shutdown
-      winston.debug('shutting down.')
-      await app.shutdown()
-      adminApi.shutdown()
-      winston.debug('completed graceful shutdown.')
+      await gracefulShutdown()
       process.exit(0)
     } catch (err) {
       const errInfo = (err && typeof err === 'object' && err.stack) ? err.stack : err
@@ -58,14 +62,10 @@ const start = async () => {
     }
   })
 
-  const config = new Config()
   config.loadFromEnv()
-  const app = new App(config)
-  const settlementEngine = new SettlementEngine({ streamKey: SETTLEMENT_BALANCE_STREAM_KEY, redisClient:  new Redis({ host: SETTLEMENT_REDIS_HOST, port: SETTLEMENT_REDIS_PORT }) })
-  const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app, settlementEngine })
-
   await app.start()
   adminApi.listen()
+  settlementAdminApi.listen()
 
   // load peers from config
   Object.keys(config.peers || {}).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))

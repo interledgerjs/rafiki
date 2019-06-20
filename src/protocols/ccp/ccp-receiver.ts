@@ -45,7 +45,8 @@ export class CcpReceiver {
     this.addRoute = addRoute
     this.removeRoute = removeRoute
     this.getRouteWeight = getRouteWeight
-    setInterval(this.shouldSendRouteControl.bind(this), 20 * 1000)
+    const interval = setInterval(this.shouldSendRouteControl.bind(this), 20 * 1000)
+    interval.unref()
   }
 
   bump (holdDownTime: number) {

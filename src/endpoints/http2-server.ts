@@ -13,7 +13,6 @@ export class Http2EndpointManager extends Map<string, Http2Endpoint> {
     server.on('stream', async (stream, headers, flags) => {
       const method = headers[':method']
       const path = headers[':path']
-
       // logger.silly('incoming http2 stream', { path, method })
 
       if (method !== 'POST' || typeof path === 'undefined') {

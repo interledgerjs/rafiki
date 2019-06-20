@@ -124,9 +124,21 @@
       "default": 7780
     },
     "adminApiHost": {
-      "description": "Host to bind to. Warning: The admin API interface is public by default: '0.0.0.0'",
+      "description": "Host for the admin api to bind to. Warning: The admin API interface is public by default: '0.0.0.0'",
       "type": "string",
       "default": "0.0.0.0"
+    },
+    "settlementAdminApiPort": {
+      "description": "Which port the settlement admin API should listen on. Default: 7781",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "default": 7781
+    },
+    "settlementAdminApiHost": {
+      "description": "Host for the settlement admin api to bind to. Note: The settlement admin API interface is private: '127.0.0.1'",
+      "type": "string",
+      "default": "127.0.0.1"
     },
     "routes": {
       "description": "Preconfigured routes to add to the connector's routing table.",
