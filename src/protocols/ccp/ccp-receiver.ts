@@ -45,10 +45,18 @@ export class CcpReceiver {
     this.addRoute = addRoute
     this.removeRoute = removeRoute
     this.getRouteWeight = getRouteWeight
+    setInterval(this.shouldSendRouteControl.bind(this), 20 * 1000)
   }
 
   bump (holdDownTime: number) {
-    this.expiry = Math.max(Date.now() + holdDownTime, this.expiry)
+    this.expiry = Date.now()
+  }
+
+  shouldSendRouteControl () {
+    logger.silly('Checking if need to send new route control')
+    if (Date.now() - this.expiry > 60 * 1000) {
+      this.sendRouteControl(true)
+    }
   }
 
   getStatus () {
@@ -58,7 +66,7 @@ export class CcpReceiver {
     }
   }
 
-  handleRouteUpdate ({
+  async handleRouteUpdate ({
     speaker,
     routingTableId,
     fromEpochIndex,
@@ -78,6 +86,7 @@ export class CcpReceiver {
     if (fromEpochIndex > this.epoch) {
       // There is a gap, we need to go back to the last epoch we have
       logger.silly('gap in routing updates', { expectedEpoch: this.epoch, actualFromEpoch: fromEpochIndex })
+      this.sendRouteControl(true) // TODO: test
       return []
     }
     if (this.epoch > toEpochIndex) {
@@ -115,13 +124,14 @@ export class CcpReceiver {
     logger.verbose('applied route update', { count: changedPrefixes.length, fromEpoch: fromEpochIndex, toEpoch: toEpochIndex })
   }
 
-  sendRouteControl = () => {
+  sendRouteControl = (sendOnce: boolean = false) => {
     const routeControl: CcpRouteControlRequest = {
       mode: Mode.MODE_SYNC,
       lastKnownRoutingTableId: this.routingTableId,
       lastKnownEpoch: this.epoch,
       features: []
     }
+    logger.silly('Sending Route Control message')
 
     this.sendData(deserializeIlpPrepare(serializeCcpRouteControlRequest(routeControl)))
       .then(packet => {
@@ -139,9 +149,11 @@ export class CcpReceiver {
         const errInfo = (err instanceof Object && err.stack) ? err.stack : err
         logger.debug('failed to set route control information on peer', { error: errInfo })
         // TODO: Should have more elegant, thought-through retry logic here
-        const retryTimeout = setTimeout(this.sendRouteControl, ROUTE_CONTROL_RETRY_INTERVAL)
+        if (!sendOnce) {
+          const retryTimeout = setTimeout(this.sendRouteControl, ROUTE_CONTROL_RETRY_INTERVAL)
+          retryTimeout.unref()
+        }
 
-        retryTimeout.unref()
       })
   }
 }

@@ -77,7 +77,7 @@ export class CcpSender {
     }
   }
 
-  handleRouteControl ({
+  async handleRouteControl ({
     mode,
     lastKnownRoutingTableId,
     lastKnownEpoch,
