@@ -22,11 +22,13 @@ export class ErrorHandlerRule extends Rule {
           const response = await next(request)
 
           if (!(isFulfill(response) || isReject(response))) {
+            logger.error('handler did not return a value.', { response: JSON.stringify(response) })
             throw new Error('handler did not return a value.')
           }
 
           return response
         } catch (e) {
+          console.log('error', e)
           let err = e
           if (!err || typeof err !== 'object') {
             err = new Error('Non-object thrown: ' + e)

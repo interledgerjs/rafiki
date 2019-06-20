@@ -6,11 +6,8 @@ import { AdminApi } from '../../src/services/admin-api'
 import axios from 'axios'
 import { PeerInfo } from '../../src/types/peer'
 import { App } from '../../src/app'
-import { SettlementEngine } from '../../src/services/settlement-engine'
 import { EndpointInfo, AuthFunction } from '../../src'
-import { Redis } from 'ioredis'
 import { Config } from '../../src'
-const RedisMock = require('ioredis-mock')
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -18,16 +15,12 @@ describe('Admin Api', function () {
 
   let app: App
   let adminApi: AdminApi
-  let settlementEngine: SettlementEngine
-  let redis: Redis
   const config = new Config()
-
+  
   beforeEach(function () {
     const authFunction: AuthFunction = (token: string) => Promise.resolve('bob') 
     app = new App(config, authFunction)
-    redis = new RedisMock()
-    settlementEngine = new SettlementEngine({ streamKey: 'balance', redisClient: redis })
-    adminApi = new AdminApi({},{ app, settlementEngine })
+    adminApi = new AdminApi({},{ app })
     adminApi.listen()
   })
 
@@ -38,8 +31,6 @@ describe('Admin Api', function () {
 
   it('starts an http server if admin api is true in config', async function (){
     try{
-      // stub redis status
-      redis.status = 'ready'
       const response = await axios.get('http://127.0.0.1:7780/health')
       assert.equal(response.data, "Status: ok")
       return
@@ -60,22 +51,7 @@ describe('Admin Api', function () {
   })
 
   describe('getHealth', function () {
-    it('returns 500 if settlement engine is not connected to redis', async function () {
-      try {
-        // stub redis status
-        redis.status = 'connecting'
-        await axios.get('http://127.0.0.1:7780/health')
-      }
-      catch  (error) {
-        assert.equal(error.response.status, 500)
-        return
-      }
-      assert.fail('Did not return expected error code')
-    })
-
-    it('returns 200 if settlement engine is connected to redis', async function () {
-      // stub redis status
-      redis.status = 'ready'
+    it('returns 200', async function () {
 
       const response = await axios.get('http://127.0.0.1:7780/health')
       
@@ -171,38 +147,56 @@ describe('Admin Api', function () {
 
   describe('getBalances', function () {
     it('returns balances and limits for all peers', async function () {
-      settlementEngine.setBalance('alice', 300n, 0n, 400n)
-      settlementEngine.setBalance('bob', 100n, 0n, 200n)
+      const alicePeerInfo: PeerInfo = {
+        id: 'alice',
+        assetCode: 'USD',
+        assetScale: 2,
+        relation: 'peer',
+        rules: [{
+          name: 'balance',
+          minimum: '0',
+          maximum: '400'
+        }],
+        protocols: []
+      }
+      const aliceEndpointInfo: EndpointInfo = {
+        type: 'http',
+        url: 'http://localhost:8084'
+      }
+      const bobPeerInfo: PeerInfo = {
+        id: 'bob',
+        assetCode: 'USD',
+        assetScale: 2,
+        relation: 'peer',
+        rules: [{
+          name: 'balance',
+          minimum: '0',
+          maximum: '200'
+        }],
+        protocols: []
+      }
+      const bobEndpointInfo: EndpointInfo = {
+        type: 'http',
+        url: 'http://localhost:8085'
+      }
       const expectedBalances = {
         'alice': {
-          'balance': '300',
+          'balance': '0',
           'minimum': '0',
           'maximum': '400'
         },
         'bob': {
-          'balance': '100',
+          'balance': '0',
           'minimum': '0',
           'maximum': '200'
         }
       }
+      await axios.post('http://127.0.0.1:7780/peer', { peerInfo: alicePeerInfo, endpointInfo: aliceEndpointInfo })
+      await axios.post('http://127.0.0.1:7780/peer', { peerInfo: bobPeerInfo, endpointInfo: bobEndpointInfo })
 
       const response = await axios.get('http://127.0.0.1:7780/balance')
 
       assert.deepEqual(response.data, expectedBalances)
-    })
-  })
-
-  describe('updateBalance', function ()  {
-    it('updates the balance of the specified peer and returns the balance', async function () {
-      settlementEngine.setBalance('alice', 100n, 0n, 400n)
-
-      const response = await axios.post('http://127.0.0.1:7780/balance', { peerId: 'alice', amountDiff: '100' })
-
-      assert.deepEqual(response.data, {
-        'balance': '200',
-        'minimum': '0',
-        'maximum': '400'
-      })      
     })
   })
 

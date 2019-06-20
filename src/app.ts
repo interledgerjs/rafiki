@@ -16,12 +16,16 @@ import { Stats } from './services/stats'
 import { ReduceExpiryRule } from './rules/reduce-expiry'
 import { EndpointInfo, EndpointManager, AuthFunction } from './endpoints'
 
-import { IlpReply, IlpPrepare } from 'ilp-packet'
+import { IlpReply, IlpPrepare, isReject } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
 import { Endpoint } from './types/endpoint'
 import { createServer, Http2Server } from 'http2'
 import { PluginEndpoint } from './legacy/plugin-endpoint'
 import { Config } from './services'
+import { Balance, JSONBalanceSummary, InMemoryBalance } from './types'
+import { MIN_INT_64, MAX_INT_64, STATIC_CONDITION } from './constants'
+import { BalanceRule } from './rules'
+import { PeerNotFoundError } from './errors/peer-not-found-error'
 
 const logger = log.child({ component: 'App' })
 
@@ -36,6 +40,7 @@ export class App {
   private _http2Server: Http2Server
   private _endpointManager: EndpointManager
   private _businessRulesMap: Map<string, Rule[]>
+  private _balanceMap: Map<string, Balance>
   private _config: Config
 
   /**
@@ -51,9 +56,8 @@ export class App {
     this._rateLimitBucketMap = new Map()
     this._throughputBucketsMap = new Map()
     this._businessRulesMap = new Map()
+    this._balanceMap = new Map()
     this._config = opts
-
-    if (opts.ilpAddress !== 'unknown') this.connector.addOwnAddress(opts.ilpAddress) // config loads ilpAddress as 'unknown' by default
 
     this._http2Server = createServer()
     this._endpointManager = new EndpointManager({
@@ -67,6 +71,7 @@ export class App {
     logger.info('starting connector....')
     logger.info('starting HTTP2 server on port ' + this._config.http2ServerPort)
     this._http2Server.listen(this._config.http2ServerPort)
+    if (this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) // config loads ilpAddress as 'unknown' by default
   }
 
   public connector: Connector
@@ -106,6 +111,7 @@ export class App {
     await this.connector.addPeer(peerInfo, wrapperEndpoint)
 
     if (endpoint instanceof PluginEndpoint) {
+      logger.info('Plugin endpoint connecting')
       endpoint.connect().catch(() => logger.error('Plugin endpoint failed to connect'))
     }
 
@@ -138,6 +144,60 @@ export class App {
 
   public getRules (peerId: string): Rule[] {
     return this._businessRulesMap.get(peerId) || []
+  }
+
+  public getBalance = (peerId: string): JSONBalanceSummary => {
+    const balance = this._balanceMap.get(peerId)
+
+    if (!balance) {
+      throw new Error(`Cannot find balance for peerId=${peerId}`)
+    }
+
+    return balance.toJSON()
+  }
+
+  public getBalances = () => {
+    let balances = {}
+    this._balanceMap.forEach((value, key) => balances[key] = value.toJSON())
+    return balances
+  }
+
+  public updateBalance = (peerId: string, amountDiff: bigint, scale: number): void => {
+    const balance = this._balanceMap.get(peerId)
+
+    if (!balance) {
+      throw new PeerNotFoundError(peerId)
+    }
+
+    const scaleDiff = balance.scale - scale
+    // TODO: update to check whether scaledAmountDiff is an integer
+    if (scaleDiff < 0) {
+      logger.warn('Could not adjust balance due to scale differences', { amountDiff, scale })
+      return
+    }
+
+    const scaleRatio = Math.pow(10, scaleDiff)
+    const scaledAmountDiff = amountDiff * BigInt(scaleRatio)
+
+    balance.update(scaledAmountDiff)
+  }
+
+  public forwardSettlementMessage = async (to: string, message: Buffer): Promise<Buffer> => {
+    logger.debug('Forwarding settlement message', { to, message: message.toString() })
+    const packet: IlpPrepare = {
+      amount: '0',
+      destination: 'peer.settle',
+      executionCondition: STATIC_CONDITION,
+      expiresAt: new Date(Date.now() + 60000),
+      data: message
+    }
+
+    const ilpReply = await this.connector.sendOutgoingRequest(to, packet)
+    if (isReject(ilpReply)) {
+      throw new Error('IlpPacket to settlement engine was rejected')
+    }
+
+    return ilpReply.data
   }
 
   public addRoute (targetPrefix: string, peerId: string) {
@@ -192,6 +252,24 @@ export class App {
           return new StatsRule({ stats: this.stats, peerInfo })
         case('alert'):
           return new AlertRule({ createAlert: (triggeredBy: string, message: string) => this.alerts.createAlert(peerInfo.id, triggeredBy, message) })
+        case('balance'):
+          if (!rule.minimum && !rule.maximum) {
+            logger.warn(`(!!!) balance bounds NOT defined for peer, this peer can spend UNLIMITED funds peerId=${peerInfo.id}`)
+          }
+          if (rule.settlement && !rule.settlement.url) {
+            logger.error('config error for peerId=' + peerInfo.id + '. Url for settlement engine needs to be a string')
+            throw new Error('config error for peerId=' + peerInfo.id + '. Url for settlement engine needs to be a string')
+          }
+          const minimum = rule.minimum ? BigInt(rule.minimum) : MIN_INT_64
+          const maximum = rule.maximum ? BigInt(rule.maximum) : MAX_INT_64
+          const settleTo = rule.settlement && rule.settlement.settleTo ? BigInt(rule.settlement.settleTo) : BigInt(0)
+          const settleThreshold = rule.settlement && rule.settlement.settleThreshold ? BigInt(rule.settlement.settleThreshold) : BigInt(0)
+          const url = rule.settlement && rule.settlement.url ? rule.settlement.url : ''
+          const settlementInfo = rule.settlement ? { url, settleTo, settleThreshold } : undefined
+          logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum: minimum.toString(), maximum: maximum.toString(), initialBalance: '0' })
+          const balance = new InMemoryBalance({ initialBalance: 0n, minimum, maximum, scale: peerInfo.assetScale }) // In future can get from a balance service
+          this._balanceMap.set(peerInfo.id, balance)
+          return new BalanceRule({ peerInfo, stats: this.stats, balance }, settlementInfo)
         default:
           throw new Error('Rule identifier undefined')
       }
