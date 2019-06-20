@@ -14,7 +14,7 @@ import { AlertRule, Alerts } from './rules/alert'
 import { TokenBucket } from './lib/token-bucket'
 import { Stats } from './services/stats'
 import { ReduceExpiryRule } from './rules/reduce-expiry'
-import { EndpointInfo, EndpointManager } from './endpoints'
+import { EndpointInfo, EndpointManager, AuthFunction } from './endpoints'
 
 import { IlpReply, IlpPrepare } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
@@ -42,7 +42,7 @@ export class App {
    * Instantiates an http2 server which handles posts to ilp/:peerId and passes the packet on to the appropriate peer's endpoint.
    * @param opts Options for the application
    */
-  constructor (opts: Config) {
+  constructor (opts: Config, authService: AuthFunction) {
 
     this.connector = new Connector()
     this.stats = new Stats()
@@ -57,7 +57,8 @@ export class App {
 
     this._http2Server = createServer()
     this._endpointManager = new EndpointManager({
-      http2Server: this._http2Server
+      http2Server: this._http2Server,
+      authService: authService
     })
 
   }

@@ -12,23 +12,23 @@ import { PeerInfo } from '../src/types/peer';
 import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
 import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
-import { EndpointInfo, Config } from '../src'
+import { EndpointInfo, Config, AuthFunction } from '../src'
 
-const post = (client: ClientHttp2Session, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
+const post = (client: ClientHttp2Session, authToken: string, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
       [constants.HTTP2_HEADER_SCHEME]: "http",
       [constants.HTTP2_HEADER_METHOD]: constants.HTTP2_METHOD_POST,
-      [constants.HTTP2_HEADER_PATH]: `/${path}`
+      [constants.HTTP2_HEADER_PATH]: `/${path}`,
+      [constants.HTTP2_HEADER_AUTHORIZATION]: `Bearer ${authToken}`
   })
 
-  req.write(body)
-  req.end()
+  req.end(body)
   let chunks: Array<Buffer> = []
   req.on('data', (chunk: Buffer) => {
       chunks.push(chunk)
   })
   req.on('end', () => {
-      resolve(Buffer.concat(chunks))
+      chunks.length > 0 ? resolve(Buffer.concat(chunks)) : reject()
   })
   req.on('error', (error) => reject(error))
 });
@@ -89,9 +89,21 @@ describe('Test App', function () {
   }
   const config = new Config()
   config.loadFromOpts({ ilpAddress: 'test.harry', http2ServerPort: 8083, peers: {} })
+  const authFunction = (token: string) => new Promise<string>((resolve, reject) => {
+    switch(token) {
+      case "aliceToken":
+        resolve('alice')
+      case "bobToken":
+          resolve('bob')
+      case "drew":
+          resolve('drewToken')
+      default:
+        reject()
+    }
+  })
 
   beforeEach(async () => {
-    app = new App(config)
+    app = new App(config, authFunction)
     await app.start()
     await app.addPeer(peerInfo, {
       type: 'http',
@@ -125,7 +137,7 @@ describe('Test App', function () {
       expiresAt: new Date(Date.now() + 34000)
     }
 
-    const result = deserializeIlpReply(await post(client, 'ilp/alice', serializeIlpPrepare(ilpPrepare)))
+    const result = deserializeIlpReply(await post(client, 'aliceToken' , 'ilp', serializeIlpPrepare(ilpPrepare)))
 
     assert.deepEqual(result, {
       data: Buffer.from(''),
@@ -190,7 +202,7 @@ describe('Test App', function () {
     it('inherits address from parent and uses default parent', async function () {
       const config = new Config()
       config.loadFromOpts({ http2ServerPort: 8082, peers: {} })
-      const newApp = new App(config)
+      const newApp = new App(config, authFunction)
       await newApp.start()
       const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
         const ildcpResponse: IldcpResponse = {
@@ -217,7 +229,7 @@ describe('Test App', function () {
       // parent 2 will have a higher relation weighting than parent 1. So when getOwnAdress is called, the address from parent 2 should be returned. But getOwnAddresses should return an array of addresses.
       const config = new Config()
       config.loadFromOpts({ http2ServerPort: 8082, peers: {} })
-      const newApp = new App(config)
+      const newApp = new App(config, authFunction)
       await newApp.start()
       const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
         const ildcpResponse: IldcpResponse = {

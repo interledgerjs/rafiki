@@ -10,6 +10,8 @@ export * from './http2'
 export * from './request-stream'
 export * from './request-stream-ws'
 
+export type AuthFunction = (token: string) => Promise<string>
+
 export interface PluginOpts {
   name: string,
   opts: {
@@ -25,7 +27,8 @@ export interface EndpointInfo {
 
 // TODO: Support other endpoint types
 export interface EndpointManagerServices {
-  http2Server?: Http2Server
+  http2Server?: Http2Server,
+  authService?: AuthFunction
 }
 
 export class EndpointManager {
@@ -34,9 +37,10 @@ export class EndpointManager {
   private _pluginEndpoints: Map<string, PluginEndpoint> = new Map()
   private _pluginStores: Map<string, InMemoryMapStore> = new Map()
 
-  constructor ({ http2Server }: EndpointManagerServices) {
+  constructor ({ http2Server, authService }: EndpointManagerServices) {
     if (http2Server) {
-      this._http2Endpoints = new Http2EndpointManager(http2Server)
+      if (!authService) throw new Error('Auth Service required for Http2 Endpoints')
+      this._http2Endpoints = new Http2EndpointManager(http2Server, authService)
     }
   }
 

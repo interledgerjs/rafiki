@@ -69,8 +69,9 @@ describe('Config', function () {
   
     it('can be used to create peers on app', async function () {
       const config = new Config()
+      const authFunction = (token: string) => Promise.resolve('')
       config.loadFromEnv()
-      const app = new App(config)
+      const app = new App(config, authFunction)
   
       Object.keys(config.peers).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))
   
