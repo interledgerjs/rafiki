@@ -5,7 +5,7 @@ import { ForwardingRoutingTable, IncomingRoute, Relation } from 'ilp-routing'
 import { CcpSender } from './ccp-sender'
 import { CcpReceiver } from './ccp-receiver'
 import { log } from './../../winston'
-import { TemporaryApplicationError } from 'ilp-packet/dist/src/errors';
+import { TemporaryApplicationError } from 'ilp-packet/dist/src/errors'
 const logger = log.child({ component: 'ccp-protocol' })
 export interface CcpMiddlewareServices {
   isSender: boolean,
