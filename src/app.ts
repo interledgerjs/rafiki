@@ -139,6 +139,21 @@ export class App {
     return this._businessRulesMap.get(peerId) || []
   }
 
+  public addRoute (targetPrefix: string, peerId: string) {
+    logger.info('adding route', { targetPrefix, peerId })
+    const peer = this.connector.routeManager.getPeer(peerId)
+    if (!peer) {
+      const msg = 'Cannot add route for unknown peerId=' + peerId
+      logger.error(msg)
+      throw new Error(msg)
+    }
+    this.connector.routeManager.addRoute({
+      peer: peerId,
+      prefix: targetPrefix,
+      path: []
+    })
+  }
+
   /**
    * Creates the business rules specified in the peer information. Custom rules should be added to the list.
    * @param peerInfo Peer information

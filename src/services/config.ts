@@ -79,7 +79,7 @@ export class Config extends ConfigSchemaTyping {
             try {
               config[key] = JSON.parse(envValue)
             } catch (err) {
-              logger.error('unable to parse config. key=%s', envKey)
+              logger.error('unable to parse config. key=%s' + envKey)
             }
             break
           case 'boolean':
@@ -96,7 +96,7 @@ export class Config extends ConfigSchemaTyping {
     }
 
     for (const key of unrecognizedEnvKeys) {
-      logger.warn('unrecognized environment variable. key=%s', key)
+      logger.warn('unrecognized environment variable. key=' + key)
     }
 
     this.validate(config)
@@ -117,6 +117,16 @@ export class Config extends ConfigSchemaTyping {
         : { message: 'unknown validation error', dataPath: '' }
       throw new InvalidJsonBodyError('config failed to validate. error=' + firstError.message + ' dataPath=' + firstError.dataPath, this._validate.errors || [])
     }
+
+    // check that a peer exists for preconfigured routes
+    const routes: {targetPrefix: string, peerId: string}[] = config['routes'] || []
+    routes.forEach(entry => {
+      if (!config['peers'][entry.peerId]) {
+        const err = 'No peer configured for pre-configured route: ' + JSON.stringify(entry)
+        logger.error(err)
+        throw new Error(err)
+      }
+    })
   }
 
   get (key: string) {

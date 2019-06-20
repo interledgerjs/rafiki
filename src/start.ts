@@ -69,6 +69,10 @@ const start = async () => {
 
   // load peers from config
   Object.keys(config.peers || {}).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))
+
+  // load pre-configured routes. Must be done after the pre-configured peers have been loaded.
+  const routes: {targetPrefix: string, peerId: string}[] = config['routes'] || []
+  routes.forEach(entry => app.addRoute(entry.targetPrefix, entry.peerId))
 }
 if (!module.parent) {
   start().catch(e => {
