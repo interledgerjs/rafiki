@@ -56,7 +56,8 @@ describe('Connector and settlement engine linking', function () {
   const aliceEndpointInfo: EndpointInfo = {
     type: 'http',
     httpOpts: {
-      peerUrl: 'http://localhost:8083/ilp/bob'
+      peerUrl: 'http://localhost:8083/ilp',
+      peerAuthToken: 'bob'
     }
   }
   const bobInfo: PeerInfo = {
@@ -102,7 +103,8 @@ describe('Connector and settlement engine linking', function () {
   const bobEndpointInfo: EndpointInfo = {
     type: 'http',
     httpOpts: {
-      peerUrl: 'http://localhost:8084/ilp/alice'
+      peerUrl: 'http://localhost:8084/ilp',
+      peerAuthToken: 'alice'
     }
   }
   const config1 = new Config()
@@ -117,9 +119,9 @@ describe('Connector and settlement engine linking', function () {
     await mockSe2Server.start(4001)
     await mockSe1Server.post('/accounts').thenReply(200)
     await mockSe2Server.post('/accounts').thenReply(200)
-    rafiki1 = new App(config1, (string) => Promise.resolve(''))
+    rafiki1 = new App(config1, (string) => Promise.resolve('bob'))
     await rafiki1.addPeer(bobInfo, bobEndpointInfo)
-    rafiki2 = new App(config2, (string) => Promise.resolve(''))
+    rafiki2 = new App(config2, (string) => Promise.resolve('alice'))
     await rafiki2.addPeer(aliceInfo, aliceEndpointInfo)
     await rafiki1.start()
     await rafiki2.start()
