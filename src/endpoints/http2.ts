@@ -23,7 +23,7 @@ export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
 
       this.path = url.pathname
       this.origin = url.origin
-      this.authToken = opts.peerAuthToken
+      this.authToken = opts.peerAuthToken || ''
 
       // Setup connection to the other side
       this.client = new Http2Client(this.origin, {

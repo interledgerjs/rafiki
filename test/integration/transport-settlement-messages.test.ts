@@ -55,7 +55,9 @@ describe('Connector and settlement engine linking', function () {
   }
   const aliceEndpointInfo: EndpointInfo = {
     type: 'http',
-    url: 'http://localhost:8083/ilp/bob'
+    httpOpts: {
+      peerUrl: 'http://localhost:8083/ilp/bob'
+    }
   }
   const bobInfo: PeerInfo = {
     id: 'bob',
@@ -99,7 +101,9 @@ describe('Connector and settlement engine linking', function () {
   }
   const bobEndpointInfo: EndpointInfo = {
     type: 'http',
-    url: 'http://localhost:8084/ilp/alice'
+    httpOpts: {
+      peerUrl: 'http://localhost:8084/ilp/alice'
+    }
   }
   const config1 = new Config()
   config1.loadFromOpts({ ilpAddress: 'test.alice', http2ServerPort: 8083, peers: {} })
