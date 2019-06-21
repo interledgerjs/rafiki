@@ -31,7 +31,9 @@ describe('Settlement Admin Api', function () {
   }
   const endpointInfo: EndpointInfo = {
     type: 'http',
-    'url': 'http://localhost:1234'
+    httpOpts: {
+      peerUrl: 'http://localhost:1234'
+    }
   }
 
   beforeEach(async function () {

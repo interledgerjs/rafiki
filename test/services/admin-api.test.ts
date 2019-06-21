@@ -161,7 +161,9 @@ describe('Admin Api', function () {
       }
       const aliceEndpointInfo: EndpointInfo = {
         type: 'http',
-        url: 'http://localhost:8084'
+        httpOpts: {
+          peerUrl: 'http://localhost:8084'
+        }
       }
       const bobPeerInfo: PeerInfo = {
         id: 'bob',
@@ -177,7 +179,9 @@ describe('Admin Api', function () {
       }
       const bobEndpointInfo: EndpointInfo = {
         type: 'http',
-        url: 'http://localhost:8085'
+        httpOpts: {
+          peerUrl: 'http://localhost:8085'
+        }
       }
       const expectedBalances = {
         'alice': {
@@ -213,7 +217,9 @@ describe('Admin Api', function () {
       }
       const endpointInfo: EndpointInfo = {
         type: 'http',
-        url: 'http://localhost:8084'
+        httpOpts: {
+          peerUrl: 'http://localhost:8084'
+        }
       }
 
       const response = await axios.post('http://127.0.0.1:7780/peer', { peerInfo, endpointInfo })
@@ -268,7 +274,9 @@ describe('Admin Api', function () {
       }
       const endpointInfo: EndpointInfo = {
         type: "http",
-        url: 'http://localhost:8084'
+        httpOpts: {
+          peerUrl: 'http://localhost:8085'
+        }
       }
       app.addPeer(peerInfo, endpointInfo)
       app.addRoute('test.rafiki.alice', 'alice')

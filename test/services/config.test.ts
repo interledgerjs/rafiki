@@ -23,7 +23,9 @@ describe('Config', function () {
       protocols: [],
       endpoint: {
         type: 'http',
-        url: 'http://localhost:8084'
+        httpOpts: {
+          peerUrl: 'http://localhost:8084'
+        }
       }
     },
     'eur-ledger': {
@@ -35,7 +37,9 @@ describe('Config', function () {
       protocols: [],
       endpoint: {
         type: 'http',
-        url: 'http://localhost:8085'
+        httpOpts: {
+          peerUrl: 'http://localhost:8085'
+        }
       }
     }
   }

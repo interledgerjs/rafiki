@@ -56,12 +56,16 @@ describe('Test App', function () {
   }
   const endpointInfo: EndpointInfo = {
     type: 'http',
-    'url': 'http://localhost:1234'
+    httpOpts: {
+      peerUrl: 'http://localhost:1234'
+    }
   }
 
   const parentEndpointInfo = {
     type: 'http',
-    url: 'http://localhost:8085'
+    httpOpts: {
+      peerUrl: 'http://localhost:8085'
+    }
   }
   const parentInfo: PeerInfo = {
     id: 'bob',
@@ -90,7 +94,9 @@ describe('Test App', function () {
   }
   const parent2EndpointInfo = {
     type: 'http',
-    url: 'http://localhost:8086'
+    httpOpts: {
+      peerUrl: 'http://localhost:8086'
+    }
   }
   const config = new Config()
   config.loadFromOpts({ ilpAddress: 'test.harry', http2ServerPort: 8083, peers: {} })
@@ -117,7 +123,9 @@ describe('Test App', function () {
     await app.start()
     await app.addPeer(peerInfo, {
       type: 'http',
-      url: 'http://localhost:8084'
+      httpOpts: {
+        peerUrl: 'http://localhost:8084' 
+      }
     } as EndpointInfo)
     client = connect('http://localhost:8083')
     aliceServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {

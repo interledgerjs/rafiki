@@ -67,8 +67,10 @@ describe('Endpoint Manager', function () {
       return new Promise(async (resolve) => {
         const req = client.request({ ':path': '/ilp', ':method': "POST", 'Authorization': 'Bearer myawesometoken' })
         const pluginEndpoint = endpointManager.createEndpoint('bob', {
-          'type': 'http',
-          'url': 'http://test.local/'
+          type: 'http',
+          httpOpts: {
+            peerUrl: 'http://test.local/'
+          }
         })
   
         pluginEndpoint.setIncomingRequestHandler((packet) => {

@@ -5,34 +5,41 @@ import { ServerHttp2Stream } from 'http2'
 import { IlpRequestHandler } from '../types/rule'
 import Http2Client from 'ilp-plugin-http/build/lib/http2' // TODO remove this dependency
 import { log } from '../winston'
+import { HttpOpts } from '.'
 const logger = log.child({ component: 'http2-endpoint' })
-export interface HttpEndpointOpts {
-  url: string
-}
 
 export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
 
   private client: Http2Client
   private path: string
   private origin: string
+  private authToken: string
 
   private _handler: IlpRequestHandler
 
-  constructor (opts: HttpEndpointOpts) {
-    const url = new URL(opts.url)
+  constructor (opts: HttpOpts) {
+    if (opts.peerUrl) {
+      const url = new URL(opts.peerUrl)
 
-    this.path = url.pathname
-    this.origin = url.origin
+      this.path = url.pathname
+      this.origin = url.origin
+      this.authToken = opts.peerAuthToken
 
-    // Setup connection to the other side
-    this.client = new Http2Client(this.origin, {
-      maxRequestsPerSession: 100
-    })
+      // Setup connection to the other side
+      this.client = new Http2Client(this.origin, {
+        maxRequestsPerSession: 100
+      })
+    }
   }
 
   private async sendIlpPacket (packet: Buffer): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
-      const result = await this.client.fetch(this.path, { method: 'POST', body: packet, headers: {} })
+      // No peerURL was set, cant send outgoing packet
+      if (!this.client) {
+        logger.error('No peer URL set for outgoing HTTP2 Endpoint')
+        reject()
+      }
+      const result = await this.client.fetch(this.path, { method: 'POST', body: packet, headers: { 'Authorization': `Bearer ${this.authToken}` } })
       resolve(result.buffer())
     })
   }
