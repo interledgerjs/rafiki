@@ -22,11 +22,11 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
   let amountReceived: number
 
   beforeEach(async function () {
-    port1 = await getPort()
-    port2 = await getPort()
-    port3 = await getPort()
-    port4 = await getPort()
-
+    port1 = 5050
+    port2 = 5051
+    port3 = 5052
+    port4 = 5053
+    
     const rafikiPeers = {
       "server": {
         "id": "server",

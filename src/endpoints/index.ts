@@ -10,6 +10,8 @@ export * from './http2'
 export * from './request-stream'
 export * from './request-stream-ws'
 
+export type AuthFunction = (token: string) => Promise<string>
+
 export interface PluginOpts {
   name: string,
   opts: {
@@ -17,15 +19,21 @@ export interface PluginOpts {
   }
 }
 
+export interface HttpOpts {
+  peerUrl?: string,
+  peerAuthToken?: string
+}
+
 export interface EndpointInfo {
   type: string,
-  url?: string,
-  pluginOpts?: PluginOpts
+  pluginOpts?: PluginOpts,
+  httpOpts?: HttpOpts
 }
 
 // TODO: Support other endpoint types
 export interface EndpointManagerServices {
-  http2Server?: Http2Server
+  http2Server?: Http2Server,
+  authService?: AuthFunction
 }
 
 export class EndpointManager {
@@ -34,9 +42,10 @@ export class EndpointManager {
   private _pluginEndpoints: Map<string, PluginEndpoint> = new Map()
   private _pluginStores: Map<string, InMemoryMapStore> = new Map()
 
-  constructor ({ http2Server }: EndpointManagerServices) {
+  constructor ({ http2Server, authService }: EndpointManagerServices) {
     if (http2Server) {
-      this._http2Endpoints = new Http2EndpointManager(http2Server)
+      if (!authService) throw new Error('Auth Service required for Http2 Endpoints')
+      this._http2Endpoints = new Http2EndpointManager(http2Server, authService)
     }
   }
 
@@ -46,14 +55,14 @@ export class EndpointManager {
    * @param endpointInfo info required to create the endpoint
    */
   public createEndpoint (peerId: string, endpointInfo: EndpointInfo): Endpoint<IlpPrepare, IlpReply> {
-    const { type, url } = endpointInfo
+    const { type } = endpointInfo
     switch (type) {
       case ('http'):
         if (this._http2Endpoints) {
-          if (!url) {
-            throw new Error('url needs to be specified to create an HTTP2 endpoint')
+          if (!endpointInfo.httpOpts) {
+            throw new Error('Http Options need to be specified for given user')
           }
-          const endpoint = new Http2Endpoint({ url })
+          const endpoint = new Http2Endpoint(endpointInfo.httpOpts)
           this._http2Endpoints.set(peerId, endpoint)
           return endpoint
         } else {

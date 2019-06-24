@@ -31,12 +31,14 @@ describe('Settlement Admin Api', function () {
   }
   const endpointInfo: EndpointInfo = {
     type: 'http',
-    'url': 'http://localhost:1234'
+    httpOpts: {
+      peerUrl: 'http://localhost:1234'
+    }
   }
 
   beforeEach(async function () {
     config = new Config()
-    app = new App(config)
+    app = new App(config, (string) => Promise.resolve(''))
     await app.addPeer(peerInfo, endpointInfo)
     settlementAdminApi = new SettlementAdminApi({}, { updateAccountBalance: app.updateBalance, getAccountBalance: app.getBalance, sendMessage: app.forwardSettlementMessage.bind(app)})
     settlementAdminApi.listen()

@@ -2,9 +2,10 @@
 
 import * as winston from 'winston'
 import { App } from './app'
-import { AdminApi } from './services/admin-api'
+import { AdminApi, AdminApiServices } from './services/admin-api'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { Config } from './index'
+import { AuthService } from './services/auth'
 
 // Logging
 // tslint:disable-next-line
@@ -28,8 +29,9 @@ winston.configure({
 })
 
 const config = new Config()
-const app = new App(config)
-const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app })
+const authService = new AuthService()
+const app = new App(config, authService.getPeerIdByToken.bind(authService))
+const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app, authService: authService } as AdminApiServices)
 const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })
 
 export const gracefulShutdown = async () => {

@@ -6,8 +6,9 @@ import { AdminApi } from '../../src/services/admin-api'
 import axios from 'axios'
 import { PeerInfo } from '../../src/types/peer'
 import { App } from '../../src/app'
-import { EndpointInfo } from '../../src'
+import { EndpointInfo, AuthFunction } from '../../src'
 import { Config } from '../../src'
+import { AuthService } from '../../src/services/auth';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -18,8 +19,10 @@ describe('Admin Api', function () {
   const config = new Config()
   
   beforeEach(function () {
-    app = new App(config)
-    adminApi = new AdminApi({},{ app })
+    const authService = new AuthService()
+    const authFunction: AuthFunction = (token: string) => Promise.resolve('bob') 
+    app = new App(config, authFunction)
+    adminApi = new AdminApi({},{ app, authService })
     adminApi.listen()
   })
 
@@ -160,7 +163,9 @@ describe('Admin Api', function () {
       }
       const aliceEndpointInfo: EndpointInfo = {
         type: 'http',
-        url: 'http://localhost:8084'
+        httpOpts: {
+          peerUrl: 'http://localhost:8084'
+        }
       }
       const bobPeerInfo: PeerInfo = {
         id: 'bob',
@@ -176,7 +181,9 @@ describe('Admin Api', function () {
       }
       const bobEndpointInfo: EndpointInfo = {
         type: 'http',
-        url: 'http://localhost:8085'
+        httpOpts: {
+          peerUrl: 'http://localhost:8085'
+        }
       }
       const expectedBalances = {
         'alice': {
@@ -212,7 +219,9 @@ describe('Admin Api', function () {
       }
       const endpointInfo: EndpointInfo = {
         type: 'http',
-        url: 'http://localhost:8084'
+        httpOpts: {
+          peerUrl: 'http://localhost:8084'
+        }
       }
 
       const response = await axios.post('http://127.0.0.1:7780/peer', { peerInfo, endpointInfo })
@@ -267,7 +276,9 @@ describe('Admin Api', function () {
       }
       const endpointInfo: EndpointInfo = {
         type: "http",
-        url: 'http://localhost:8084'
+        httpOpts: {
+          peerUrl: 'http://localhost:8085'
+        }
       }
       app.addPeer(peerInfo, endpointInfo)
       app.addRoute('test.rafiki.alice', 'alice')

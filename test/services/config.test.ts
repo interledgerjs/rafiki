@@ -23,7 +23,9 @@ describe('Config', function () {
       protocols: [],
       endpoint: {
         type: 'http',
-        url: 'http://localhost:8084'
+        httpOpts: {
+          peerUrl: 'http://localhost:8084'
+        }
       }
     },
     'eur-ledger': {
@@ -35,7 +37,9 @@ describe('Config', function () {
       protocols: [],
       endpoint: {
         type: 'http',
-        url: 'http://localhost:8085'
+        httpOpts: {
+          peerUrl: 'http://localhost:8085'
+        }
       }
     }
   }
@@ -69,8 +73,9 @@ describe('Config', function () {
   
     it('can be used to create peers on app', async function () {
       const config = new Config()
+      const authFunction = (token: string) => Promise.resolve('')
       config.loadFromEnv()
-      const app = new App(config)
+      const app = new App(config, authFunction)
   
       Object.keys(config.peers).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))
   
