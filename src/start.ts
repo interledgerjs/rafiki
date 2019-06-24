@@ -30,7 +30,7 @@ winston.configure({
 
 const config = new Config()
 const authService = new AuthService()
-const app = new App(config, authService.getPeerIdByToken)
+const app = new App(config, authService.getPeerIdByToken.bind(authService))
 const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app, authService: authService } as AdminApiServices)
 const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })
 
@@ -64,17 +64,17 @@ export const start = async () => {
     }
   })
 
-  // config.loadFromEnv()
+  config.loadFromEnv()
   await app.start()
   adminApi.listen()
   settlementAdminApi.listen()
 
   // load peers from config
-  // Object.keys(config.peers || {}).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))
+  Object.keys(config.peers || {}).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))
 
   // load pre-configured routes. Must be done after the pre-configured peers have been loaded.
-  // const routes: {targetPrefix: string, peerId: string}[] = config['routes'] || []
-  // routes.forEach(entry => app.addRoute(entry.targetPrefix, entry.peerId))
+  const routes: {targetPrefix: string, peerId: string}[] = config['routes'] || []
+  routes.forEach(entry => app.addRoute(entry.targetPrefix, entry.peerId))
 }
 if (!module.parent) {
   start().catch(e => {
