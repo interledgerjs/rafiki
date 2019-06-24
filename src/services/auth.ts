@@ -31,7 +31,7 @@ export class AuthService {
 
     if (peerId !== '') {
       console.log('setting peer token for', peerId)
-      this.setPeerToken(peerId, token)
+      await this.setPeerToken(peerId, token)
     }
 
     return token

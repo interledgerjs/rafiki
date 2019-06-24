@@ -5,7 +5,7 @@ import { App } from './app'
 import { AdminApi, AdminApiServices } from './services/admin-api'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { Config } from './index'
-import { AuthService } from './services/auth';
+import { AuthService } from './services/auth'
 
 // Logging
 // tslint:disable-next-line
