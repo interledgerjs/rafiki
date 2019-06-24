@@ -5,6 +5,7 @@ import { App } from './app'
 import { AdminApi, AdminApiServices } from './services/admin-api'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { Config } from './index'
+import { AuthService } from './services/auth';
 
 // Logging
 // tslint:disable-next-line
@@ -28,8 +29,9 @@ winston.configure({
 })
 
 const config = new Config()
-const app = new App(config, (token: string) => Promise.resolve(''))
-const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app } as AdminApiServices)
+const authService = new AuthService()
+const app = new App(config, authService.getPeerIdByToken)
+const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app, authService: authService } as AdminApiServices)
 const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })
 
 export const gracefulShutdown = async () => {
@@ -62,17 +64,17 @@ export const start = async () => {
     }
   })
 
-  config.loadFromEnv()
+  // config.loadFromEnv()
   await app.start()
   adminApi.listen()
   settlementAdminApi.listen()
 
   // load peers from config
-  Object.keys(config.peers || {}).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))
+  // Object.keys(config.peers || {}).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))
 
   // load pre-configured routes. Must be done after the pre-configured peers have been loaded.
-  const routes: {targetPrefix: string, peerId: string}[] = config['routes'] || []
-  routes.forEach(entry => app.addRoute(entry.targetPrefix, entry.peerId))
+  // const routes: {targetPrefix: string, peerId: string}[] = config['routes'] || []
+  // routes.forEach(entry => app.addRoute(entry.targetPrefix, entry.peerId))
 }
 if (!module.parent) {
   start().catch(e => {

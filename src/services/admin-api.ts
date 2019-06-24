@@ -4,6 +4,7 @@ import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server, createServer } from 'http'
 import { App } from '../app'
+import { AuthService } from './auth';
 const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
@@ -12,18 +13,21 @@ export interface AdminApiOptions {
 }
 
 export interface AdminApiServices {
-  app: App
+  app: App,
+  authService: AuthService
 }
 
 export class AdminApi {
   private _koa: Koa
   private app: App
+  private _auth: AuthService
   private server?: Server
   private host: string
   private port: number
 
-  constructor ({ host, port }: AdminApiOptions, { app }: AdminApiServices) {
+  constructor ({ host, port }: AdminApiOptions, { app, authService }: AdminApiServices) {
     this.app = app
+    this._auth = authService
     if (host) this.host = host
     if (port) this.port = port
   }
@@ -79,7 +83,8 @@ export class AdminApi {
         const peerInfo = ctx.request.body['peerInfo']
         const endpointInfo = ctx.request.body['endpointInfo']
         await this.app.addPeer(peerInfo, endpointInfo)
-        ctx.body = ''
+        console.log(peerInfo)
+        const token = await this._auth.generateAuthToken(peerInfo.id)
         ctx.response.status = 204
       }
     })
@@ -87,6 +92,16 @@ export class AdminApi {
       method: 'get',
       path: '/peer',
       handler: async (ctx: Context) => ctx.body = this.app.connector.getPeerList()
+    })
+    router.route({
+      method: 'get',
+      path: '/peers/:id/token',
+      handler: async (ctx: Context) => {
+        const token = await this._auth.getTokenByPeerId(ctx.params.id)
+        ctx.body = {
+          token
+        }
+      }
     })
     router.route({
       method: 'get',

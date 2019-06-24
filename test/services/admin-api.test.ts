@@ -8,6 +8,7 @@ import { PeerInfo } from '../../src/types/peer'
 import { App } from '../../src/app'
 import { EndpointInfo, AuthFunction } from '../../src'
 import { Config } from '../../src'
+import { AuthService } from '../../src/services/auth';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -18,9 +19,10 @@ describe('Admin Api', function () {
   const config = new Config()
   
   beforeEach(function () {
+    const authService = new AuthService()
     const authFunction: AuthFunction = (token: string) => Promise.resolve('bob') 
     app = new App(config, authFunction)
-    adminApi = new AdminApi({},{ app })
+    adminApi = new AdminApi({},{ app, authService })
     adminApi.listen()
   })
 
