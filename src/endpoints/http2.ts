@@ -79,6 +79,8 @@ export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
   }
 
   close () {
-    this.client.close()
+    if (this.client) {
+      this.client.close()
+    }
   }
 }
