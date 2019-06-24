@@ -266,8 +266,9 @@ export class App {
           const settleThreshold = rule.settlement && rule.settlement.settleThreshold ? BigInt(rule.settlement.settleThreshold) : BigInt(0)
           const url = rule.settlement && rule.settlement.url ? rule.settlement.url : ''
           const settlementInfo = rule.settlement ? { url, settleTo, settleThreshold } : undefined
-          logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum: minimum.toString(), maximum: maximum.toString(), initialBalance: '0' })
-          const balance = new InMemoryBalance({ initialBalance: 0n, minimum, maximum, scale: peerInfo.assetScale }) // In future can get from a balance service
+          const initialBalance = rule.initialBalance ? BigInt(rule.initialBalance) : 0n
+          logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum: minimum.toString(), maximum: maximum.toString(), initialBalance: initialBalance.toString() })
+          const balance = new InMemoryBalance({ initialBalance, minimum, maximum, scale: peerInfo.assetScale }) // In future can get from a balance service
           this._balanceMap.set(peerInfo.id, balance)
           return new BalanceRule({ peerInfo, stats: this.stats, balance }, settlementInfo)
         default:
