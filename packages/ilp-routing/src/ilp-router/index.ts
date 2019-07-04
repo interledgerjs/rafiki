@@ -5,20 +5,17 @@ import { canDragonFilter } from '../lib/dragon'
 import { Relation } from '../types/relation'
 import { sha256 } from '../lib/utils'
 
-/**
- * Terminology definitions
- * @param prefix equivalent to ILP address.
- */
-
 export class Router {
 
+  private globalPrefix: string
   private ownAddress: string
   private routingTable: RoutingTable
   private forwardingRoutingTable: ForwardingRoutingTable
 
-  constructor () {
+  constructor (globalPrefix: string = 'g') {
     this.routingTable = new RoutingTable()
     this.forwardingRoutingTable = new ForwardingRoutingTable()
+    this.globalPrefix = globalPrefix
   }
 
   setOwnAddress (address: string) {
@@ -84,9 +81,8 @@ export class Router {
     return false
   }
 
-  // TODO: Temp
   private getGlobalPrefix () {
-    return 'g'
+    return this.globalPrefix
   }
 
   /**
