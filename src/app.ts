@@ -26,7 +26,7 @@ import { Balance, JSONBalanceSummary, InMemoryBalance } from './types'
 import { MIN_INT_64, MAX_INT_64, STATIC_CONDITION } from './constants'
 import { BalanceRule } from './rules'
 import { PeerNotFoundError } from './errors/peer-not-found-error'
-import { Peer } from './models/peer'
+import { Peer } from './models/Peer'
 
 const logger = log.child({ component: 'App' })
 

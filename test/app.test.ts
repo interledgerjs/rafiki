@@ -16,10 +16,10 @@ import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
 import { EndpointInfo, Config, STATIC_FULFILLMENT, STATIC_CONDITION, MAX_UINT_64, MAX_INT_64, MIN_INT_64, AuthFunction } from '../src'
 import { PeerNotFoundError } from '../src/errors/peer-not-found-error';
 
-import { Peer } from '../src/models/peer'
-import { Rule } from '../src/models/rule'
-import { Protocol } from '../src/models/protocol'
-import { Endpoint } from '../src/models/endpoint'
+import { Peer } from '../src/models/Peer'
+import { Rule } from '../src/models/Rule'
+import { Protocol } from '../src/models/Protocol'
+import { Endpoint } from '../src/models/Endpoint'
 
 const post = (client: ClientHttp2Session, authToken: string, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({

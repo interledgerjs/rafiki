@@ -1,4 +1,5 @@
 import { Pojo, Model } from 'objection'
+import { object } from 'joi';
 
 export class Endpoint extends Model {
 
@@ -8,6 +9,7 @@ export class Endpoint extends Model {
 
   id!: number
   type!: string
+  options!: any
 
   static get jsonSchema () {
     return {
