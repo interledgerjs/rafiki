@@ -59,6 +59,8 @@ export class App {
     this._balanceMap = new Map()
     this._config = opts
 
+    this.connector.routingTable.setGlobalPrefix(this._config.env === 'production' ? 'g' : 'test')
+
     this._http2Server = createServer()
     this._endpointManager = new EndpointManager({
       http2Server: this._http2Server,

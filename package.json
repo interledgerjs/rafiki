@@ -57,7 +57,7 @@
     "ilp-plugin-xrp-paychan": "^2.4.1",
     "ilp-protocol-ccp": "^1.1.1",
     "ilp-protocol-ildcp": "^2.0.1",
-    "ilp-routing": "^20.0.1-beta.0",
+    "ilp-routing": "^20.0.1-beta.1",
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.2.1",
     "koa-joi-router": "^6.0.0",
