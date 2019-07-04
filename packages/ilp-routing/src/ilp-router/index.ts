@@ -12,10 +12,14 @@ export class Router {
   private routingTable: RoutingTable
   private forwardingRoutingTable: ForwardingRoutingTable
 
-  constructor (globalPrefix: string = 'g') {
+  constructor () {
     this.routingTable = new RoutingTable()
     this.forwardingRoutingTable = new ForwardingRoutingTable()
-    this.globalPrefix = globalPrefix
+    this.globalPrefix = 'g'
+  }
+
+  setGlobalPrefix (prefix: string) {
+    this.globalPrefix = prefix
   }
 
   setOwnAddress (address: string) {
