@@ -1,7 +1,7 @@
 import { log } from './winston'
 import { Rule, setPipelineReader } from './types/rule'
 import { Connector } from './connector'
-import { PeerInfo, RuleConfig } from './types/peer'
+import { PeerInfo, RuleConfig, PeerRelation } from './types/peer'
 import { ErrorHandlerRule } from './rules/error-handler'
 import { RateLimitRule, createRateLimitBucketForPeer } from './rules/rate-limit'
 import { MaxPacketAmountRule } from './rules/max-packet-amount'
@@ -26,6 +26,7 @@ import { Balance, JSONBalanceSummary, InMemoryBalance } from './types'
 import { MIN_INT_64, MAX_INT_64, STATIC_CONDITION } from './constants'
 import { BalanceRule } from './rules'
 import { PeerNotFoundError } from './errors/peer-not-found-error'
+import { Peer } from './models/peer'
 
 const logger = log.child({ component: 'App' })
 
@@ -72,8 +73,11 @@ export class App {
   public async start () {
     logger.info('starting connector....')
     logger.info('starting HTTP2 server on port ' + this._config.http2ServerPort)
-    this._http2Server.listen(this._config.http2ServerPort)
+
     if (this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) // config loads ilpAddress as 'unknown' by default
+
+    await this.loadFromDataStore()
+    this._http2Server.listen(this._config.http2ServerPort)
   }
 
   public connector: Connector
@@ -277,8 +281,35 @@ export class App {
           throw new Error('Rule identifier undefined')
       }
     }
-
     return peerInfo.rules.map(instantiateRule)
   }
 
+  private loadFromDataStore = async () => {
+    const peers = await Peer.query().eager('[rules,protocols,endpoint]')
+    peers.forEach(peer => {
+      const rules = peer['rules'].map((rule: RuleConfig) => {
+        return {
+          name: rule.name
+        }
+      })
+      const protocols = peer['protocols'].map((protocol: any) => {
+        return {
+          name: protocol.name
+        }
+      })
+      const peerInfo: PeerInfo = {
+        id: peer.id,
+        assetCode: peer.assetCode,
+        assetScale: peer.assetScale,
+        relation: peer.relation as PeerRelation,
+        rules: rules,
+        protocols: protocols
+      }
+      const endpointInfo: EndpointInfo = {
+        type: peer['endpoint'].type,
+        httpOpts: peer['endpoint'].options
+      }
+      this.addPeer(peerInfo, endpointInfo)
+    })
+  }
 }

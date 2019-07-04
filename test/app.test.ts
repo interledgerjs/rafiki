@@ -16,6 +16,11 @@ import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
 import { EndpointInfo, Config, STATIC_FULFILLMENT, STATIC_CONDITION, MAX_UINT_64, MAX_INT_64, MIN_INT_64, AuthFunction } from '../src'
 import { PeerNotFoundError } from '../src/errors/peer-not-found-error';
 
+import { Peer } from '../src/models/peer'
+import { Rule } from '../src/models/rule'
+import { Protocol } from '../src/models/protocol'
+import { Endpoint } from '../src/models/endpoint'
+
 const post = (client: ClientHttp2Session, authToken: string, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
       [constants.HTTP2_HEADER_SCHEME]: "http",
@@ -118,15 +123,18 @@ describe('Test App', function () {
     fulfillment: Buffer.alloc(32)
   }
 
+  before(async () => {
+    //Add Alice to DB
+    const alice = await Peer.query().insertAndFetch({ id: 'alice', assetCode: 'XRP', assetScale: 9, relation: 'child' })
+    await alice.$relatedQuery<Rule>('rules').insert({ name: 'errorHandler' })
+    await alice.$relatedQuery<Rule>('rules').insert({ name: 'balance' })
+    await alice.$relatedQuery<Protocol>('protocols').insert({ name: 'ildcp' })
+    await alice.$relatedQuery<Endpoint>('endpoint').insert({ type: 'http', options: { peerUrl: 'http://localhost:8084' }})
+  })
+
   beforeEach(async () => {
     app = new App(config, authFunction)
     await app.start()
-    await app.addPeer(peerInfo, {
-      type: 'http',
-      httpOpts: {
-        peerUrl: 'http://localhost:8084' 
-      }
-    } as EndpointInfo)
     client = connect('http://localhost:8083')
     aliceServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
       response.end(serializeIlpFulfill(aliceResponse))
@@ -152,6 +160,7 @@ describe('Test App', function () {
       executionCondition: Buffer.alloc(32),
       expiresAt: new Date(Date.now() + 34000)
     }
+    console.log(app.connector.routingTable.getRoutingTable())
 
     const result = deserializeIlpReply(await post(client, 'aliceToken' , 'ilp', serializeIlpPrepare(ilpPrepare)))
 
