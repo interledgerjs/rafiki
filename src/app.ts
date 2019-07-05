@@ -27,6 +27,8 @@ import { MIN_INT_64, MAX_INT_64, STATIC_CONDITION } from './constants'
 import { BalanceRule } from './rules'
 import { PeerNotFoundError } from './errors/peer-not-found-error'
 import { Peer } from './models/Peer'
+import Knex from 'knex'
+import { Model } from 'objection'
 
 const logger = log.child({ component: 'App' })
 
@@ -43,12 +45,13 @@ export class App {
   private _businessRulesMap: Map<string, Rule[]>
   private _balanceMap: Map<string, Balance>
   private _config: Config
+  private _knex: Knex
 
   /**
    * Instantiates an http2 server which handles posts to ilp/:peerId and passes the packet on to the appropriate peer's endpoint.
    * @param opts Options for the application
    */
-  constructor (opts: Config, authService: AuthFunction) {
+  constructor (opts: Config, authService: AuthFunction, knex: Knex) {
 
     this.connector = new Connector()
     this.stats = new Stats()
@@ -68,6 +71,7 @@ export class App {
       authService: authService
     })
 
+    this._knex = knex
   }
 
   public async start () {
@@ -285,7 +289,7 @@ export class App {
   }
 
   private loadFromDataStore = async () => {
-    const peers = await Peer.query().eager('[rules,protocols,endpoint]')
+    const peers = await Peer.query(this._knex).eager('[rules,protocols,endpoint]')
     peers.forEach(peer => {
       const rules = peer['rules'].map((rule: RuleConfig) => {
         return {

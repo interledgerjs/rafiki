@@ -7,19 +7,20 @@ import { App } from '../src/app'
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 
-import { connect, ClientHttp2Session, constants, createServer, Http2Server, Http2ServerRequest, Http2ServerResponse } from  'http2'
-import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill, IlpReject } from 'ilp-packet';
+import { connect, ClientHttp2Session, constants, createServer, Http2Server, Http2ServerRequest, Http2ServerResponse } from 'http2'
+import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
 import { PeerInfo } from '../src/types/peer';
 import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
 import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
-import { EndpointInfo, Config, STATIC_FULFILLMENT, STATIC_CONDITION, MAX_UINT_64, MAX_INT_64, MIN_INT_64, AuthFunction } from '../src'
+import { EndpointInfo, Config, STATIC_CONDITION, MAX_INT_64, MIN_INT_64 } from '../src'
 import { PeerNotFoundError } from '../src/errors/peer-not-found-error';
 
 import { Peer } from '../src/models/Peer'
 import { Rule } from '../src/models/Rule'
 import { Protocol } from '../src/models/Protocol'
 import { Endpoint } from '../src/models/Endpoint'
+import { DB } from './helpers/db';
 
 const post = (client: ClientHttp2Session, authToken: string, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -44,6 +45,7 @@ describe('Test App', function () {
   let client: ClientHttp2Session
   let aliceServer: Http2Server
   let app: App
+  let db: DB
   let mockSEServer: Mockttp
   const peerInfo: PeerInfo = {
     id: 'alice',
@@ -104,7 +106,7 @@ describe('Test App', function () {
     }
   }
   const config = new Config()
-  config.loadFromOpts({ ilpAddress: 'test.harry', http2ServerPort: 8083, peers: {} })
+  config.loadFromOpts({ ilpAddress: 'test.harry', http2ServerPort: 8083 })
   const authFunction = (token: string) => new Promise<string>((resolve, reject) => {
     switch(token) {
       case "aliceToken":
@@ -124,16 +126,21 @@ describe('Test App', function () {
   }
 
   before(async () => {
-    //Add Alice to DB
-    const alice = await Peer.query().insertAndFetch({ id: 'alice', assetCode: 'XRP', assetScale: 9, relation: 'child' })
-    await alice.$relatedQuery<Rule>('rules').insert({ name: 'errorHandler' })
-    await alice.$relatedQuery<Rule>('rules').insert({ name: 'balance' })
-    await alice.$relatedQuery<Protocol>('protocols').insert({ name: 'ildcp' })
-    await alice.$relatedQuery<Endpoint>('endpoint').insert({ type: 'http', options: { peerUrl: 'http://localhost:8084' }})
+    db = new DB()
+    await db.setup()
+    const alice = await Peer.query(db.knex()).insertAndFetch({ id: 'alice', assetCode: 'XRP', assetScale: 9, relation: 'child' })
+    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'errorHandler' })
+    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance' })
+    await alice.$relatedQuery<Protocol>('protocols', db.knex()).insert({ name: 'ildcp' })
+    await alice.$relatedQuery<Endpoint>('endpoint', db.knex()).insert({ type: 'http', options: { peerUrl: 'http://localhost:8084' }})
+  })
+
+  after(async () => {
+    await db.teardown()
   })
 
   beforeEach(async () => {
-    app = new App(config, authFunction)
+    app = new App(config, authFunction, db.knex())
     await app.start()
     client = connect('http://localhost:8083')
     aliceServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
@@ -160,7 +167,6 @@ describe('Test App', function () {
       executionCondition: Buffer.alloc(32),
       expiresAt: new Date(Date.now() + 34000)
     }
-    console.log(app.connector.routingTable.getRoutingTable())
 
     const result = deserializeIlpReply(await post(client, 'aliceToken' , 'ilp', serializeIlpPrepare(ilpPrepare)))
 

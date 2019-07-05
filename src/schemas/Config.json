@@ -17,88 +17,6 @@
       "pattern": "^[a-zA-Z0-9._~-]+$",
       "default": "unknown"
     },
-    "peers": {
-      "description": "Description of connector account plugins.",
-      "type": "object",
-      "default": {},
-      "additionalProperties": {
-        "description": "Description of individual account.",
-        "type": "object",
-        "properties": {
-          "id": { "type":"string" },
-          "relation": {
-            "description": "Relationship between the connector and the counterparty that the account is with.",
-            "enum": ["parent", "peer", "child"]
-          },
-          "relationWeight": {
-            "description": "Weighting to use in the routing table for this counterparty. Intended to be used when there are multiple parents from which to inherit an address from. The weighting will determine which address will be returned as this connectors address.",
-            "type": "integer",
-            "minimum": 0
-          },
-          "assetCode": {
-            "description": "Currency code or other asset identifier that will be passed to the backend to select the correct rate for this account.",
-            "type": "string"
-          },
-          "assetScale": {
-            "description": "Interledger amounts are integers, but most currencies are typically represented as fractional units, e.g. cents. This property defines how many Interledger units make up one regular units. For dollars, this would usually be set to 9, so that Interledger amounts are expressed in nanodollars.",
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 255
-          },
-          "rules": {
-            "description": "The business rules that should be used for this peer.",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": { "type": "string" }
-              },
-              "required": ["name"]
-            },
-            "default": []
-          },
-          "protocols": {
-            "description": "The protocols that connector should apply for this peer.",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": { "type": "string" }
-              },
-              "required": ["name"]
-            },
-            "default": []
-          },
-          "endpoint": {
-            "description": "Information to describe which endpoint to use for this peer",
-            "type": "object",
-            "properties": {
-              "type": { "type": "string" },
-              "url": { "type": "string" },
-              "pluginOpts": {
-                "type":"object",
-                "properties": {
-                  "name": { "type": "string" },
-                  "opts": { "type": "object" }
-                },
-                "required": ["name", "opts"]
-              }
-            },
-            "required": ["type"]
-          }
-        },
-        "required": [
-          "id",
-          "relation",
-          "assetCode",
-          "assetScale",
-          "rules",
-          "protocols",
-          "endpoint"
-        ],
-        "additionalProperties": false
-      }
-    },
     "minExpirationWindow": {
       "description": "Minimum time the connector wants to budget for getting a message to the accounts its trading on. In milliseconds.",
       "type": "integer",
@@ -164,6 +82,5 @@
       }
     }
   },
-  "required": ["peers"],
   "additionalProperties": false
 }

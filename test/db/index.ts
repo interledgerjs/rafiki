@@ -11,7 +11,6 @@ setTimeout(() => {
 
   before(async function () {
     try {
-      console.log("INITIALIZE DATABASE")
       // Initialize knex.
       knex = Knex({
         ...knexConfig.testing,

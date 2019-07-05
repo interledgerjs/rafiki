@@ -35,7 +35,6 @@ export class Config extends ConfigSchemaTyping {
   public ilpAddress!: string
 
   protected _validate: Ajv.ValidateFunction
-  protected _validatePeer: Ajv.ValidateFunction
 
   constructor () {
     super()
@@ -43,7 +42,6 @@ export class Config extends ConfigSchemaTyping {
     this.loadDefaults()
 
     this._validate = ajv.compile(configSchema)
-    this._validatePeer = ajv.compile(configSchema.properties.peers.additionalProperties)
   }
 
   loadDefaults () {
