@@ -2,16 +2,17 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { getLocal, Mockttp } from 'mockttp'
+import {getLocal, Mockttp} from 'mockttp'
+import {IlpFulfill, IlpPrepare, IlpReject, isFulfill, isReject} from 'ilp-packet'
+import {PeerInfo} from '../../src/types/peer'
+import {BalanceRule} from '../../src/rules/balance'
+import {Stats} from '../../src/services/stats'
+import {setPipelineReader} from '../../src/types/rule'
+import {MAX_UINT_64, STATIC_CONDITION} from '../../src/constants'
+import {InMemoryBalance} from '../../src'
+
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { IlpPrepare, IlpReject, IlpFulfill, isFulfill, isReject } from 'ilp-packet'
-import { PeerInfo } from '../../src/types/peer'
-import { BalanceRule } from '../../src/rules/balance'
-import { Stats } from '../../src/services/stats'
-import { setPipelineReader } from '../../src/types/rule'
-import { MAX_UINT_64, STATIC_CONDITION, STATIC_FULFILLMENT } from '../../src/constants'
-import { InMemoryBalance } from '../../src'
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 

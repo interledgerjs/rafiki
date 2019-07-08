@@ -2,11 +2,11 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { EchoProtocol } from '../../src/protocols/echo'
-import { setPipelineReader } from '../../src/types/rule'
-import { IlpPrepare, IlpReply, IlpFulfill } from 'ilp-packet'
-import { Writer } from 'oer-utils'
-import { InvalidPacketError } from 'ilp-packet/dist/src/errors';
+import {EchoProtocol} from '../../src/protocols'
+import {setPipelineReader} from '../../src/types'
+import {IlpFulfill, IlpPrepare, IlpReply} from 'ilp-packet'
+import {Writer} from 'oer-utils'
+import {InvalidPacketError} from 'ilp-packet/dist/src/errors'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

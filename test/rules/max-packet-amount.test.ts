@@ -2,11 +2,12 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
+import {Errors, IlpFulfill, IlpPrepare, isFulfill} from 'ilp-packet'
+import {MaxPacketAmountRule} from '../../src/rules/max-packet-amount'
+import {setPipelineReader} from '../../src/types/rule'
+
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { IlpPrepare, IlpFulfill, isFulfill, Errors } from 'ilp-packet';
-import { MaxPacketAmountRule } from '../../src/rules/max-packet-amount'
-import { setPipelineReader } from '../../src/types/rule';
 const { AmountTooLargeError } = Errors
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT

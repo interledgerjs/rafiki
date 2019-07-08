@@ -2,11 +2,11 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { SettlementAdminApi } from '../../src/services/settlement-admin-api/settlement-admin-api'
+import {SettlementAdminApi} from '../../src/services/settlement-admin-api/settlement-admin-api'
 import axios from 'axios'
-import { App, PeerInfo, EndpointInfo, Config, STATIC_FULFILLMENT, STATIC_CONDITION } from '../../src'
-import { IlpFulfill } from 'ilp-packet'
-import { DB } from '../helpers/db';
+import {App, Config, EndpointInfo, PeerInfo, STATIC_CONDITION, STATIC_FULFILLMENT} from '../../src'
+import {IlpFulfill} from 'ilp-packet'
+import {DB} from '../helpers/db'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

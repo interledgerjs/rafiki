@@ -1,5 +1,5 @@
-import { EventEmitter } from 'events'
-import { DataHandler, MoneyHandler, PluginInstance } from '../../src/legacy/plugin'
+import {EventEmitter} from 'events'
+import {DataHandler, MoneyHandler, PluginInstance} from '../../src/legacy/plugin'
 
 export class MockPlugin extends EventEmitter implements PluginInstance {
 

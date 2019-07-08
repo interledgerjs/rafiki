@@ -1,4 +1,5 @@
 import Knex from 'knex'
+
 const knexConfig = require('../../knexfile.js')
 
 export class DB {

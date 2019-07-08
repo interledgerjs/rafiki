@@ -2,12 +2,13 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { App, Config, PeerInfo, EndpointInfo } from '../../src'
-const PluginHttp = require('ilp-plugin-http')
-import { createConnection, Server, DataAndMoneyStream } from 'ilp-protocol-stream'
+import {App, Config, EndpointInfo, PeerInfo} from '../../src'
+import {createConnection, DataAndMoneyStream, Server} from 'ilp-protocol-stream'
 import crypto from 'crypto'
-import { AuthService } from '../../src/services/auth'
-import { DB } from '../helpers/db'
+import {AuthService} from '../../src/services/auth'
+import {DB} from '../helpers/db'
+
+const PluginHttp = require('ilp-plugin-http')
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

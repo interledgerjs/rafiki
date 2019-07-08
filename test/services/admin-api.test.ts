@@ -2,14 +2,13 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { AdminApi } from '../../src/services/admin-api'
+import {AdminApi} from '../../src/services'
 import axios from 'axios'
-import { PeerInfo } from '../../src/types/peer'
-import { App } from '../../src/app'
-import { EndpointInfo, AuthFunction } from '../../src'
-import { Config } from '../../src'
-import { AuthService } from '../../src/services/auth';
-import { DB } from '../helpers/db'
+import {PeerInfo} from '../../src/types'
+import {App} from '../../src'
+import {AuthFunction, Config, EndpointInfo} from '../../src'
+import {AuthService} from '../../src/services/auth'
+import {DB} from '../helpers/db'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

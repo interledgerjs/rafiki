@@ -1,10 +1,10 @@
-import { Rule, IlpRequestHandler, RuleRequestHandler } from '../../types/rule'
-import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpFulfill, IlpReject } from 'ilp-packet'
+import { Rule, IlpRequestHandler, RuleRequestHandler } from '../../types'
+import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet'
 import { deserializeCcpRouteUpdateRequest, serializeCcpResponse, deserializeCcpRouteControlRequest } from 'ilp-protocol-ccp'
 import { ForwardingRoutingTable, IncomingRoute, Relation } from 'ilp-routing'
 import { CcpSender } from './ccp-sender'
 import { CcpReceiver } from './ccp-receiver'
-import { log } from './../../winston'
+import { log } from '../../winston'
 import { TemporaryApplicationError } from 'ilp-packet/dist/src/errors'
 const logger = log.child({ component: 'ccp-protocol' })
 export interface CcpMiddlewareServices {

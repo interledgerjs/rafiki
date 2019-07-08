@@ -1,5 +1,5 @@
-import { Rule } from "../../src/types/rule";
-import { IlpPrepare, IlpReply } from "ilp-packet";
+import {Rule} from "../../src/types"
+import {IlpPrepare, IlpReply} from "ilp-packet"
 
 export class MockRule extends Rule {
 

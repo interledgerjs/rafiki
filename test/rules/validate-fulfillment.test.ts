@@ -2,8 +2,8 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { ValidateFulfillmentRule } from '../../src/rules/validate-fulfillment'
-import { setPipelineReader } from '../../src/types/rule';
+import {ValidateFulfillmentRule} from '../../src/rules'
+import {setPipelineReader} from '../../src/types'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

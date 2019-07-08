@@ -2,11 +2,11 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { PluginEndpoint } from '../../src/legacy/plugin-endpoint'
-import { PluginInstance } from '../../src/legacy/plugin';
-import { Endpoint } from '../../src/types/endpoint';
-import { IlpPrepare, IlpReply, serializeIlpReply, deserializeIlpPrepare, IlpFulfill } from 'ilp-packet';
-import { MockPlugin } from '../mocks/mockPlugin';
+import {PluginEndpoint} from '../../src'
+import {PluginInstance} from '../../src/legacy/plugin'
+import {Endpoint} from '../../src/types'
+import {deserializeIlpPrepare, IlpFulfill, IlpPrepare, IlpReply, serializeIlpReply} from 'ilp-packet'
+import {MockPlugin} from '../mocks/mockPlugin'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
