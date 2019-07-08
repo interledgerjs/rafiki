@@ -5,7 +5,7 @@ export class DB {
   private _knex: Knex
 
   constructor() {
-    this._knex = Knex(knexConfig.testing)
+    this._knex = Knex(knexConfig.test)
   }
 
   async setup () {

@@ -83,7 +83,6 @@ export class AdminApi {
         const peerInfo = ctx.request.body['peerInfo']
         const endpointInfo = ctx.request.body['endpointInfo']
         await this.app.addPeer(peerInfo, endpointInfo)
-        console.log(peerInfo)
         const token = await this._auth.generateAuthToken(peerInfo.id)
         ctx.response.status = 204
       }

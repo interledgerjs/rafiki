@@ -21,6 +21,8 @@ import { Rule } from '../src/models/Rule'
 import { Protocol } from '../src/models/Protocol'
 import { Endpoint } from '../src/models/Endpoint'
 import { DB } from './helpers/db';
+import { Route } from '../src/models/Route'
+import { Model } from 'objection'
 
 const post = (client: ClientHttp2Session, authToken: string, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -133,6 +135,8 @@ describe('Test App', function () {
     await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance' })
     await alice.$relatedQuery<Protocol>('protocols', db.knex()).insert({ name: 'ildcp' })
     await alice.$relatedQuery<Endpoint>('endpoint', db.knex()).insert({ type: 'http', options: { peerUrl: 'http://localhost:8084' }})
+    // load routes into db
+    await Route.query(db.knex()).insertAndFetch({ peerId: 'alice', targetPrefix: 'test.other.rafiki.bob' })
   })
 
   after(async () => {
@@ -173,6 +177,29 @@ describe('Test App', function () {
     assert.deepEqual(result, {
       data: Buffer.from(''),
       fulfillment: Buffer.alloc(32)
+    })
+  })
+
+  it('loads routes from db', async () => {
+    const routes = app.connector.routingTable.getRoutingTable()
+
+    assert.deepEqual(routes.get('test.other.rafiki.bob'), { nextHop: 'alice', path: [], weight: undefined, auth: undefined })
+  })
+
+  describe('add route', function () {
+    it('stores route in db if store is true', async () => {
+      app.addRoute('test.other.rafiki.drew', 'alice', true)
+
+      const route = await Route.query(db.knex()).where('targetPrefix', 'test.other.rafiki.drew')
+      assert.equal(route[0].peerId, 'alice')
+      assert.equal(route[0].targetPrefix, 'test.other.rafiki.drew')
+    })
+
+    it('does not store route in db if store is false', async () => {
+      app.addRoute('test.other.rafiki.fred', 'alice', false)
+
+      const route = await Route.query(db.knex()).where('targetPrefix', 'test.other.rafiki.fred')
+      assert.isEmpty(route)
     })
   })
 
@@ -230,10 +257,12 @@ describe('Test App', function () {
       sinon.assert.calledOnce(startSpy)
     })
 
-    it('inherits address from parent and uses default parent', async function () {
+    it('inherits address from parent', async function () {
       const config = new Config()
-      config.loadFromOpts({ http2ServerPort: 8082, peers: {} })
-      const newApp = new App(config, authFunction)
+      config.loadFromOpts({ http2ServerPort: 8082 })
+      const newDB = new DB()
+      await newDB.setup()
+      const newApp = new App(config, authFunction, newDB.knex())
       await newApp.start()
       const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
         const ildcpResponse: IldcpResponse = {
@@ -247,20 +276,23 @@ describe('Test App', function () {
       parentServer.listen(8085)
       
       assert.equal(newApp.connector.getOwnAddress(), 'unknown')
-  
+
       await newApp.addPeer(parentInfo, parentEndpointInfo)
   
       assert.equal('test.alice.fred', newApp.connector.getOwnAddress())
       newApp.shutdown()
       parentServer.close()
       newAppClient.close()
+      newDB.teardown()
     })
 
     it('inherits addresses from multiple parents', async function () {
       // parent 2 will have a higher relation weighting than parent 1. So when getOwnAdress is called, the address from parent 2 should be returned. But getOwnAddresses should return an array of addresses.
       const config = new Config()
-      config.loadFromOpts({ http2ServerPort: 8082, peers: {} })
-      const newApp = new App(config, authFunction)
+      config.loadFromOpts({ http2ServerPort: 8082 })
+      const newDB = new DB()
+      await newDB.setup()
+      const newApp = new App(config, authFunction, newDB.knex())
       await newApp.start()
       const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
         const ildcpResponse: IldcpResponse = {
@@ -293,6 +325,7 @@ describe('Test App', function () {
       parentServer.close()
       parent2Server.close()
       newAppClient.close()
+      newDB.teardown()
     })
   })
 

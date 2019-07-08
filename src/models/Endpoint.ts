@@ -1,5 +1,4 @@
 import { Pojo, Model } from 'objection'
-import { object } from 'joi';
 
 export class Endpoint extends Model {
 

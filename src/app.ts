@@ -28,7 +28,7 @@ import { BalanceRule } from './rules'
 import { PeerNotFoundError } from './errors/peer-not-found-error'
 import { Peer } from './models/Peer'
 import Knex from 'knex'
-import { Model } from 'objection'
+import { Route } from './models/Route'
 
 const logger = log.child({ component: 'App' })
 
@@ -210,7 +210,7 @@ export class App {
     return ilpReply.data
   }
 
-  public addRoute (targetPrefix: string, peerId: string) {
+  public addRoute (targetPrefix: string, peerId: string, store: boolean = false) {
     logger.info('adding route', { targetPrefix, peerId })
     const peer = this.connector.routeManager.getPeer(peerId)
     if (!peer) {
@@ -223,6 +223,10 @@ export class App {
       prefix: targetPrefix,
       path: []
     })
+
+    if (store) {
+      Route.query(this._knex).insert({ peerId, targetPrefix }).execute().catch(error => logger.error('Could not save route in database.', { error: error.toString() }))
+    }
   }
 
   /**
@@ -313,7 +317,10 @@ export class App {
         type: peer['endpoint'].type,
         httpOpts: peer['endpoint'].options
       }
-      this.addPeer(peerInfo, endpointInfo)
+      this.addPeer(peerInfo, endpointInfo).catch(error => logger.error('Could not load peer.', { error: error.toString() }))
     })
+
+    const routes = await Route.query(this._knex)
+    routes.forEach(entry => this.addRoute(entry.targetPrefix, entry.peerId))
   }
 }

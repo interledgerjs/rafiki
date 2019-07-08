@@ -33,6 +33,7 @@ export class Config extends ConfigSchemaTyping {
   public routeBroadcastInterval!: number
   public http2ServerPort!: number
   public ilpAddress!: string
+  public databaseEnv!: 'test' | 'development' | 'production'
 
   protected _validate: Ajv.ValidateFunction
 
@@ -65,7 +66,6 @@ export class Config extends ConfigSchemaTyping {
       const envValue = env[envKey]
 
       unrecognizedEnvKeys.delete(envKey)
-
       if (typeof envValue === 'string') {
         switch (configSchema.properties[key].type) {
           case 'string':

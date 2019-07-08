@@ -1,7 +1,7 @@
 // Update with your config settings.
 
 module.exports = {
-  testing: {
+  test: {
     client: 'sqlite3',
     useNullAsDefault: true,
     connection: {
@@ -10,6 +10,7 @@ module.exports = {
   },
   development: {
     client: 'sqlite3',
+    useNullAsDefault: true,
     connection: {
       filename: './dev.sqlite3'
     }

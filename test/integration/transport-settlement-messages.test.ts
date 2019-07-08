@@ -5,6 +5,7 @@ import chaiAsPromised from 'chai-as-promised'
 import { App, PeerInfo, EndpointInfo } from '../../src'
 import { Mockttp, getLocal } from 'mockttp'
 import { Config } from '../../src';
+import { DB } from '../helpers/db';
 
 const assert = Object.assign(Chai.assert, sinon.assert)
 
@@ -13,6 +14,8 @@ describe('Connector and settlement engine linking', function () {
   let rafiki2: App
   let mockSe1Server: Mockttp
   let mockSe2Server: Mockttp
+  let db1: DB
+  let db2: DB
   const aliceInfo: PeerInfo = {
     id: 'alice',
     assetCode: 'XRP',
@@ -108,23 +111,27 @@ describe('Connector and settlement engine linking', function () {
     }
   }
   const config1 = new Config()
-  config1.loadFromOpts({ ilpAddress: 'test.alice', http2ServerPort: 8083, peers: {} })
+  config1.loadFromOpts({ ilpAddress: 'test.alice', http2ServerPort: 8083 })
   const config2 = new Config()
-  config2.loadFromOpts({ ilpAddress: 'test.bob', http2ServerPort: 8084, peers: {} })
+  config2.loadFromOpts({ ilpAddress: 'test.bob', http2ServerPort: 8084 })
 
   beforeEach(async () => {
+    db1 = new DB()
+    db2 = new DB()
+    await db1.setup()
+    await db2.setup()
     mockSe1Server = getLocal()
     mockSe2Server = getLocal()
     await mockSe1Server.start(4000)
     await mockSe2Server.start(4001)
     await mockSe1Server.post('/accounts').thenReply(200)
     await mockSe2Server.post('/accounts').thenReply(200)
-    rafiki1 = new App(config1, (string) => Promise.resolve('bob'))
-    await rafiki1.addPeer(bobInfo, bobEndpointInfo)
-    rafiki2 = new App(config2, (string) => Promise.resolve('alice'))
-    await rafiki2.addPeer(aliceInfo, aliceEndpointInfo)
+    rafiki1 = new App(config1, (string) => Promise.resolve('bob'), db1.knex())
+    rafiki2 = new App(config2, (string) => Promise.resolve('alice'), db2.knex())    
     await rafiki1.start()
     await rafiki2.start()
+    await rafiki1.addPeer(bobInfo, bobEndpointInfo)
+    await rafiki2.addPeer(aliceInfo, aliceEndpointInfo)
   })
 
   afterEach(async () => {
@@ -135,6 +142,8 @@ describe('Connector and settlement engine linking', function () {
     await new Promise(resolve => setTimeout(() => resolve(), 100)) //wait for delete account requests to reach mock se
     mockSe1Server.stop()
     mockSe2Server.stop()
+    await db1.teardown()
+    await db2.teardown()
   })
 
   it('can send a message from one settlement engine to another', async function () {

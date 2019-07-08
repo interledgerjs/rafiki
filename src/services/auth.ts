@@ -1,5 +1,7 @@
 import nanoid from 'nanoid/generate'
+import { log } from '../winston'
 
+const logger = log.child({ component: 'auth-service' })
 const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
 export class AuthService {
@@ -30,7 +32,7 @@ export class AuthService {
     const token = nanoid(alphabet, 36)
 
     if (peerId !== '') {
-      console.log('setting peer token for', peerId)
+      logger.debug('setting peer token for', peerId)
       await this.setPeerToken(peerId, token)
     }
 

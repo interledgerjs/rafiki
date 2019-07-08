@@ -28,7 +28,6 @@ export class ErrorHandlerRule extends Rule {
 
           return response
         } catch (e) {
-          console.log('error', e)
           let err = e
           if (!err || typeof err !== 'object') {
             err = new Error('Non-object thrown: ' + e)

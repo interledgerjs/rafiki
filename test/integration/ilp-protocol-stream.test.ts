@@ -2,11 +2,12 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import * as rafiki from '../../src/start'
-import getPort from 'get-port'
+import { App, Config, PeerInfo, EndpointInfo } from '../../src'
 const PluginHttp = require('ilp-plugin-http')
 import { createConnection, Server, DataAndMoneyStream } from 'ilp-protocol-stream'
 import crypto from 'crypto'
+import { AuthService } from '../../src/services/auth'
+import { DB } from '../helpers/db'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -20,120 +21,119 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
   let clientPlugin: any
   let server: Server
   let amountReceived: number
+  let rafiki: App
+  let db: DB
 
   beforeEach(async function () {
     port1 = 5050
     port2 = 5051
     port3 = 5052
     port4 = 5053
-    
-    const rafikiPeers = {
-      "server": {
-        "id": "server",
-        "assetCode": "XRP",
-        "assetScale": 9,
-        "relation": "child",
-        "rules": [
-          {
-            "name": "errorHandler"
-          },
-          {
-            "name": "validateFulfillment"
-          },
-          {
-            "name": "stats"
-          },
-          {
-            "name": "expire"
-          },
-          {
-            "name": "reduceExpiry"
-          },
-          {
-            "name": "stats"
-          },
-          {
-            "name": "balance",
-            "minimum": "-2000000000000",
-            "maximum": "2000000000000"
-          }
-        ],
-        "protocols": [
-          {
-            "name": "ildcp"
-          }
-        ],
-        "endpoint": {
-          "type": "plugin",
-          "pluginOpts": {
-            "name": "ilp-plugin-http",
-            "opts": {
-              "incoming": {
-                secret: 'secret_number_two',
-                port: port2
-              },
-              "outgoing": {
-                secret: 'secret_number_one',
-                url: 'http://localhost:' + port1
-              }
-            }
-          }
+
+    const serverPeerInfo: PeerInfo = {
+      "id": "server",
+      "assetCode": "XRP",
+      "assetScale": 9,
+      "relation": "child",
+      "rules": [
+        {
+          "name": "errorHandler"
+        },
+        {
+          "name": "validateFulfillment"
+        },
+        {
+          "name": "stats"
+        },
+        {
+          "name": "expire"
+        },
+        {
+          "name": "reduceExpiry"
+        },
+        {
+          "name": "stats"
+        },
+        {
+          "name": "balance",
+          "minimum": "-2000000000000",
+          "maximum": "2000000000000"
         }
-      },
-      "client": {
-        "id": "client",
-        "assetCode": "XRP",
-        "assetScale": 9,
-        "relation": "child",
-        "rules": [
-          {
-            "name": "errorHandler"
+      ],
+      "protocols": [
+        {
+          "name": "ildcp"
+        }
+      ]
+    }
+    const serverEndpointInfo: EndpointInfo = {
+      "type": "plugin",
+      "pluginOpts": {
+        "name": "ilp-plugin-http",
+        "opts": {
+          "incoming": {
+            secret: 'secret_number_two',
+            port: port2
           },
-          {
-            "name": "validateFulfillment"
-          },
-          {
-            "name": "stats"
-          },
-          {
-            "name": "expire"
-          },
-          {
-            "name": "reduceExpiry"
-          },
-          {
-            "name": "stats"
-          },
-          {
-            "name": "balance",
-            "minimum": "-2000000000000",
-            "maximum": "2000000000000"
-          }
-        ],
-        "protocols": [
-          {
-            "name": "ildcp"
-          }
-        ],
-        "endpoint": {
-          "type": "plugin",
-          "pluginOpts": {
-            "name": "ilp-plugin-http",
-            "opts": {
-              "incoming": {
-                secret: 'secret_number_three',
-                port: port3
-              },
-              "outgoing": {
-                secret: 'secret_number_four',
-                url: 'http://localhost:' + port4
-              }
-            }
+          "outgoing": {
+            secret: 'secret_number_one',
+            url: 'http://localhost:' + port1
           }
         }
       }
     }
-    process.env.CONNECTOR_PEERS = JSON.stringify(rafikiPeers)
+    const clientPeerInfo: PeerInfo = {
+      "id": "client",
+      "assetCode": "XRP",
+      "assetScale": 9,
+      "relation": "child",
+      "rules": [
+        {
+          "name": "errorHandler"
+        },
+        {
+          "name": "validateFulfillment"
+        },
+        {
+          "name": "stats"
+        },
+        {
+          "name": "expire"
+        },
+        {
+          "name": "reduceExpiry"
+        },
+        {
+          "name": "stats"
+        },
+        {
+          "name": "balance",
+          "minimum": "-2000000000000",
+          "maximum": "2000000000000"
+        }
+      ],
+      "protocols": [
+        {
+          "name": "ildcp"
+        }
+      ]      
+    }
+    const clientEndpointInfo: EndpointInfo = {
+      "type": "plugin",
+      "pluginOpts": {
+        "name": "ilp-plugin-http",
+        "opts": {
+          "incoming": {
+            secret: 'secret_number_three',
+            port: port3
+          },
+          "outgoing": {
+            secret: 'secret_number_four',
+            url: 'http://localhost:' + port4
+          }
+        }
+      }
+    }
     process.env.CONNECTOR_ILP_ADDRESS = "test.rafiki"
 
     serverPlugin = new PluginHttp({
@@ -173,10 +173,15 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
       })
     })
 
-  })
-
-  beforeEach(async function () {
+    db = new DB()
+    await db.setup()
+    const config = new Config()
+    const authService = new AuthService()
+    config.loadFromEnv()
+    rafiki = new App(config, authService.getPeerIdByToken.bind(authService), db.knex())
     await rafiki.start()
+    await rafiki.addPeer(serverPeerInfo, serverEndpointInfo)
+    await rafiki.addPeer(clientPeerInfo, clientEndpointInfo)
     await Promise.all([
       serverPlugin.connect(),
       clientPlugin.connect(),
@@ -186,9 +191,10 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
 
   afterEach(async function () {
     await Promise.all([
-      rafiki.gracefulShutdown(),
+      rafiki.shutdown(),
       clientPlugin.disconnect(),
-      serverPlugin.disconnect()
+      serverPlugin.disconnect(),
+      db.teardown()
     ]) 
   })
 
@@ -204,7 +210,6 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
       const stream = connection.createStream()
       await stream.sendTotal('6000000', { timeout: 999999999 })
     } catch (error) {
-      console.log('error', error)
       assert.fail('Did not stream money')
     }
 
