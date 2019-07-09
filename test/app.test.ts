@@ -327,6 +327,42 @@ describe('Test App', function () {
       newAppClient.close()
       newDB.teardown()
     })
+
+    it('persists peer and endpoint info to db if store is set to true', async () => {
+      let peers = await Peer.query(db.knex())
+      assert.notInclude(peers.map(peer => peer.id), 'bob')
+      const bobInfo: PeerInfo = {
+        id: 'bob',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'peer',
+        rules: [{
+          name: 'errorHandler'
+        }],
+        protocols: [{
+          name: 'ildcp'
+        }]
+      }
+      const bobEndpointInfo = {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://localhost:8087'
+        }
+      }
+
+      await app.addPeer(bobInfo, bobEndpointInfo, true)
+
+      peers = await Peer.query(db.knex()).where('id', 'bob').eager('[rules,protocols,endpoint]')
+      const bob = peers[0]
+      assert.equal(bobInfo.id, bob.id)
+      assert.equal(bobInfo.assetCode, bob.assetCode)
+      assert.equal(bobInfo.assetScale, bob.assetScale)
+      assert.equal(bobInfo.relation, bob.relation)
+      assert.equal('errorHandler', bob['rules'][0]['name'])
+      assert.equal('ildcp', bob['protocols'][0]['name'])
+      assert.equal(bobEndpointInfo.type, bob['endpoint']['type'])
+      assert.deepEqual(bobEndpointInfo.httpOpts, bob['endpoint']['options'])
+    })
   })
 
   describe('remove peer', function () {
@@ -338,6 +374,36 @@ describe('Test App', function () {
       await app.removePeer(peerInfo.id)
 
       shutdownSpies.forEach(spy => sinon.assert.calledOnce(spy))
+    })
+
+    it('removes the peer from the database if store is set to true', async () => {
+      const jerryInfo: PeerInfo = {
+        id: 'jerry',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'peer',
+        rules: [{
+          name: 'errorHandler'
+        }],
+        protocols: [{
+          name: 'ildcp'
+        }]
+      }
+      const bobEndpointInfo = {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://localhost:8087'
+        }
+      }
+      await app.addPeer(jerryInfo, bobEndpointInfo, true)
+      assert.equal((await Peer.query(db.knex()).where('id', 'jerry')).length, 1)
+
+      await app.removePeer('jerry', true)
+
+      assert.isEmpty(await Peer.query(db.knex()).where('id', 'jerry'))
+      assert.isEmpty(await Rule.query(db.knex()).where('peerId', 'jerry'))
+      assert.isEmpty(await Protocol.query(db.knex()).where('peerId', 'jerry'))
+      assert.isEmpty(await Endpoint.query(db.knex()).where('peerId', 'jerry'))
     })
   })
 

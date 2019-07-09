@@ -2,6 +2,9 @@ import { Pojo, Model } from 'objection'
 import { Rule } from './Rule'
 import { Protocol } from './Protocol'
 import { Endpoint } from './Endpoint'
+import Knex from 'knex'
+import { PeerInfo } from '../types';
+import { EndpointInfo } from '../endpoints';
 
 export class Peer extends Model {
 
@@ -39,6 +42,23 @@ export class Peer extends Model {
         to: 'endpoints.peerId'
       }
     }
+  }
+
+  static async deleteByIdWithRelations (peerId: string, knex: Knex) {
+    const peer = await Peer.query(knex).where('id', peerId).first()
+    if (peer) {
+      await peer.$relatedQuery('rules', knex).delete()
+      await peer.$relatedQuery('protocols', knex).delete()
+      await peer.$relatedQuery('endpoint', knex).delete()
+      await peer.$query(knex).delete()
+    }
+  }
+
+  static async insertFromInfo (peerInfo: PeerInfo, endpointInfo: EndpointInfo, knex: Knex) {
+    const peer = await Peer.query(knex).insertAndFetch({ ...peerInfo })
+    peerInfo.rules.forEach(async (rule) => peer.$relatedQuery<Rule>('rules', knex).insert({ ...rule }))
+    peerInfo.protocols.forEach(async (protocol) => peer.$relatedQuery<Protocol>('protocols', knex).insert({ ...protocol }))
+    await peer.$relatedQuery<Endpoint>('endpoint', knex).insert({ type: endpointInfo.type, options: endpointInfo.type === 'http' ? endpointInfo.httpOpts : endpointInfo.pluginOpts })
   }
 
   $formatJson (): Pojo {

@@ -29,6 +29,9 @@ import { PeerNotFoundError } from './errors/peer-not-found-error'
 import { Peer } from './models/Peer'
 import Knex from 'knex'
 import { Route } from './models/Route'
+import { Rule as RuleModel } from './models/Rule'
+import { Protocol as ProtocolModel } from './models/Protocol'
+import { Endpoint as EndpointModel } from './models/Endpoint'
 
 const logger = log.child({ component: 'App' })
 
@@ -94,12 +97,14 @@ export class App {
    * to inherit address from the peer if it is a parent and you do not have an address.
    * @param peerInfo Peer information
    * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
+   * @param store Boolean to determine whether to persist peer and endpoint info to database
    */
-  public async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
+  public async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo, store: boolean = false) {
     logger.info('adding new peer: ' + peerInfo.id, { peerInfo, endpointInfo })
     const rulesInstances: Rule[] = this._createRules(peerInfo)
     this._businessRulesMap.set(peerInfo.id, rulesInstances)
     logger.info('creating new endpoint for peer', { endpointInfo })
+
     const endpoint = this._endpointManager.createEndpoint(peerInfo.id, endpointInfo)
 
     // create incoming and outgoing pipelines for business rules
@@ -126,9 +131,13 @@ export class App {
     }
 
     rulesInstances.forEach(rule => rule.startup())
+
+    if (store) {
+      await Peer.insertFromInfo(peerInfo, endpointInfo, this._knex)
+    }
   }
 
-  public async removePeer (peerId: string) {
+  public async removePeer (peerId: string, store: boolean = false) {
     logger.info('Removing peer: ' + peerId, { peerId })
     await this._endpointManager.closeEndpoints(peerId)
     this._packetCacheMap.delete(peerId)
@@ -136,6 +145,10 @@ export class App {
     this._throughputBucketsMap.delete(peerId)
     await this.connector.removePeer(peerId)
     Array.from(this.getRules(peerId)).forEach(rule => rule.shutdown())
+
+    if (store) {
+      await Peer.deleteByIdWithRelations(peerId, this._knex)
+    }
   }
 
   /**
