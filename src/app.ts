@@ -42,6 +42,8 @@ import { PeerNotFoundError } from './errors/peer-not-found-error'
 import { Peer } from './models/Peer'
 import Knex from 'knex'
 import { Route } from './models/Route'
+import { Rule as RuleModel } from './models/Rule'
+import { Protocol as ProtocolModel } from './models/Protocol'
 
 const logger = log.child({ component: 'App' })
 
@@ -103,18 +105,20 @@ export class App {
   public stats: Stats
   public alerts: Alerts
 
-    /**
-     * Instantiates the business rules specified in the peer information and attaches it to a pipeline. Creates a wrapper endpoint which connects the pipeline to
-     * the original endpoint. This is then passed into the connector's addPeer. The business rules are then started and the original endpoint stored. Tells connector
-     * to inherit address from the peer if it is a parent and you do not have an address.
-     * @param peerInfo Peer information
-     * @param endpointInfo
-     */
-  public async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo) {
+  /**
+   * Instantiates the business rules specified in the peer information and attaches it to a pipeline. Creates a wrapper endpoint which connects the pipeline to
+   * the original endpoint. This is then passed into the connector's addPeer. The business rules are then started and the original endpoint stored. Tells connector
+   * to inherit address from the peer if it is a parent and you do not have an address.
+   * @param peerInfo Peer information
+   * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
+   * @param store Boolean to determine whether to persist peer and endpoint info to database
+   */
+  public async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo, store: boolean = false) {
     logger.info('adding new peer: ' + peerInfo.id, { peerInfo, endpointInfo })
     const rulesInstances: Rule[] = this._createRules(peerInfo)
     this._businessRulesMap.set(peerInfo.id, rulesInstances)
     logger.info('creating new endpoint for peer', { endpointInfo })
+
     const endpoint = this._endpointManager.createEndpoint(peerInfo.id, endpointInfo)
 
         // create incoming and outgoing pipelines for business rules
@@ -141,9 +145,13 @@ export class App {
     }
 
     rulesInstances.forEach(rule => rule.startup())
+
+    if (store) {
+      await Peer.insertFromInfo(peerInfo, endpointInfo, this._knex)
+    }
   }
 
-  public async removePeer (peerId: string) {
+  public async removePeer (peerId: string, store: boolean = false) {
     logger.info('Removing peer: ' + peerId, { peerId })
     await this._endpointManager.closeEndpoints(peerId)
     this._packetCacheMap.delete(peerId)
@@ -151,6 +159,10 @@ export class App {
     this._throughputBucketsMap.delete(peerId)
     await this.connector.removePeer(peerId)
     Array.from(this.getRules(peerId)).forEach(rule => rule.shutdown())
+
+    if (store) {
+      await Peer.deleteByIdWithRelations(peerId, this._knex)
+    }
   }
 
     /**
@@ -322,15 +334,11 @@ export class App {
   private loadFromDataStore = async () => {
     const peers = await Peer.query(this._knex).eager('[rules,protocols,endpoint]')
     peers.forEach(peer => {
-      const rules = peer['rules'].map((rule: RuleConfig) => {
-        return {
-          name: rule.name
-        }
+      const rules = peer['rules'].map((rule: RuleModel) => {
+        return rule.config ? JSON.parse(rule.config) : { name: rule.name }
       })
-      const protocols = peer['protocols'].map((protocol: any) => {
-        return {
-          name: protocol.name
-        }
+      const protocols = peer['protocols'].map((protocol: ProtocolModel) => {
+        return protocol.config ? JSON.parse(protocol.config) : { name: protocol.name }
       })
       const peerInfo: PeerInfo = {
         id: peer.id,
@@ -340,10 +348,8 @@ export class App {
         rules: rules,
         protocols: protocols
       }
-      const endpointInfo: EndpointInfo = {
-        type: peer['endpoint'].type,
-        httpOpts: peer['endpoint'].options
-      }
+      const endpointOptions = peer['endpoint'].type === 'http' ? { httpOpts: peer['endpoint'].options } : { pluginOpts: peer['endpoint'].options }
+      const endpointInfo: EndpointInfo = Object.assign({ type: peer['endpoint'].type }, endpointOptions)
       this.addPeer(peerInfo, endpointInfo).catch(error => logger.error('Could not load peer.', { error: error.toString() }))
     })
 

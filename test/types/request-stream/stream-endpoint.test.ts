@@ -92,9 +92,7 @@ describe('StreamEndpoint', () => {
       return
     })
 
-    it('should send multiple of the same request prepare and get back replies for all', async function (done) {
-
-      this.skip()
+    it.skip('should send multiple of the same request prepare and get back replies for all', async function (done) {
       
       const endpoint = new StreamEndpoint(getCodecs())
       mock(endpoint)

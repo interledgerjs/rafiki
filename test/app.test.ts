@@ -1,7 +1,7 @@
 import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
-import {getLocal, Mockttp} from 'mockttp'
+import { getLocal, Mockttp } from 'mockttp'
 import chaiAsPromised from 'chai-as-promised'
 import {App, Config, EndpointInfo, MAX_INT_64, MIN_INT_64, STATIC_CONDITION} from '../src'
 import {
@@ -137,7 +137,7 @@ describe('Test App', function () {
     await db.setup()
     const alice = await Peer.query(db.knex()).insertAndFetch({ id: 'alice', assetCode: 'XRP', assetScale: 9, relation: 'child' })
     await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'errorHandler' })
-    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance' })
+    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance', config: JSON.stringify({ name: 'balance', minimum: '0', maximum: '100', initialBalance: '10' }) })
     await alice.$relatedQuery<Protocol>('protocols', db.knex()).insert({ name: 'ildcp' })
     await alice.$relatedQuery<Endpoint>('endpoint', db.knex()).insert({ type: 'http', options: { peerUrl: 'http://localhost:8084' }})
     // load routes into db
@@ -185,10 +185,16 @@ describe('Test App', function () {
     })
   })
 
-  it('loads routes from db', async () => {
-    const routes = app.connector.routingTable.getRoutingTable()
+  describe('start', function () {
+    it('loads routes from db', async () => {
+      const routes = app.connector.routingTable.getRoutingTable()
 
-    assert.deepEqual(routes.get('test.other.rafiki.bob'), { nextHop: 'alice', path: [], weight: undefined, auth: undefined })
+      assert.deepEqual(routes.get('test.other.rafiki.bob'), { nextHop: 'alice', path: [], weight: undefined, auth: undefined })
+    })
+
+    it('loads the peers and rules from the database', async () => {
+      assert.deepEqual(app.getBalance('alice'), { balance: '10', minimum: '0', maximum: '100' })
+    })
   })
 
   describe('add route', function () {
@@ -332,6 +338,42 @@ describe('Test App', function () {
       newAppClient.close()
       newDB.teardown()
     })
+
+    it('persists peer and endpoint info to db if store is set to true', async () => {
+      let peers = await Peer.query(db.knex())
+      assert.notInclude(peers.map(peer => peer.id), 'bob')
+      const bobInfo: PeerInfo = {
+        id: 'bob',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'peer',
+        rules: [{
+          name: 'errorHandler'
+        }],
+        protocols: [{
+          name: 'ildcp'
+        }]
+      }
+      const bobEndpointInfo = {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://localhost:8087'
+        }
+      }
+
+      await app.addPeer(bobInfo, bobEndpointInfo, true)
+
+      peers = await Peer.query(db.knex()).where('id', 'bob').eager('[rules,protocols,endpoint]')
+      const bob = peers[0]
+      assert.equal(bobInfo.id, bob.id)
+      assert.equal(bobInfo.assetCode, bob.assetCode)
+      assert.equal(bobInfo.assetScale, bob.assetScale)
+      assert.equal(bobInfo.relation, bob.relation)
+      assert.equal('errorHandler', bob['rules'][0]['name'])
+      assert.equal('ildcp', bob['protocols'][0]['name'])
+      assert.equal(bobEndpointInfo.type, bob['endpoint']['type'])
+      assert.deepEqual(bobEndpointInfo.httpOpts, bob['endpoint']['options'])
+    })
   })
 
   describe('remove peer', function () {
@@ -343,6 +385,36 @@ describe('Test App', function () {
       await app.removePeer(peerInfo.id)
 
       shutdownSpies.forEach(spy => sinon.assert.calledOnce(spy))
+    })
+
+    it('removes the peer from the database if store is set to true', async () => {
+      const jerryInfo: PeerInfo = {
+        id: 'jerry',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'peer',
+        rules: [{
+          name: 'errorHandler'
+        }],
+        protocols: [{
+          name: 'ildcp'
+        }]
+      }
+      const bobEndpointInfo = {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://localhost:8087'
+        }
+      }
+      await app.addPeer(jerryInfo, bobEndpointInfo, true)
+      assert.equal((await Peer.query(db.knex()).where('id', 'jerry')).length, 1)
+
+      await app.removePeer('jerry', true)
+
+      assert.isEmpty(await Peer.query(db.knex()).where('id', 'jerry'))
+      assert.isEmpty(await Rule.query(db.knex()).where('peerId', 'jerry'))
+      assert.isEmpty(await Protocol.query(db.knex()).where('peerId', 'jerry'))
+      assert.isEmpty(await Endpoint.query(db.knex()).where('peerId', 'jerry'))
     })
   })
 
@@ -480,9 +552,9 @@ describe('Test App', function () {
 
       assert.deepEqual(balances, {
         'alice': {
-          balance: '0',
-          minimum: MIN_INT_64.toString(),
-          maximum: MAX_INT_64.toString()
+          balance: '10',
+          minimum: '0',
+          maximum: '100'
         },
         'drew': {
           balance: '0',
