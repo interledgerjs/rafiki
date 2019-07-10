@@ -2,10 +2,11 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { SettlementAdminApi } from '../../src/services/settlement-admin-api/settlement-admin-api'
+import {SettlementAdminApi} from '../../src/services/settlement-admin-api/settlement-admin-api'
 import axios from 'axios'
-import { App, PeerInfo, EndpointInfo, Config, STATIC_FULFILLMENT, STATIC_CONDITION } from '../../src'
-import { IlpFulfill } from 'ilp-packet'
+import {App, Config, EndpointInfo, PeerInfo, STATIC_CONDITION, STATIC_FULFILLMENT} from '../../src'
+import {IlpFulfill} from 'ilp-packet'
+import {DB} from '../helpers/db'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -13,6 +14,7 @@ const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
 describe('Settlement Admin Api', function () {
   let app: App
+  let db: DB
   let settlementAdminApi: SettlementAdminApi
   let config: Config
   const peerInfo: PeerInfo = {
@@ -37,15 +39,18 @@ describe('Settlement Admin Api', function () {
   }
 
   beforeEach(async function () {
+    db = new DB()
+    await db.setup()
     config = new Config()
-    app = new App(config, (string) => Promise.resolve(''))
+    app = new App(config, (string) => Promise.resolve(''), db.knex())
     await app.addPeer(peerInfo, endpointInfo)
     settlementAdminApi = new SettlementAdminApi({}, { updateAccountBalance: app.updateBalance, getAccountBalance: app.getBalance, sendMessage: app.forwardSettlementMessage.bind(app)})
     settlementAdminApi.listen()
   })
 
-  afterEach(function () {
+  afterEach(async function () {
     settlementAdminApi.shutdown()
+    db.teardown()
   })
 
   it('health returns 200', async function () {

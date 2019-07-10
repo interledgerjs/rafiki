@@ -3,7 +3,7 @@
  */
 
 import * as winston from 'winston'
-import { PassThrough, Transform } from 'stream';
+import {PassThrough, Transform} from 'stream'
 
 const format = winston.format.json({
   replacer: (key: string, value: any) => {

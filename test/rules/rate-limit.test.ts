@@ -2,14 +2,15 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
+import {Errors, IlpFulfill, IlpPrepare, isFulfill} from 'ilp-packet'
+import {createRateLimitBucketForPeer, RateLimitRule} from '../../src/rules/rate-limit'
+import {Stats} from '../../src/services/stats'
+import {PeerInfo} from '../../src/types/peer'
+import {TokenBucket} from '../../src/lib/token-bucket'
+import {setPipelineReader} from '../../src/types/rule'
+
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { IlpPrepare, IlpFulfill, isFulfill, Errors } from 'ilp-packet';
-import { RateLimitRule, createRateLimitBucketForPeer } from '../../src/rules/rate-limit'
-import { Stats } from '../../src/services/stats';
-import { PeerInfo } from '../../src/types/peer';
-import { TokenBucket } from '../../src/lib/token-bucket';
-import { setPipelineReader } from '../../src/types/rule';
 const { RateLimitedError } = Errors
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT

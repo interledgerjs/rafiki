@@ -3,18 +3,31 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import { getLocal, Mockttp } from 'mockttp'
 import chaiAsPromised from 'chai-as-promised'
-import { App } from '../src/app'
+import {App, Config, EndpointInfo, MAX_INT_64, MIN_INT_64, STATIC_CONDITION} from '../src'
+import {
+  ClientHttp2Session,
+  connect,
+  constants,
+  createServer,
+  Http2Server,
+  Http2ServerRequest,
+  Http2ServerResponse
+} from 'http2'
+import {deserializeIlpReply, IlpFulfill, IlpPrepare, serializeIlpFulfill, serializeIlpPrepare} from 'ilp-packet'
+import {isEndpoint, PeerInfo} from '../src/types'
+import {ErrorHandlerRule} from '../src/rules'
+import {IldcpResponse, serializeIldcpResponse} from 'ilp-protocol-ildcp'
+import {PeerNotFoundError} from '../src/errors/peer-not-found-error'
+
+import {Peer} from '../src/models/Peer'
+import {Rule} from '../src/models/Rule'
+import {Protocol} from '../src/models/Protocol'
+import {Endpoint} from '../src/models/Endpoint'
+import {DB} from './helpers/db'
+import {Route} from '../src/models/Route'
+
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-
-import { connect, ClientHttp2Session, constants, createServer, Http2Server, Http2ServerRequest, Http2ServerResponse } from  'http2'
-import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill, IlpReject } from 'ilp-packet';
-import { PeerInfo } from '../src/types/peer';
-import { ErrorHandlerRule } from '../src/rules/error-handler';
-import { isEndpoint } from '../src/types/endpoint';
-import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
-import { EndpointInfo, Config, STATIC_FULFILLMENT, STATIC_CONDITION, MAX_UINT_64, MAX_INT_64, MIN_INT_64, AuthFunction } from '../src'
-import { PeerNotFoundError } from '../src/errors/peer-not-found-error';
 
 const post = (client: ClientHttp2Session, authToken: string, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -36,9 +49,11 @@ const post = (client: ClientHttp2Session, authToken: string, path: string, body:
 });
 
 describe('Test App', function () {
+  let addPeerSpyForAppConstructor: sinon.SinonSpy
   let client: ClientHttp2Session
   let aliceServer: Http2Server
   let app: App
+  let db: DB
   let mockSEServer: Mockttp
   const peerInfo: PeerInfo = {
     id: 'alice',
@@ -99,7 +114,7 @@ describe('Test App', function () {
     }
   }
   const config = new Config()
-  config.loadFromOpts({ ilpAddress: 'test.harry', http2ServerPort: 8083, peers: {} })
+  config.loadFromOpts({ ilpAddress: 'test.harry', http2ServerPort: 8083 })
   const authFunction = (token: string) => new Promise<string>((resolve, reject) => {
     switch(token) {
       case "aliceToken":
@@ -118,15 +133,26 @@ describe('Test App', function () {
     fulfillment: Buffer.alloc(32)
   }
 
+  before(async () => {
+    db = new DB()
+    await db.setup()
+    const alice = await Peer.query(db.knex()).insertAndFetch({ id: 'alice', assetCode: 'XRP', assetScale: 9, relation: 'child' })
+    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'errorHandler' })
+    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance', config: { name: 'balance', minimum: '0', maximum: '100', initialBalance: '10' } })
+    await alice.$relatedQuery<Protocol>('protocols', db.knex()).insert({ name: 'ildcp' })
+    await alice.$relatedQuery<Endpoint>('endpoint', db.knex()).insert({ type: 'http', options: { peerUrl: 'http://localhost:8084' }})
+    // load routes into db
+    await Route.query(db.knex()).insertAndFetch({ peerId: 'alice', targetPrefix: 'test.other.rafiki.bob' })
+  })
+
+  after(async () => {
+    await db.teardown()
+  })
+
   beforeEach(async () => {
-    app = new App(config, authFunction)
+    app = new App(config, authFunction, db.knex())
+    addPeerSpyForAppConstructor = sinon.spy(app, 'addPeer')
     await app.start()
-    await app.addPeer(peerInfo, {
-      type: 'http',
-      httpOpts: {
-        peerUrl: 'http://localhost:8084' 
-      }
-    } as EndpointInfo)
     client = connect('http://localhost:8083')
     aliceServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
       response.end(serializeIlpFulfill(aliceResponse))
@@ -142,6 +168,7 @@ describe('Test App', function () {
     aliceServer.close()
     client.close()
     mockSEServer.stop()
+    addPeerSpyForAppConstructor.restore()
   })
 
   it('can send a packet and receive reply from self', async function() {
@@ -158,6 +185,54 @@ describe('Test App', function () {
     assert.deepEqual(result, {
       data: Buffer.from(''),
       fulfillment: Buffer.alloc(32)
+    })
+  })
+
+  describe('start', function () {
+    it('loads routes from db', async () => {
+      const routes = app.connector.routingTable.getRoutingTable()
+
+      assert.deepEqual(routes.get('test.other.rafiki.bob'), { nextHop: 'alice', path: [], weight: undefined, auth: undefined })
+    })
+
+    it('loads the peers from the database', async () => {
+      const peerInfo =  addPeerSpyForAppConstructor.getCall(0).args[0]
+      const endpointInfo =  addPeerSpyForAppConstructor.getCall(0).args[1]
+
+      assert.deepEqual(peerInfo, {
+        id: 'alice',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'child',
+        rules: [
+          { name: 'errorHandler' },
+          { name: 'balance', minimum: '0', maximum: '100', initialBalance: '10'}
+        ],
+        protocols: [
+          { name: 'ildcp' }
+        ]
+      })
+      assert.deepEqual(endpointInfo, {
+        type: 'http',
+        httpOpts: { peerUrl: 'http://localhost:8084' }
+      })
+    })
+  })
+
+  describe('add route', function () {
+    it('stores route in db if store is true', async () => {
+      app.addRoute('test.other.rafiki.drew', 'alice', true)
+
+      const route = await Route.query(db.knex()).where('targetPrefix', 'test.other.rafiki.drew')
+      assert.equal(route[0].peerId, 'alice')
+      assert.equal(route[0].targetPrefix, 'test.other.rafiki.drew')
+    })
+
+    it('does not store route in db if store is false', async () => {
+      app.addRoute('test.other.rafiki.fred', 'alice', false)
+
+      const route = await Route.query(db.knex()).where('targetPrefix', 'test.other.rafiki.fred')
+      assert.isEmpty(route)
     })
   })
 
@@ -215,10 +290,12 @@ describe('Test App', function () {
       sinon.assert.calledOnce(startSpy)
     })
 
-    it('inherits address from parent and uses default parent', async function () {
+    it('inherits address from parent', async function () {
       const config = new Config()
-      config.loadFromOpts({ http2ServerPort: 8082, peers: {} })
-      const newApp = new App(config, authFunction)
+      config.loadFromOpts({ http2ServerPort: 8082 })
+      const newDB = new DB()
+      await newDB.setup()
+      const newApp = new App(config, authFunction, newDB.knex())
       await newApp.start()
       const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
         const ildcpResponse: IldcpResponse = {
@@ -232,20 +309,23 @@ describe('Test App', function () {
       parentServer.listen(8085)
       
       assert.equal(newApp.connector.getOwnAddress(), 'unknown')
-  
+
       await newApp.addPeer(parentInfo, parentEndpointInfo)
   
       assert.equal('test.alice.fred', newApp.connector.getOwnAddress())
       newApp.shutdown()
       parentServer.close()
       newAppClient.close()
+      newDB.teardown()
     })
 
     it('inherits addresses from multiple parents', async function () {
       // parent 2 will have a higher relation weighting than parent 1. So when getOwnAdress is called, the address from parent 2 should be returned. But getOwnAddresses should return an array of addresses.
       const config = new Config()
-      config.loadFromOpts({ http2ServerPort: 8082, peers: {} })
-      const newApp = new App(config, authFunction)
+      config.loadFromOpts({ http2ServerPort: 8082 })
+      const newDB = new DB()
+      await newDB.setup()
+      const newApp = new App(config, authFunction, newDB.knex())
       await newApp.start()
       const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
         const ildcpResponse: IldcpResponse = {
@@ -278,6 +358,50 @@ describe('Test App', function () {
       parentServer.close()
       parent2Server.close()
       newAppClient.close()
+      newDB.teardown()
+    })
+
+    it('persists peer and endpoint info to db if store is set to true', async () => {
+      let peers = await Peer.query(db.knex())
+      assert.notInclude(peers.map(peer => peer.id), 'bob')
+      const bobInfo: PeerInfo = {
+        id: 'bob',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'peer',
+        rules: [{
+          name: 'balance',
+          minimum: '0',
+          maximum: '100'
+        }],
+        protocols: [{
+          name: 'ildcp',
+          testData: 'test'
+        }]
+      }
+      const bobEndpointInfo = {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://localhost:8087'
+        }
+      }
+
+      await app.addPeer(bobInfo, bobEndpointInfo, true)
+
+      peers = await Peer.query(db.knex()).where('id', 'bob').eager('[rules,protocols,endpoint]')
+      const bob = peers[0]
+      assert.equal(bobInfo.id, bob.id)
+      assert.equal(bobInfo.assetCode, bob.assetCode)
+      assert.equal(bobInfo.assetScale, bob.assetScale)
+      assert.equal(bobInfo.relation, bob.relation)
+      assert.equal('balance', bob['rules'][0]['name'])
+      assert.deepEqual({name: 'balance', minimum: '0', maximum: '100'}, bob['rules'][0]['config'])
+      assert.equal('ildcp', bob['protocols'][0]['name'])
+      assert.deepEqual({ name: 'ildcp', testData: 'test' }, bob['protocols'][0]['config'])
+      assert.equal(bobEndpointInfo.type, bob['endpoint']['type'])
+      assert.deepEqual(bobEndpointInfo.httpOpts, bob['endpoint']['options'])
+      // clean up for other tests
+      await app.removePeer('bob', true)
     })
   })
 
@@ -290,6 +414,36 @@ describe('Test App', function () {
       await app.removePeer(peerInfo.id)
 
       shutdownSpies.forEach(spy => sinon.assert.calledOnce(spy))
+    })
+
+    it('removes the peer from the database if store is set to true', async () => {
+      const jerryInfo: PeerInfo = {
+        id: 'jerry',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'peer',
+        rules: [{
+          name: 'errorHandler'
+        }],
+        protocols: [{
+          name: 'ildcp'
+        }]
+      }
+      const bobEndpointInfo = {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://localhost:8087'
+        }
+      }
+      await app.addPeer(jerryInfo, bobEndpointInfo, true)
+      assert.equal((await Peer.query(db.knex()).where('id', 'jerry')).length, 1)
+
+      await app.removePeer('jerry', true)
+
+      assert.isEmpty(await Peer.query(db.knex()).where('id', 'jerry'))
+      assert.isEmpty(await Rule.query(db.knex()).where('peerId', 'jerry'))
+      assert.isEmpty(await Protocol.query(db.knex()).where('peerId', 'jerry'))
+      assert.isEmpty(await Endpoint.query(db.knex()).where('peerId', 'jerry'))
     })
   })
 
@@ -427,9 +581,9 @@ describe('Test App', function () {
 
       assert.deepEqual(balances, {
         'alice': {
-          balance: '0',
-          minimum: MIN_INT_64.toString(),
-          maximum: MAX_INT_64.toString()
+          balance: '10',
+          minimum: '0',
+          maximum: '100'
         },
         'drew': {
           balance: '0',

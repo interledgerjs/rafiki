@@ -1,8 +1,9 @@
 import 'mocha'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { IlpStreamEndpoint, nextFrameSize } from '../../src/endpoints/request-stream'
-import { serializeIlpPrepare, IlpPrepare, serializeIlpFulfill } from 'ilp-packet';
+import {IlpStreamEndpoint, nextFrameSize} from '../../src/endpoints'
+import {IlpPrepare, serializeIlpFulfill, serializeIlpPrepare} from 'ilp-packet'
+
 const { expect } = Chai
 Chai.use(chaiAsPromised)
 

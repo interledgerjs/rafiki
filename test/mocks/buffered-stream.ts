@@ -1,5 +1,4 @@
-import { Duplex, DuplexOptions } from "stream";
-
+import {Duplex, DuplexOptions} from "stream"
 
 export class BufferedStream extends Duplex {
 

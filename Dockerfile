@@ -17,4 +17,4 @@ COPY . .
 
 RUN npm run build
 
-CMD [ "node", "build/src/start.js" ]
+ENTRYPOINT ["./Entrypoint.sh"]

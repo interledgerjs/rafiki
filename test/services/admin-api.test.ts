@@ -2,13 +2,16 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { AdminApi } from '../../src/services/admin-api'
+import {AdminApi} from '../../src/services'
 import axios from 'axios'
-import { PeerInfo } from '../../src/types/peer'
-import { App } from '../../src/app'
+import { PeerInfo } from '../../src/types'
+import { App } from '../../src'
 import { EndpointInfo, AuthFunction } from '../../src'
 import { Config } from '../../src'
-import { AuthService } from '../../src/services/auth';
+import { AuthService } from '../../src/services/auth'
+import { DB } from '../helpers/db'
+import { Peer } from '../../src/models/Peer'
+import { AuthToken } from '../../src/models/AuthToken';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -16,19 +19,23 @@ describe('Admin Api', function () {
 
   let app: App
   let adminApi: AdminApi
+  let db: DB
   const config = new Config()
   
-  beforeEach(function () {
-    const authService = new AuthService()
+  beforeEach(async function () {
+    db = new DB()
+    await db.setup()
+    const authService = new AuthService(db.knex())
     const authFunction: AuthFunction = (token: string) => Promise.resolve('bob') 
-    app = new App(config, authFunction)
+    app = new App(config, authFunction, db.knex())
     adminApi = new AdminApi({},{ app, authService })
     adminApi.listen()
   })
 
-  afterEach(function () {
+  afterEach(async function () {
     adminApi.shutdown()
     app.shutdown()
+    db.teardown()
   })
 
   it('starts an http server if admin api is true in config', async function (){
@@ -261,6 +268,52 @@ describe('Admin Api', function () {
 
       assert.equal(response.status, 204)
       sinon.assert.calledWith(addPeerSpy, peerInfo, endpointInfo)
+    })
+
+    it('stores the peer in the database', async () => {
+      const peerInfo: PeerInfo = {
+        id: 'fred',
+        assetCode: 'USD',
+        assetScale: 2,
+        relation: 'peer',
+        rules: [],
+        protocols: []
+      }
+      const endpointInfo: EndpointInfo = {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://localhost:8084'
+        }
+      }
+
+      const response = await axios.post('http://127.0.0.1:7780/peer', { peerInfo, endpointInfo })
+
+      assert.equal(response.status, 204)
+      const fred = await Peer.query(db.knex()).where('id', 'fred').first()
+      assert.instanceOf(fred, Peer)
+    })
+
+    it('generates auth token for peer', async () => {
+      const peerInfo: PeerInfo = {
+        id: 'fred',
+        assetCode: 'USD',
+        assetScale: 2,
+        relation: 'peer',
+        rules: [],
+        protocols: []
+      }
+      const endpointInfo: EndpointInfo = {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://localhost:8084'
+        }
+      }
+
+      const response = await axios.post('http://127.0.0.1:7780/peer', { peerInfo, endpointInfo })
+
+      assert.equal(response.status, 204)
+      const token = await AuthToken.query(db.knex()).where('peerId', 'fred').first()
+      assert.instanceOf(token, AuthToken)
     })
   })
 

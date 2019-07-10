@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
 import * as winston from 'winston'
+import Knex from 'knex'
 import { App } from './app'
-import { AdminApi, AdminApiServices } from './services/admin-api'
+import { AdminApi, AdminApiServices } from './services'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { Config } from './index'
 import { AuthService } from './services/auth'
+
+let knex: Knex
 
 // Logging
 // tslint:disable-next-line
@@ -29,8 +32,11 @@ winston.configure({
 })
 
 const config = new Config()
-const authService = new AuthService()
-const app = new App(config, authService.getPeerIdByToken.bind(authService))
+config.loadFromEnv()
+knex = Knex(config.databaseConnectionString)
+
+const authService = new AuthService(knex)
+const app = new App(config, authService.getPeerIdByToken.bind(authService), knex)
 const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app, authService: authService } as AdminApiServices)
 const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })
 
@@ -64,17 +70,24 @@ export const start = async () => {
     }
   })
 
-  config.loadFromEnv()
+  if (knex.client.config.connection.filename === ':memory:') {
+    await knex.migrate.latest()
+  } else {
+    const status = await knex.migrate.status().catch(error => {
+      winston.error('Error getting migrations status.', { error })
+      winston.info('Please ensure your run the migrations before starting Rafiki')
+      process.exit(1)
+    })
+    if (status !== 0) {
+      winston.error('You need to run the latest migrations before running Rafiki')
+      process.exit(1)
+    }
+  }
+
   await app.start()
   adminApi.listen()
   settlementAdminApi.listen()
-
-  // load peers from config
-  Object.keys(config.peers || {}).forEach(peer => app.addPeer(config.peers[peer], config.peers[peer]['endpoint']))
-
-  // load pre-configured routes. Must be done after the pre-configured peers have been loaded.
-  const routes: {targetPrefix: string, peerId: string}[] = config['routes'] || []
-  routes.forEach(entry => app.addRoute(entry.targetPrefix, entry.peerId))
+  winston.info('🐒 has 🚀. Get ready for 🍌🍌🍌🍌🍌')
 }
 if (!module.parent) {
   start().catch(e => {
