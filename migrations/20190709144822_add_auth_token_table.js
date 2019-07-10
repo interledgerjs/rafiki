@@ -5,7 +5,7 @@ exports.up = function(knex) {
     table.string('id').primary()
     table.string('peerId').notNullable()
   }).then(() => {
-    const adminAuthToken = nanoid(36)
+    const adminAuthToken = process.env.ADMIN_AUTH_TOKEN || nanoid(36)
     console.log('****************************')
     console.log('Save this token somewhere safe as it is required to perform admin api functions')
     console.log('****************************')
