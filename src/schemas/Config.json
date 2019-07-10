@@ -57,6 +57,11 @@
       "type": "string",
       "default": "0.0.0.0"
     },
+    "adminApiAuth": {
+      "description": "Boolean to determine whether the admin api endpoints should use authentication.",
+      "type": "boolean",
+      "default": true
+    },
     "settlementAdminApiPort": {
       "description": "Which port the settlement admin API should listen on. Default: 7781",
       "type": "integer",

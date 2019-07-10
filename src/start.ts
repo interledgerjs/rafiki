@@ -3,7 +3,7 @@
 import * as winston from 'winston'
 import Knex from 'knex'
 import { App } from './app'
-import { AdminApi, AdminApiServices } from './services'
+import { AdminApi } from './services'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { Config } from './index'
 import { AuthService } from './services/auth'
@@ -37,7 +37,7 @@ knex = Knex(config.databaseConnectionString)
 
 const authService = new AuthService(knex)
 const app = new App(config, authService.getPeerIdByToken.bind(authService), knex)
-const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app, authService: authService } as AdminApiServices)
+const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort, useAuthentication: config.adminApiAuth }, { app, authService })
 const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })
 
 export const gracefulShutdown = async () => {
@@ -75,7 +75,7 @@ export const start = async () => {
   } else {
     const status = await knex.migrate.status().catch(error => {
       winston.error('Error getting migrations status.', { error })
-      winston.info('Please ensure your run the migrations before starting Rafiki')
+      winston.info('Please ensure you run the migrations before starting Rafiki')
       process.exit(1)
     })
     if (status !== 0) {
