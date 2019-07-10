@@ -92,7 +92,7 @@
     "mock-require": "^3.0.3",
     "mockttp": "^0.15.0",
     "nyc": "^13.1.0",
-    "sinon": "^7.1.1",
+    "sinon": "^7.3.2",
     "source-map-support": "^0.5.10",
     "ts-node": "^8.0.2",
     "tslint": "^5.12.1",

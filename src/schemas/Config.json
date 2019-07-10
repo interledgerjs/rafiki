@@ -17,6 +17,11 @@
       "enum": ["test", "development", "production"],
       "default": "test"
     },
+    "databaseConnectionString": {
+      "description": "Database connection URI passed to knexjs. Defaults to sqlite3 in memory",
+      "type": "string",
+      "default": ":memory:"
+    },
     "ilpAddress": {
       "description": "ILP address of the connector. This property can be omitted if an account with `relation=parent` is configured under `accounts`.",
       "type": "string",

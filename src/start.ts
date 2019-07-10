@@ -3,12 +3,11 @@
 import * as winston from 'winston'
 import Knex from 'knex'
 import { App } from './app'
-import { AdminApi, AdminApiServices } from './services/admin-api'
+import { AdminApi, AdminApiServices } from './services'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { Config } from './index'
 import { AuthService } from './services/auth'
 
-const knexConfig = require('../knexfile')
 let knex: Knex
 
 // Logging
@@ -34,9 +33,8 @@ winston.configure({
 
 const config = new Config()
 config.loadFromEnv()
-knex = Knex({
-  ...knexConfig[config.databaseEnv]
-})
+knex = Knex(config.databaseConnectionString)
+
 const authService = new AuthService(knex)
 const app = new App(config, authService.getPeerIdByToken.bind(authService), knex)
 const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app, authService: authService } as AdminApiServices)
@@ -72,9 +70,24 @@ export const start = async () => {
     }
   })
 
+  if (knex.client.config.connection.filename === ':memory:') {
+    await knex.migrate.latest()
+  } else {
+    const status = await knex.migrate.status().catch(error => {
+      winston.error('Error getting migrations status.', { error })
+      winston.info('Please ensure your run the migrations before starting Rafiki')
+      process.exit(1)
+    })
+    if (status !== 0) {
+      winston.error('You need to run the latest migrations before running Rafiki')
+      process.exit(1)
+    }
+  }
+
   await app.start()
   adminApi.listen()
   settlementAdminApi.listen()
+  winston.info('🐒 has 🚀. Get ready for 🍌🍌🍌🍌🍌')
 }
 if (!module.parent) {
   start().catch(e => {
