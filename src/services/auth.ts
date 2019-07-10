@@ -1,5 +1,7 @@
 import nanoid from 'nanoid/generate'
+import Knex from 'knex'
 import { log } from '../winston'
+import { AuthToken } from '../models/AuthToken'
 
 const logger = log.child({ component: 'auth-service' })
 const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -8,24 +10,29 @@ export class AuthService {
 
   private _accountTokensMap: Map<string, string>
 
-  constructor () {
+  constructor (private _knex: Knex) {
     this._accountTokensMap = new Map()
   }
 
   async getPeerIdByToken (token: string) {
-    return Object.keys(this._accountTokensMap).find(key => this._accountTokensMap[key] === token) || ''
+    const authToken = await AuthToken.query(this._knex).where('id', token).first()
+    return authToken ? authToken.peerId : ''
   }
 
   async getTokenByPeerId (peerId: string) {
-    return this._accountTokensMap.get(peerId)
+    const authToken = await AuthToken.query(this._knex).where('peerId', peerId).first()
+    return authToken ? authToken.id : ''
   }
 
   async setPeerToken (peerId: string, token: string) {
-    this._accountTokensMap.set(peerId, token)
+    await AuthToken.query(this._knex).insert({ id: token, peerId }).catch(error => console.log('error', error))
   }
 
   async removePeerToken (peerId: string) {
-    this._accountTokensMap.delete(peerId)
+    const authToken = await AuthToken.query(this._knex).where('peerId', peerId).first()
+    if (authToken) {
+      await authToken.$query(this._knex).delete()
+    }
   }
 
   async generateAuthToken (peerId: string = '') {

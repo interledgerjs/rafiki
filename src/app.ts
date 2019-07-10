@@ -31,7 +31,6 @@ import Knex from 'knex'
 import { Route } from './models/Route'
 import { Rule as RuleModel } from './models/Rule'
 import { Protocol as ProtocolModel } from './models/Protocol'
-import { Endpoint as EndpointModel } from './models/Endpoint'
 
 const logger = log.child({ component: 'App' })
 
@@ -308,15 +307,11 @@ export class App {
   private loadFromDataStore = async () => {
     const peers = await Peer.query(this._knex).eager('[rules,protocols,endpoint]')
     peers.forEach(peer => {
-      const rules = peer['rules'].map((rule: RuleConfig) => {
-        return {
-          name: rule.name
-        }
+      const rules = peer['rules'].map((rule: RuleModel) => {
+        return rule.config ? JSON.parse(rule.config) : { name: rule.name }
       })
-      const protocols = peer['protocols'].map((protocol: any) => {
-        return {
-          name: protocol.name
-        }
+      const protocols = peer['protocols'].map((protocol: ProtocolModel) => {
+        return protocol.config ? JSON.parse(protocol.config) : { name: protocol.name }
       })
       const peerInfo: PeerInfo = {
         id: peer.id,
@@ -326,10 +321,8 @@ export class App {
         rules: rules,
         protocols: protocols
       }
-      const endpointInfo: EndpointInfo = {
-        type: peer['endpoint'].type,
-        httpOpts: peer['endpoint'].options
-      }
+      const endpointOptions = peer['endpoint'].type === 'http' ? { httpOpts: peer['endpoint'].options } : { pluginOpts: peer['endpoint'].options }
+      const endpointInfo: EndpointInfo = Object.assign({ type: peer['endpoint'].type }, endpointOptions)
       this.addPeer(peerInfo, endpointInfo).catch(error => logger.error('Could not load peer.', { error: error.toString() }))
     })
 

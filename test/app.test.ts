@@ -8,21 +8,20 @@ Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 
 import { connect, ClientHttp2Session, constants, createServer, Http2Server, Http2ServerRequest, Http2ServerResponse } from 'http2'
-import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill } from 'ilp-packet';
+import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill } from 'ilp-packet'
 import { PeerInfo } from '../src/types/peer';
 import { ErrorHandlerRule } from '../src/rules/error-handler';
 import { isEndpoint } from '../src/types/endpoint';
 import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
-import { EndpointInfo, Config, STATIC_CONDITION, MAX_INT_64, MIN_INT_64 } from '../src'
-import { PeerNotFoundError } from '../src/errors/peer-not-found-error';
+import { EndpointInfo, Config, STATIC_CONDITION } from '../src'
+import { PeerNotFoundError } from '../src/errors/peer-not-found-error'
 
 import { Peer } from '../src/models/Peer'
 import { Rule } from '../src/models/Rule'
 import { Protocol } from '../src/models/Protocol'
 import { Endpoint } from '../src/models/Endpoint'
-import { DB } from './helpers/db';
+import { DB } from './helpers/db'
 import { Route } from '../src/models/Route'
-import { Model } from 'objection'
 
 const post = (client: ClientHttp2Session, authToken: string, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -132,7 +131,7 @@ describe('Test App', function () {
     await db.setup()
     const alice = await Peer.query(db.knex()).insertAndFetch({ id: 'alice', assetCode: 'XRP', assetScale: 9, relation: 'child' })
     await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'errorHandler' })
-    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance' })
+    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance', config: JSON.stringify({ name: 'balance', minimum: '0', maximum: '100', initialBalance: '10' }) })
     await alice.$relatedQuery<Protocol>('protocols', db.knex()).insert({ name: 'ildcp' })
     await alice.$relatedQuery<Endpoint>('endpoint', db.knex()).insert({ type: 'http', options: { peerUrl: 'http://localhost:8084' }})
     // load routes into db
@@ -180,10 +179,16 @@ describe('Test App', function () {
     })
   })
 
-  it('loads routes from db', async () => {
-    const routes = app.connector.routingTable.getRoutingTable()
+  describe('start', function () {
+    it('loads routes from db', async () => {
+      const routes = app.connector.routingTable.getRoutingTable()
+  
+      assert.deepEqual(routes.get('test.other.rafiki.bob'), { nextHop: 'alice', path: [], weight: undefined, auth: undefined })
+    })
 
-    assert.deepEqual(routes.get('test.other.rafiki.bob'), { nextHop: 'alice', path: [], weight: undefined, auth: undefined })
+    it('loads the peers and rules from the database', async () => {
+      assert.deepEqual(app.getBalance('alice'), { balance: '10', minimum: '0', maximum: '100' })
+    })
   })
 
   describe('add route', function () {
@@ -541,9 +546,9 @@ describe('Test App', function () {
 
       assert.deepEqual(balances, {
         'alice': {
-          balance: '0',
-          minimum: MIN_INT_64.toString(),
-          maximum: MAX_INT_64.toString()
+          balance: '10',
+          minimum: '0',
+          maximum: '100'
         },
         'drew': {
           balance: '0',

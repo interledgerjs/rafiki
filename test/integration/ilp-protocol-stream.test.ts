@@ -176,7 +176,7 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
     db = new DB()
     await db.setup()
     const config = new Config()
-    const authService = new AuthService()
+    const authService = new AuthService(db.knex())
     config.loadFromEnv()
     rafiki = new App(config, authService.getPeerIdByToken.bind(authService), db.knex())
     await rafiki.start()

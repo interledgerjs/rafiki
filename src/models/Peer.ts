@@ -3,8 +3,8 @@ import { Rule } from './Rule'
 import { Protocol } from './Protocol'
 import { Endpoint } from './Endpoint'
 import Knex from 'knex'
-import { PeerInfo } from '../types';
-import { EndpointInfo } from '../endpoints';
+import { PeerInfo } from '../types'
+import { EndpointInfo } from '../endpoints'
 
 export class Peer extends Model {
 
@@ -56,7 +56,7 @@ export class Peer extends Model {
 
   static async insertFromInfo (peerInfo: PeerInfo, endpointInfo: EndpointInfo, knex: Knex) {
     const peer = await Peer.query(knex).insertAndFetch({ ...peerInfo })
-    peerInfo.rules.forEach(async (rule) => peer.$relatedQuery<Rule>('rules', knex).insert({ ...rule }))
+    peerInfo.rules.forEach(async (rule) => peer.$relatedQuery<Rule>('rules', knex).insert({ name: rule.name, config: JSON.stringify(rule) }))
     peerInfo.protocols.forEach(async (protocol) => peer.$relatedQuery<Protocol>('protocols', knex).insert({ ...protocol }))
     await peer.$relatedQuery<Endpoint>('endpoint', knex).insert({ type: endpointInfo.type, options: endpointInfo.type === 'http' ? endpointInfo.httpOpts : endpointInfo.pluginOpts })
   }

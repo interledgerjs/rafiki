@@ -37,7 +37,7 @@ config.loadFromEnv()
 knex = Knex({
   ...knexConfig[config.databaseEnv]
 })
-const authService = new AuthService()
+const authService = new AuthService(knex)
 const app = new App(config, authService.getPeerIdByToken.bind(authService), knex)
 const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort }, { app, authService: authService } as AdminApiServices)
 const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })
