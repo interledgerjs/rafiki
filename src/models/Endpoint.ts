@@ -8,7 +8,7 @@ export class Endpoint extends Model {
 
   id!: number
   type!: string
-  options!: any
+  options!: Pojo
 
   static get jsonSchema () {
     return {

@@ -9,7 +9,21 @@ export class Protocol extends Model {
   id!: number
   peerId!: string
   name!: string
-  config!: string
+  config!: Pojo
+
+  static get jsonSchema () {
+    return {
+      type: 'object',
+      properties: {
+        id: { type: 'integer' },
+        peerId: { type: 'string' },
+        name: { type: 'string' },
+        config: {
+          type: 'object'
+        }
+      }
+    }
+  }
 
   $formatJson (): Pojo {
     return {

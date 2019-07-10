@@ -43,6 +43,7 @@ const post = (client: ClientHttp2Session, authToken: string, path: string, body:
 });
 
 describe('Test App', function () {
+  let addPeerSpyForAppConstructor: sinon.SinonSpy
   let client: ClientHttp2Session
   let aliceServer: Http2Server
   let app: App
@@ -131,7 +132,7 @@ describe('Test App', function () {
     await db.setup()
     const alice = await Peer.query(db.knex()).insertAndFetch({ id: 'alice', assetCode: 'XRP', assetScale: 9, relation: 'child' })
     await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'errorHandler' })
-    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance', config: JSON.stringify({ name: 'balance', minimum: '0', maximum: '100', initialBalance: '10' }) })
+    await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance', config: { name: 'balance', minimum: '0', maximum: '100', initialBalance: '10' } })
     await alice.$relatedQuery<Protocol>('protocols', db.knex()).insert({ name: 'ildcp' })
     await alice.$relatedQuery<Endpoint>('endpoint', db.knex()).insert({ type: 'http', options: { peerUrl: 'http://localhost:8084' }})
     // load routes into db
@@ -144,6 +145,7 @@ describe('Test App', function () {
 
   beforeEach(async () => {
     app = new App(config, authFunction, db.knex())
+    addPeerSpyForAppConstructor = sinon.spy(app, 'addPeer')
     await app.start()
     client = connect('http://localhost:8083')
     aliceServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
@@ -160,6 +162,7 @@ describe('Test App', function () {
     aliceServer.close()
     client.close()
     mockSEServer.stop()
+    addPeerSpyForAppConstructor.restore()
   })
 
   it('can send a packet and receive reply from self', async function() {
@@ -186,8 +189,27 @@ describe('Test App', function () {
       assert.deepEqual(routes.get('test.other.rafiki.bob'), { nextHop: 'alice', path: [], weight: undefined, auth: undefined })
     })
 
-    it('loads the peers and rules from the database', async () => {
-      assert.deepEqual(app.getBalance('alice'), { balance: '10', minimum: '0', maximum: '100' })
+    it('loads the peers from the database', async () => {
+      const peerInfo =  addPeerSpyForAppConstructor.getCall(0).args[0]
+      const endpointInfo =  addPeerSpyForAppConstructor.getCall(0).args[1]
+
+      assert.deepEqual(peerInfo, {
+        id: 'alice',
+        assetCode: 'XRP',
+        assetScale: 9,
+        relation: 'child',
+        rules: [
+          { name: 'errorHandler' },
+          { name: 'balance', minimum: '0', maximum: '100', initialBalance: '10'}
+        ],
+        protocols: [
+          { name: 'ildcp' }
+        ]
+      })
+      assert.deepEqual(endpointInfo, {
+        type: 'http',
+        httpOpts: { peerUrl: 'http://localhost:8084' }
+      })
     })
   })
 
@@ -342,10 +364,13 @@ describe('Test App', function () {
         assetScale: 9,
         relation: 'peer',
         rules: [{
-          name: 'errorHandler'
+          name: 'balance',
+          minimum: '0',
+          maximum: '100'
         }],
         protocols: [{
-          name: 'ildcp'
+          name: 'ildcp',
+          testData: 'test'
         }]
       }
       const bobEndpointInfo = {
@@ -363,10 +388,14 @@ describe('Test App', function () {
       assert.equal(bobInfo.assetCode, bob.assetCode)
       assert.equal(bobInfo.assetScale, bob.assetScale)
       assert.equal(bobInfo.relation, bob.relation)
-      assert.equal('errorHandler', bob['rules'][0]['name'])
+      assert.equal('balance', bob['rules'][0]['name'])
+      assert.deepEqual({name: 'balance', minimum: '0', maximum: '100'}, bob['rules'][0]['config'])
       assert.equal('ildcp', bob['protocols'][0]['name'])
+      assert.deepEqual({ name: 'ildcp', testData: 'test' }, bob['protocols'][0]['config'])
       assert.equal(bobEndpointInfo.type, bob['endpoint']['type'])
       assert.deepEqual(bobEndpointInfo.httpOpts, bob['endpoint']['options'])
+      // clean up for other tests
+      await app.removePeer('bob', true)
     })
   })
 

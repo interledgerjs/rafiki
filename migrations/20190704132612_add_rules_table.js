@@ -4,7 +4,7 @@ exports.up = function(knex) {
     table.increments('id').unsigned().primary()
     table.string('peerId').notNullable()
     table.string('name').notNullable()
-    table.text('config')
+    table.json('config')
   });
 };
 

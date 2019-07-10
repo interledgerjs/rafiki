@@ -308,10 +308,10 @@ export class App {
     const peers = await Peer.query(this._knex).eager('[rules,protocols,endpoint]')
     peers.forEach(peer => {
       const rules = peer['rules'].map((rule: RuleModel) => {
-        return rule.config ? JSON.parse(rule.config) : { name: rule.name }
+        return rule.config || { name: rule.name }
       })
       const protocols = peer['protocols'].map((protocol: ProtocolModel) => {
-        return protocol.config ? JSON.parse(protocol.config) : { name: protocol.name }
+        return protocol.config || { name: protocol.name }
       })
       const peerInfo: PeerInfo = {
         id: peer.id,
