@@ -3,25 +3,31 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import { getLocal, Mockttp } from 'mockttp'
 import chaiAsPromised from 'chai-as-promised'
-import { App } from '../src/app'
+import {App, Config, EndpointInfo, MAX_INT_64, MIN_INT_64, STATIC_CONDITION} from '../src'
+import {
+  ClientHttp2Session,
+  connect,
+  constants,
+  createServer,
+  Http2Server,
+  Http2ServerRequest,
+  Http2ServerResponse
+} from 'http2'
+import {deserializeIlpReply, IlpFulfill, IlpPrepare, serializeIlpFulfill, serializeIlpPrepare} from 'ilp-packet'
+import {isEndpoint, PeerInfo} from '../src/types'
+import {ErrorHandlerRule} from '../src/rules'
+import {IldcpResponse, serializeIldcpResponse} from 'ilp-protocol-ildcp'
+import {PeerNotFoundError} from '../src/errors/peer-not-found-error'
+
+import {Peer} from '../src/models/Peer'
+import {Rule} from '../src/models/Rule'
+import {Protocol} from '../src/models/Protocol'
+import {Endpoint} from '../src/models/Endpoint'
+import {DB} from './helpers/db'
+import {Route} from '../src/models/Route'
+
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-
-import { connect, ClientHttp2Session, constants, createServer, Http2Server, Http2ServerRequest, Http2ServerResponse } from 'http2'
-import { IlpPrepare, serializeIlpPrepare, deserializeIlpReply, IlpFulfill, serializeIlpFulfill } from 'ilp-packet'
-import { PeerInfo } from '../src/types/peer';
-import { ErrorHandlerRule } from '../src/rules/error-handler';
-import { isEndpoint } from '../src/types/endpoint';
-import { IldcpResponse, serializeIldcpResponse } from 'ilp-protocol-ildcp'
-import { EndpointInfo, Config, STATIC_CONDITION } from '../src'
-import { PeerNotFoundError } from '../src/errors/peer-not-found-error'
-
-import { Peer } from '../src/models/Peer'
-import { Rule } from '../src/models/Rule'
-import { Protocol } from '../src/models/Protocol'
-import { Endpoint } from '../src/models/Endpoint'
-import { DB } from './helpers/db'
-import { Route } from '../src/models/Route'
 
 const post = (client: ClientHttp2Session, authToken: string, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
   const req = client.request({
@@ -185,7 +191,7 @@ describe('Test App', function () {
   describe('start', function () {
     it('loads routes from db', async () => {
       const routes = app.connector.routingTable.getRoutingTable()
-  
+
       assert.deepEqual(routes.get('test.other.rafiki.bob'), { nextHop: 'alice', path: [], weight: undefined, auth: undefined })
     })
 

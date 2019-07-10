@@ -1,30 +1,43 @@
 import { log } from './winston'
-import { Rule, setPipelineReader } from './types/rule'
+import {
+    Balance,
+    Endpoint,
+    InMemoryBalance,
+    JSONBalanceSummary,
+    PeerInfo,
+    PeerRelation,
+    Rule,
+    RuleConfig,
+    setPipelineReader
+} from './types'
 import { Connector } from './connector'
-import { PeerInfo, RuleConfig, PeerRelation } from './types/peer'
-import { ErrorHandlerRule } from './rules/error-handler'
-import { RateLimitRule, createRateLimitBucketForPeer } from './rules/rate-limit'
-import { MaxPacketAmountRule } from './rules/max-packet-amount'
-import { ThroughputRule, createThroughputLimitBucketsForPeer } from './rules/throughput'
-import { DeduplicateRule, PacketCache, PacketCacheOptions } from './rules/deduplicate'
-import { ExpireRule } from './rules/expire'
-import { ValidateFulfillmentRule } from './rules/validate-fulfillment'
-import { StatsRule } from './rules/stats'
-import { AlertRule, Alerts } from './rules/alert'
+import {
+    AlertRule,
+    Alerts,
+    BalanceRule,
+    createRateLimitBucketForPeer,
+    createThroughputLimitBucketsForPeer,
+    DeduplicateRule,
+    ErrorHandlerRule,
+    ExpireRule,
+    MaxPacketAmountRule,
+    PacketCache,
+    PacketCacheOptions,
+    RateLimitRule,
+    ReduceExpiryRule,
+    StatsRule,
+    ThroughputRule,
+    ValidateFulfillmentRule
+} from './rules'
 import { TokenBucket } from './lib/token-bucket'
-import { Stats } from './services/stats'
-import { ReduceExpiryRule } from './rules/reduce-expiry'
-import { EndpointInfo, EndpointManager, AuthFunction } from './endpoints'
+import { Config, Stats } from './services'
+import { AuthFunction, EndpointInfo, EndpointManager } from './endpoints'
 
-import { IlpReply, IlpPrepare, isReject } from 'ilp-packet'
+import { IlpPrepare, IlpReply, isReject } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
-import { Endpoint } from './types/endpoint'
 import { createServer, Http2Server } from 'http2'
 import { PluginEndpoint } from './legacy/plugin-endpoint'
-import { Config } from './services'
-import { Balance, JSONBalanceSummary, InMemoryBalance } from './types'
-import { MIN_INT_64, MAX_INT_64, STATIC_CONDITION } from './constants'
-import { BalanceRule } from './rules'
+import { MAX_INT_64, MIN_INT_64, STATIC_CONDITION } from './constants'
 import { PeerNotFoundError } from './errors/peer-not-found-error'
 import { Peer } from './models/Peer'
 import Knex from 'knex'
@@ -49,10 +62,12 @@ export class App {
   private _config: Config
   private _knex: Knex
 
-  /**
-   * Instantiates an http2 server which handles posts to ilp/:peerId and passes the packet on to the appropriate peer's endpoint.
-   * @param opts Options for the application
-   */
+    /**
+     * Instantiates an http2 server which handles posts to ilp/:peerId and passes the packet on to the appropriate peer's endpoint.
+     * @param opts Options for the application
+     * @param authService Auth function for incoming connections
+     * @param knex database object for persistence
+     */
   constructor (opts: Config, authService: AuthFunction, knex: Knex) {
 
     this.connector = new Connector()
@@ -106,11 +121,11 @@ export class App {
 
     const endpoint = this._endpointManager.createEndpoint(peerInfo.id, endpointInfo)
 
-    // create incoming and outgoing pipelines for business rules
+        // create incoming and outgoing pipelines for business rules
     const combinedRule = pipeline(...rulesInstances)
     const sendOutgoing = rulesInstances.length > 0 ? setPipelineReader('outgoing', combinedRule, endpoint.sendOutgoingRequest.bind(endpoint)) : endpoint.sendOutgoingRequest.bind(endpoint)
 
-    // wrap endpoint and middleware pipelines in something that looks like an endpoint<IlpPrepare, IlpReply>
+        // wrap endpoint and middleware pipelines in something that looks like an endpoint<IlpPrepare, IlpReply>
     const wrapperEndpoint = {
       sendOutgoingRequest: async (request: IlpPrepare, sentCallback?: () => void): Promise<IlpReply> => {
         return sendOutgoing(request)
@@ -150,9 +165,9 @@ export class App {
     }
   }
 
-  /**
-   * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's protocols.
-   */
+    /**
+     * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's protocols.
+     */
   public async shutdown () {
     logger.info('Shutting down app...')
     this.connector.getPeerList().forEach((peerId: string) => this.removePeer(peerId))
@@ -192,7 +207,7 @@ export class App {
     }
 
     const scaleDiff = balance.scale - scale
-    // TODO: update to check whether scaledAmountDiff is an integer
+      // TODO: update to check whether scaledAmountDiff is an integer
     if (scaleDiff < 0) {
       logger.warn('Could not adjust balance due to scale differences', { amountDiff, scale })
       return
@@ -237,15 +252,18 @@ export class App {
     })
 
     if (store) {
-      Route.query(this._knex).insert({ peerId, targetPrefix }).execute().catch(error => logger.error('Could not save route in database.', { error: error.toString() }))
+      Route.query(this._knex).insert({
+        peerId,
+        targetPrefix
+      }).execute().catch(error => logger.error('Could not save route in database.', { error: error.toString() }))
     }
   }
 
-  /**
-   * Creates the business rules specified in the peer information. Custom rules should be added to the list.
-   * @param peerInfo Peer information
-   * @returns An array of rules
-   */
+    /**
+     * Creates the business rules specified in the peer information. Custom rules should be added to the list.
+     * @param peerInfo Peer information
+     * @returns An array of rules
+     */
   private _createRules (peerInfo: PeerInfo): Rule[] {
 
     logger.verbose('Creating rules for peer', { peerInfo })
@@ -257,7 +275,11 @@ export class App {
         case('expire'):
           return new ExpireRule()
         case('reduceExpiry'):
-          return new ReduceExpiryRule({ minIncomingExpirationWindow: 0.5 * this._config.minExpirationWindow, minOutgoingExpirationWindow: 0.5 * this._config.minExpirationWindow, maxHoldWindow: this._config.maxHoldWindow })
+          return new ReduceExpiryRule({
+            minIncomingExpirationWindow: 0.5 * this._config.minExpirationWindow,
+            minOutgoingExpirationWindow: 0.5 * this._config.minExpirationWindow,
+            maxHoldWindow: this._config.maxHoldWindow
+          })
         case('rateLimit'):
           const rateLimitBucket: TokenBucket = createRateLimitBucketForPeer(peerInfo)
           this._rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
@@ -293,7 +315,12 @@ export class App {
           const url = rule.settlement && rule.settlement.url ? rule.settlement.url : ''
           const settlementInfo = rule.settlement ? { url, settleTo, settleThreshold } : undefined
           const initialBalance = rule.initialBalance ? BigInt(rule.initialBalance) : 0n
-          logger.info('initializing in-memory balance for peer', { peerId: peerInfo.id, minimum: minimum.toString(), maximum: maximum.toString(), initialBalance: initialBalance.toString() })
+          logger.info('initializing in-memory balance for peer', {
+            peerId: peerInfo.id,
+            minimum: minimum.toString(),
+            maximum: maximum.toString(),
+            initialBalance: initialBalance.toString()
+          })
           const balance = new InMemoryBalance({ initialBalance, minimum, maximum, scale: peerInfo.assetScale }) // In future can get from a balance service
           this._balanceMap.set(peerInfo.id, balance)
           return new BalanceRule({ peerInfo, stats: this.stats, balance }, settlementInfo)

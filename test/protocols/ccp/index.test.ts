@@ -2,13 +2,14 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
+import {deserializeIlpPrepare, IlpPrepare, IlpReply} from 'ilp-packet'
+import {CcpProtocol} from '../../../src/protocols/ccp'
+import {CcpRouteUpdateRequest, serializeCcpRouteUpdateRequest} from 'ilp-protocol-ccp'
+import {setPipelineReader} from '../../../src/types/rule'
+import {ForwardingRoutingTable, IncomingRoute, Relation} from 'ilp-routing'
+
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { IlpPrepare, IlpReply, deserializeIlpPrepare } from 'ilp-packet';
-import { CcpProtocol } from '../../../src/protocols/ccp'
-import { CcpRouteUpdateRequest, serializeCcpRouteUpdateRequest} from 'ilp-protocol-ccp'
-import { setPipelineReader } from '../../../src/types/rule';
-import { ForwardingRoutingTable, IncomingRoute, Relation } from 'ilp-routing';
 
 describe('CCP Rule', function () {
     let ccpRule: CcpProtocol

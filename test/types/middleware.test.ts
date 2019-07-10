@@ -2,12 +2,11 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
+import {IlpPrepare, IlpReply} from 'ilp-packet'
+import {IlpRequestHandler, Rule, setPipelineReader} from '../../src/types/rule'
+
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { IlpPrepare, IlpReply } from 'ilp-packet';
-import { setPipelineReader, Rule, IlpRequestHandler } from '../../src/types/rule';
-import { start } from 'repl';
-
 
 class CustomRule extends Rule {
 

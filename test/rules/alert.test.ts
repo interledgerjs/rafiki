@@ -2,12 +2,13 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
+import {IlpFulfill, IlpPrepare, IlpReject} from 'ilp-packet'
+import {AlertRule, Alerts} from '../../src/rules/alert'
+import {PeerInfo} from '../../src/types/peer'
+import {setPipelineReader} from '../../src/types/rule'
+
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
-import { IlpPrepare, IlpReply, deserializeIlpFulfill, IlpReject, IlpFulfill } from 'ilp-packet';
-import { AlertRule, Alerts } from '../../src/rules/alert'
-import { PeerInfo } from '../../src/types/peer';
-import { setPipelineReader } from '../../src/types/rule';
 
 const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 

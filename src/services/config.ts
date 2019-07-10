@@ -34,6 +34,7 @@ export class Config extends ConfigSchemaTyping {
   public http2ServerPort!: number
   public ilpAddress!: string
   public databaseEnv!: 'test' | 'development' | 'production'
+  public databaseConnectionString!: string
 
   protected _validate: Ajv.ValidateFunction
 

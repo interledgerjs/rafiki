@@ -2,9 +2,9 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { DeduplicateRule, CachedPacket, PacketCache } from '../../src/rules/deduplicate'
-import { IlpPrepare } from 'ilp-packet';
-import { setPipelineReader } from '../../src/types/rule';
+import {DeduplicateRule, PacketCache} from '../../src/rules'
+import {IlpPrepare} from 'ilp-packet'
+import {setPipelineReader} from '../../src/types'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

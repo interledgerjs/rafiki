@@ -4,4 +4,4 @@ coverage
 .nyc_output
 build
 .DS_Store
-*.sqlite3
+*.sqlite

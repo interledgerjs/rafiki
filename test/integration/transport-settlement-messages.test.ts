@@ -1,11 +1,9 @@
 import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
-import chaiAsPromised from 'chai-as-promised'
-import { App, PeerInfo, EndpointInfo } from '../../src'
-import { Mockttp, getLocal } from 'mockttp'
-import { Config } from '../../src';
-import { DB } from '../helpers/db';
+import {App, Config, EndpointInfo, PeerInfo} from '../../src'
+import {getLocal, Mockttp} from 'mockttp'
+import {DB} from '../helpers/db'
 
 const assert = Object.assign(Chai.assert, sinon.assert)
 

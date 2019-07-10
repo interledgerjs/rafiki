@@ -1,6 +1,6 @@
-import { Endpoint } from '../../src/types/endpoint'
-import { IlpPrepare, IlpReply } from 'ilp-packet'
-import { RequestHandler } from '../../src/types/request-stream';
+import {Endpoint} from '../../src/types'
+import {IlpPrepare, IlpReply} from 'ilp-packet'
+import {RequestHandler} from '../../src/types/request-stream'
 
 export class MockIlpEndpoint implements Endpoint<IlpPrepare, IlpReply> {
 

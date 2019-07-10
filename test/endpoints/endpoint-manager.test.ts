@@ -2,11 +2,12 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { EndpointManager, EndpointInfo } from '../../src/endpoints'
-import { PluginEndpoint } from '../../src'
+import {EndpointInfo, EndpointManager} from '../../src/endpoints'
+import {PluginEndpoint} from '../../src'
 import BtpPlugin from 'ilp-plugin-btp'
-import { createServer, Http2Server, connect, ClientHttp2Session } from 'http2'
-import { IlpFulfill, IlpPrepare, serializeIlpPrepare } from 'ilp-packet';
+import {ClientHttp2Session, connect, createServer, Http2Server} from 'http2'
+import {IlpFulfill, IlpPrepare, serializeIlpPrepare} from 'ilp-packet'
+
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 

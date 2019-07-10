@@ -1,12 +1,9 @@
-import { Router as RoutingTable, RouteManager, IncomingRoute } from 'ilp-routing'
+import { IncomingRoute, RouteManager, Router as RoutingTable } from 'ilp-routing'
 import { pipeline } from './types/request-stream'
-import { Endpoint } from './types/endpoint'
-import { IlpPrepare, IlpReply, Errors } from 'ilp-packet'
-import { Rule, setPipelineReader } from './types/rule'
-import { PeerInfo, Relation, ProtocolConfig, RelationWeights } from './types/peer'
+import { Endpoint, PeerInfo, ProtocolConfig, Relation, RelationWeights, Rule, setPipelineReader } from './types'
+import { Errors, IlpPrepare, IlpReply } from 'ilp-packet'
 import { CcpProtocol } from './protocols/ccp'
-import { IldcpProtocol } from './protocols/ildcp'
-import { EchoProtocol } from './protocols/echo'
+import { EchoProtocol, IldcpProtocol } from './protocols'
 import { PeerUnreachableError } from 'ilp-packet/dist/src/errors'
 import { log } from './winston'
 import { PeerNotFoundError } from './errors/peer-not-found-error'
@@ -22,22 +19,7 @@ export class Connector {
   peerRules: Map<string, Rule[]> = new Map()
 
   constructor () {
-
     this.addSelfPeer()
-
-    // TODO add default route config
-    // let defaultRoute = this.config.defaultRoute
-    // if (defaultRoute === 'auto') {
-    //   defaultRoute = localAccounts.filter(id => this.accounts.getInfo(id).relation === 'parent')[0]
-    // }
-    // if (defaultRoute) {
-    //   const globalPrefix = this.getGlobalPrefix()
-    //   this.localRoutes.set(globalPrefix, {
-    //     nextHop: defaultRoute,
-    //     path: [],
-    //     auth: hmac(this.routingSecret, globalPrefix)
-    //   })
-    // }
   }
 
 /**

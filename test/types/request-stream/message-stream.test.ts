@@ -1,9 +1,10 @@
 import 'mocha'
-import { getReadBuffer, MessageEncoder, MessageDecoder } from '../../../src/types/request-stream/message-stream'
+import {getReadBuffer, MessageDecoder, MessageEncoder} from '../../../src/types/request-stream/message-stream'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { MessageFrame, isMessageFrame } from '../../../src/types/request-stream/frame';
-import { BufferedStream } from '../../mocks/buffered-stream'
+import {isMessageFrame, MessageFrame} from '../../../src/types/request-stream/frame'
+import {BufferedStream} from '../../mocks/buffered-stream'
+
 const { expect } = Chai
 Chai.use(chaiAsPromised)
 require('source-map-support').install()
