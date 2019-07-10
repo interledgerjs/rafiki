@@ -5,3 +5,4 @@ coverage
 build
 .DS_Store
 *.sqlite
+.idea
