@@ -31,7 +31,7 @@ export class Http2EndpointManager extends Map<string, Http2Endpoint> {
       const path = headers[':path']
       const authHeader = headers.authorization
 
-      if (method !== 'POST' || typeof path === 'undefined' || typeof authHeader === 'undefined') {
+      if (method !== 'POST' || typeof authHeader === 'undefined') {
         stream.respond({ ':status': 400 })
         stream.end()
         return
