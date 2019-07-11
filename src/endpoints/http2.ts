@@ -1,7 +1,7 @@
 import { Endpoint } from '../types/endpoint'
 import { RequestHandler } from '../types/request-stream'
 import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpReply, deserializeIlpPrepare, serializeIlpReply } from 'ilp-packet'
-import { ServerHttp2Stream } from 'http2'
+import { ServerHttp2Stream, constants } from 'http2'
 import { IlpRequestHandler } from '../types/rule'
 import Http2Client from 'ilp-plugin-http/build/lib/http2' // TODO remove this dependency
 import { log } from '../winston'
@@ -39,7 +39,7 @@ export class Http2Endpoint implements Endpoint<IlpPrepare, IlpReply> {
         logger.error('No peer URL set for outgoing HTTP2 Endpoint')
         reject()
       }
-      const result = await this.client.fetch(this.path, { method: 'POST', body: packet, headers: { 'Authorization': `Bearer ${this.authToken}` } })
+      const result = await this.client.fetch(this.path, { method: 'POST', body: packet, headers: { [constants.HTTP2_HEADER_AUTHORIZATION]: `Bearer ${this.authToken}` } })
       resolve(result.buffer())
     })
   }
