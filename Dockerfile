@@ -15,6 +15,6 @@ RUN npm install
 # Bundle app source
 COPY . .
 
-RUN npm run build
+RUN chmod +x ./wait-for-it.sh && npm run build
 
 ENTRYPOINT ["./Entrypoint.sh"]
