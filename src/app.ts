@@ -87,6 +87,7 @@ export class App {
     this._ilpOverHttpApp = new Koa()
     this._endpointManager = new EndpointManager({
       httpServer: this._ilpOverHttpApp,
+      httpServerPath: opts.httpServerPath,
       authService: authService
     })
 

@@ -45,6 +45,11 @@
       "maximum": 65535,
       "default": 8443
     },
+    "httpServerPath": {
+      "description": "Path to receive incoming ilp-over-http requests. Default: /ilp",
+      "type": "string",
+      "default": "/ilp"
+    },
     "adminApiPort": {
       "description": "Which port the admin API should listen on. Default: 7780",
       "type": "integer",
