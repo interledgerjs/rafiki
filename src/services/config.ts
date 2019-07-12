@@ -32,6 +32,7 @@ export class Config extends ConfigSchemaTyping {
   public maxHoldWindow!: number
   public routeBroadcastInterval!: number
   public httpServerPort!: number
+  public httpServerPath!: string
   public ilpAddress!: string
   public databaseEnv!: 'test' | 'development' | 'production'
   public databaseConnectionString!: string

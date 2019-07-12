@@ -32,6 +32,7 @@ export interface EndpointInfo {
 // TODO: Support other endpoint types
 export interface EndpointManagerServices {
   httpServer?: Koa,
+  httpServerPath?: string,
   authService?: AuthFunction
 }
 
@@ -41,10 +42,10 @@ export class EndpointManager {
   private _pluginEndpoints: Map<string, PluginEndpoint> = new Map()
   private _pluginStores: Map<string, InMemoryMapStore> = new Map()
 
-  constructor ({ httpServer: httpServer, authService }: EndpointManagerServices) {
+  constructor ({ httpServer: httpServer, authService, httpServerPath }: EndpointManagerServices) {
     if (httpServer) {
       if (!authService) throw new Error('Auth Service required for Http2 Endpoints')
-      this._httpEndpoints = new HttpEndpointManager(httpServer, authService)
+      this._httpEndpoints = new HttpEndpointManager(httpServer, authService, httpServerPath)
     }
   }
 

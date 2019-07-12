@@ -17,7 +17,7 @@ export class HttpEndpointManager extends Map<string, HttpEndpoint> {
 
     router.route({
       method: 'post',
-      path: '/ilp',
+      path: path,
       handler: async (ctx: Koa.Context, next) => {
         try {
           const token = this._getBearerToken(ctx.request)
