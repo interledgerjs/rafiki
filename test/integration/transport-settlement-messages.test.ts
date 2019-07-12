@@ -109,9 +109,9 @@ describe('Connector and settlement engine linking', function () {
     }
   }
   const config1 = new Config()
-  config1.loadFromOpts({ ilpAddress: 'test.alice', http2ServerPort: 8083 })
+  config1.loadFromOpts({ ilpAddress: 'test.alice', httpServerPort: 8083 })
   const config2 = new Config()
-  config2.loadFromOpts({ ilpAddress: 'test.bob', http2ServerPort: 8084 })
+  config2.loadFromOpts({ ilpAddress: 'test.bob', httpServerPort: 8084 })
 
   beforeEach(async () => {
     db1 = new DB()

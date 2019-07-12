@@ -38,8 +38,8 @@
       "type": "integer",
       "default": 30000
     },
-    "http2ServerPort": {
-      "description": "Which port the http2 server for incoming ilp over http requests should listen on. Default: 8843",
+    "httpServerPort": {
+      "description": "Which port the http server for incoming ilp over http requests should listen on. Default: 8843",
       "type": "integer",
       "minimum": 0,
       "maximum": 65535,
