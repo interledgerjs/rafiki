@@ -1,0 +1,67 @@
+# Default values for rafiki.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: interledgerjs/rafiki
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+config:
+  ilpAddress: 'test.rafiki'
+  databaseConnectionString: 'mysql://<username>:<password>@<host>:<port>/<db_name>'
+
+service:
+  type: NodePort
+
+  ports:
+  - name: http-ilp
+    externalPort: 8443
+    internalPort: 8443
+  - name: admin-api
+    externalPort: 7780
+    internalPort: 7780
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+    certmanager.k8s.io/issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+  hosts:
+    host: rafiki.local
+
+  paths:
+    - path: '/admin/?(.*)'
+      port: 7780
+    - path: '/ilp'
+      port: 8443
+
+  tls:
+    - hosts:
+        - eu1.rafikilabs.com
+      secretName: letsencrypt-prod
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
