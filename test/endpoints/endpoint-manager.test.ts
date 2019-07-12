@@ -5,8 +5,10 @@ import chaiAsPromised from 'chai-as-promised'
 import {EndpointInfo, EndpointManager} from '../../src/endpoints'
 import {PluginEndpoint} from '../../src'
 import BtpPlugin from 'ilp-plugin-btp'
-import {ClientHttp2Session, connect, createServer, Http2Server} from 'http2'
-import {IlpFulfill, IlpPrepare, serializeIlpPrepare} from 'ilp-packet'
+import {IlpFulfill, IlpPrepare, serializeIlpPrepare, deserializeIlpReply} from 'ilp-packet'
+import { Server } from 'net'
+import Koa from 'koa'
+import Axios from 'axios';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -14,22 +16,20 @@ const assert = Object.assign(Chai.assert, sinon.assert)
 describe('Endpoint Manager', function () {
   
   let endpointManager: EndpointManager
-  let server: Http2Server
-  let client: ClientHttp2Session
+  let server: Server
+  let ilpOverHttpApp: Koa
 
   beforeEach(async () => {
-    server = createServer()
+    ilpOverHttpApp = new Koa()
     endpointManager = new EndpointManager({
-      http2Server: server,
+      httpServer: ilpOverHttpApp,
       authService: (token: string) => Promise.resolve('bob')
     })
-    await server.listen(6969)
-    client = connect('http://127.0.0.1:6969')
+    server = await ilpOverHttpApp.listen(6969)
   })
 
   afterEach(async () => {
     await server.close()
-    await client.close()
   })
 
   describe('createEndpoint', function () {
@@ -62,36 +62,35 @@ describe('Endpoint Manager', function () {
     })
   })
 
-  describe('http2 endpoint manager', function() {
+  describe('http endpoint manager', function() {
     
-    it('can create a http2 endpoint using auth', async function () {
-      return new Promise(async (resolve) => {
-        const req = client.request({ ':path': '/ilp', ':method': "POST", 'Authorization': 'Bearer myawesometoken' })
-        const pluginEndpoint = endpointManager.createEndpoint('bob', {
-          type: 'http',
-          httpOpts: {
-            peerUrl: 'http://test.local/'
-          }
-        })
-  
-        pluginEndpoint.setIncomingRequestHandler((packet) => {
-          resolve()
-          return Promise.resolve({
-            data: Buffer.from(''),
-            fulfillment: Buffer.alloc(32)
-          } as IlpFulfill)
-        })
-  
-        const IlpPrepare: IlpPrepare = {
-          amount: '1',
-          executionCondition: Buffer.alloc(32),
-          expiresAt: new Date(),
-          data: Buffer.from(''),
-          destination: 'g.test'
+    it('can create a http endpoint using auth', async function () {
+      const fulfill: IlpFulfill = {
+        data: Buffer.from(''),
+        fulfillment: Buffer.alloc(32)
+      }
+      const pluginEndpoint = endpointManager.createEndpoint('bob', {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://test.local/'
         }
-  
-        const data = await req.end(serializeIlpPrepare(IlpPrepare))
       })
+
+      pluginEndpoint.setIncomingRequestHandler((packet) => {
+        return Promise.resolve(fulfill)
+      })
+
+      const IlpPrepare: IlpPrepare = {
+        amount: '1',
+        executionCondition: Buffer.alloc(32),
+        expiresAt: new Date(),
+        data: Buffer.from(''),
+        destination: 'g.test'
+      }
+
+      const response = await Axios.post('http://localhost:6969/ilp', serializeIlpPrepare(IlpPrepare), { headers: { 'Authorization': 'Bearer myawesometoken' }, responseType: 'arraybuffer' })
+
+      assert.deepEqual(deserializeIlpReply(response.data), fulfill)
     })
   })
 })
