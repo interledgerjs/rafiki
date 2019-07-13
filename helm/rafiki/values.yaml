@@ -26,6 +26,9 @@ service:
   - name: admin-api
     externalPort: 7780
     internalPort: 7780
+  - name: mini-accounts
+    externalPort: 6666
+    internalPort: 6666
 
 ingress:
   enabled: true
@@ -42,6 +45,8 @@ ingress:
       port: 7780
     - path: '/ilp'
       port: 8443
+    - path: '/btp'
+      port: 6666
 
   tls:
     - hosts:

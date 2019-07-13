@@ -35,6 +35,11 @@ spec:
                 configMapKeyRef:
                   name: {{.Chart.Name}}-configmap
                   key: CONNECTOR_ILP_ADDRESS
+            - name: CONNECTOR_HTTP_SERVER_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{.Chart.Name}}-configmap
+                  key: CONNECTOR_HTTP_SERVER_PATH
             - name: CONNECTOR_DATABASE_CONNECTION_STRING
               valueFrom:
                 configMapKeyRef:

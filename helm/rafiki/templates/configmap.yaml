@@ -6,3 +6,4 @@ data:
   CONNECTOR_ILP_ADDRESS: {{ .Values.config.ilpAddress | quote }}
   CONNECTOR_DATABASE_CONNECTION_STRING: {{ .Values.config.databaseConnectionString | quote }}
   LOG_LEVEL: "silly"
+  CONNECTOR_HTTP_SERVER_PATH: "/"
