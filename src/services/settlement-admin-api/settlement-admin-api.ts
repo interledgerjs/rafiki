@@ -55,6 +55,7 @@ export class SettlementAdminApi {
     koa.context.updateAccountBalance = this._updateAccountBalanceService
     koa.context.sendMessage = this._sendMessage
     koa.use(async (ctx, next) => {
+      logger.debug('Received request', { path: ctx.request.path })
       if (ctx.request.headers['content-type'] === 'application/octet-stream') {
         ctx.disableBodyParser = true
         const buffer = await getRawBody(ctx.req).catch((error: any) => {
