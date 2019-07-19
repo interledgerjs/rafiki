@@ -55,7 +55,7 @@ export class BalanceRule extends Rule {
     if (destination.startsWith('peer.settle')) {
       if (this.settlementEngineInterface) {
         const response = await this.settlementEngineInterface.receiveRequest(this.peer.id, request)
-        logger.debug('response from SE after forwarding it message' + response)
+        logger.debug('response from SE after forwarding it message' + JSON.stringify(response))
         return response
       } else {
         logger.error('Cannot handle peer.settle message. No settlement engine configured for peerId=' + this.peer.id)
@@ -208,7 +208,7 @@ class SettlementEngineInterface {
   async removeAccount (id: string) {
     logger.info('Removing account on settlement engine', { accountId: id })
     return axios.delete(`${this._url}/accounts/${id}`).catch(error => {
-      console.log('failed to delete account' + id, 'url', `${this._url}/accounts/${id}`, 'error')
+      console.log('failed to delete account' + id, 'url', `${this._url}/accounts/${id}`, 'error', error)
       logger.error('Failed to delete account on settlement engine for peer=' + id, { accountId: id, responseStatus: error.response.status })
     })
   }
@@ -217,7 +217,7 @@ class SettlementEngineInterface {
     logger.debug('Forwarding packet onto settlement engine', { accountId, packet, url: `${this._url}/accounts/${accountId}/messages` })
     const bufferMessage = packet.data
     try {
-      const response = await axios.post(`${this._url}/accounts/${accountId}/messages`, bufferMessage, { headers: { 'content-type': 'application/octet-stream' } })
+      const response = await axios.post(`${this._url}/accounts/${accountId}/messages`, bufferMessage, { headers: { 'content-type': 'application/octet-stream' }, responseType: 'arraybuffer' })
       const ilpFulfill: IlpFulfill = {
         data: response.data || Buffer.from('') ,
         fulfillment: STATIC_FULFILLMENT
