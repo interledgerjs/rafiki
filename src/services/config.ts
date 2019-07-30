@@ -31,7 +31,8 @@ export class Config extends ConfigSchemaTyping {
   public minExpirationWindow!: number
   public maxHoldWindow!: number
   public routeBroadcastInterval!: number
-  public http2ServerPort!: number
+  public httpServerPort!: number
+  public httpServerPath!: string
   public ilpAddress!: string
   public databaseEnv!: 'test' | 'development' | 'production'
   public databaseConnectionString!: string

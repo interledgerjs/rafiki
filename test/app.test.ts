@@ -3,16 +3,7 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import { getLocal, Mockttp } from 'mockttp'
 import chaiAsPromised from 'chai-as-promised'
-import {App, Config, EndpointInfo, MAX_INT_64, MIN_INT_64, STATIC_CONDITION} from '../src'
-import {
-  ClientHttp2Session,
-  connect,
-  constants,
-  createServer,
-  Http2Server,
-  Http2ServerRequest,
-  Http2ServerResponse
-} from 'http2'
+import {App, Config, EndpointInfo, STATIC_CONDITION} from '../src'
 import {deserializeIlpReply, IlpFulfill, IlpPrepare, serializeIlpFulfill, serializeIlpPrepare} from 'ilp-packet'
 import {isEndpoint, PeerInfo} from '../src/types'
 import {ErrorHandlerRule} from '../src/rules'
@@ -25,33 +16,17 @@ import {Protocol} from '../src/models/Protocol'
 import {Endpoint} from '../src/models/Endpoint'
 import {DB} from './helpers/db'
 import {Route} from '../src/models/Route'
+import Axios from 'axios'
+import Koa from 'koa'
+import createRouter from 'koa-joi-router'
+import { Server } from 'net'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
 
-const post = (client: ClientHttp2Session, authToken: string, path: string, body: Buffer): Promise<Buffer> => new Promise((resolve, reject) => {
-  const req = client.request({
-      [constants.HTTP2_HEADER_SCHEME]: "http",
-      [constants.HTTP2_HEADER_METHOD]: constants.HTTP2_METHOD_POST,
-      [constants.HTTP2_HEADER_PATH]: `/${path}`,
-      [constants.HTTP2_HEADER_AUTHORIZATION]: `Bearer ${authToken}`
-  })
-
-  req.end(body)
-  let chunks: Array<Buffer> = []
-  req.on('data', (chunk: Buffer) => {
-      chunks.push(chunk)
-  })
-  req.on('end', () => {
-      chunks.length > 0 ? resolve(Buffer.concat(chunks)) : reject()
-  })
-  req.on('error', (error) => reject(error))
-});
-
 describe('Test App', function () {
   let addPeerSpyForAppConstructor: sinon.SinonSpy
-  let client: ClientHttp2Session
-  let aliceServer: Http2Server
+  let aliceServer: Server
   let app: App
   let db: DB
   let mockSEServer: Mockttp
@@ -72,14 +47,14 @@ describe('Test App', function () {
   const endpointInfo: EndpointInfo = {
     type: 'http',
     httpOpts: {
-      peerUrl: 'http://localhost:1234'
+      peerUrl: 'http://localhost:1234/ilp'
     }
   }
 
   const parentEndpointInfo = {
     type: 'http',
     httpOpts: {
-      peerUrl: 'http://localhost:8085'
+      peerUrl: 'http://localhost:8085/ilp'
     }
   }
   const parentInfo: PeerInfo = {
@@ -110,11 +85,11 @@ describe('Test App', function () {
   const parent2EndpointInfo = {
     type: 'http',
     httpOpts: {
-      peerUrl: 'http://localhost:8086'
+      peerUrl: 'http://localhost:8086/ilp'
     }
   }
   const config = new Config()
-  config.loadFromOpts({ ilpAddress: 'test.harry', http2ServerPort: 8083 })
+  config.loadFromOpts({ ilpAddress: 'test.harry', httpServerPort: 8083 })
   const authFunction = (token: string) => new Promise<string>((resolve, reject) => {
     switch(token) {
       case "aliceToken":
@@ -140,7 +115,7 @@ describe('Test App', function () {
     await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'errorHandler' })
     await alice.$relatedQuery<Rule>('rules', db.knex()).insert({ name: 'balance', config: { name: 'balance', minimum: '0', maximum: '100', initialBalance: '10' } })
     await alice.$relatedQuery<Protocol>('protocols', db.knex()).insert({ name: 'ildcp' })
-    await alice.$relatedQuery<Endpoint>('endpoint', db.knex()).insert({ type: 'http', options: { peerUrl: 'http://localhost:8084' }})
+    await alice.$relatedQuery<Endpoint>('endpoint', db.knex()).insert({ type: 'http', options: { peerUrl: 'http://localhost:8084/ilp' }})
     // load routes into db
     await Route.query(db.knex()).insertAndFetch({ peerId: 'alice', targetPrefix: 'test.other.rafiki.bob' })
   })
@@ -153,11 +128,18 @@ describe('Test App', function () {
     app = new App(config, authFunction, db.knex())
     addPeerSpyForAppConstructor = sinon.spy(app, 'addPeer')
     await app.start()
-    client = connect('http://localhost:8083')
-    aliceServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
-      response.end(serializeIlpFulfill(aliceResponse))
+    const koaApp = new Koa()
+    const router = createRouter()
+    router.route({
+      method: 'post',
+      path: '/ilp',
+      handler: async (ctx: Koa.Context) => {
+        ctx.set('content-type', 'application/octet-stream')
+        ctx.body = serializeIlpFulfill(aliceResponse)
+      }
     })
-    aliceServer.listen(8084)
+    koaApp.use(router.middleware())
+    aliceServer = koaApp.listen(8084)
     mockSEServer = getLocal()
     mockSEServer.start(4000)
     await new Promise(resolve => setTimeout(() => resolve(), 100)) // give servers chance to start listening
@@ -166,7 +148,6 @@ describe('Test App', function () {
   afterEach(() => {
     app.shutdown()
     aliceServer.close()
-    client.close()
     mockSEServer.stop()
     addPeerSpyForAppConstructor.restore()
   })
@@ -180,7 +161,8 @@ describe('Test App', function () {
       expiresAt: new Date(Date.now() + 34000)
     }
 
-    const result = deserializeIlpReply(await post(client, 'aliceToken' , 'ilp', serializeIlpPrepare(ilpPrepare)))
+    const { data } = await Axios.post('http://localhost:8083/ilp', serializeIlpPrepare(ilpPrepare), { headers: { 'Authorization': 'Bearer aliceToken' }, responseType: 'arraybuffer' })
+    const result = deserializeIlpReply(data)
 
     assert.deepEqual(result, {
       data: Buffer.from(''),
@@ -214,7 +196,7 @@ describe('Test App', function () {
       })
       assert.deepEqual(endpointInfo, {
         type: 'http',
-        httpOpts: { peerUrl: 'http://localhost:8084' }
+        httpOpts: { peerUrl: 'http://localhost:8084/ilp' }
       })
     })
   })
@@ -292,21 +274,28 @@ describe('Test App', function () {
 
     it('inherits address from parent', async function () {
       const config = new Config()
-      config.loadFromOpts({ http2ServerPort: 8082 })
+      config.loadFromOpts({ httpServerPort: 8082 })
       const newDB = new DB()
       await newDB.setup()
       const newApp = new App(config, authFunction, newDB.knex())
       await newApp.start()
-      const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
-        const ildcpResponse: IldcpResponse = {
-          assetCode: 'USD',
-          assetScale: 2,
-          clientAddress: 'test.alice.fred'
-        } 
-        response.end(serializeIldcpResponse(ildcpResponse))
+      const koaAppParent = new Koa()
+      const router = createRouter()
+      router.route({
+        method: 'post',
+        path: '/ilp',
+        handler: async (ctx: Koa.Context) => {
+          const ildcpResponse: IldcpResponse = {
+            assetCode: 'USD',
+            assetScale: 2,
+            clientAddress: 'test.alice.fred'
+          } 
+          ctx.set('content-type', 'application/octet-stream')
+          ctx.body = serializeIldcpResponse(ildcpResponse)
+        }
       })
-      const newAppClient = connect('http://localhost:8082')
-      parentServer.listen(8085)
+      koaAppParent.use(router.middleware())
+      const parentServer = koaAppParent.listen(8085)
       
       assert.equal(newApp.connector.getOwnAddress(), 'unknown')
 
@@ -315,37 +304,51 @@ describe('Test App', function () {
       assert.equal('test.alice.fred', newApp.connector.getOwnAddress())
       newApp.shutdown()
       parentServer.close()
-      newAppClient.close()
       newDB.teardown()
     })
 
     it('inherits addresses from multiple parents', async function () {
       // parent 2 will have a higher relation weighting than parent 1. So when getOwnAdress is called, the address from parent 2 should be returned. But getOwnAddresses should return an array of addresses.
       const config = new Config()
-      config.loadFromOpts({ http2ServerPort: 8082 })
+      config.loadFromOpts({ httpServerPort: 8082 })
       const newDB = new DB()
       await newDB.setup()
       const newApp = new App(config, authFunction, newDB.knex())
       await newApp.start()
-      const parentServer = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
-        const ildcpResponse: IldcpResponse = {
-          assetCode: 'USD',
-          assetScale: 2,
-          clientAddress: 'test.alice.fred'
-        } 
-        response.end(serializeIldcpResponse(ildcpResponse))
+      const koaAppParent = new Koa()
+      const router = createRouter()
+      router.route({
+        method: 'post',
+        path: '/ilp',
+        handler: async (ctx: Koa.Context) => {
+          const ildcpResponse: IldcpResponse = {
+            assetCode: 'USD',
+            assetScale: 2,
+            clientAddress: 'test.alice.fred'
+          } 
+          ctx.set('content-type', 'application/octet-stream')
+          ctx.body = serializeIldcpResponse(ildcpResponse)
+        }
       })
-      const parent2Server = createServer((request: Http2ServerRequest, response: Http2ServerResponse) => {
-        const ildcpResponse: IldcpResponse = {
-          assetCode: 'USD',
-          assetScale: 2,
-          clientAddress: 'test.drew.fred'
-        } 
-        response.end(serializeIldcpResponse(ildcpResponse))
+      koaAppParent.use(router.middleware())
+      const koaAppParent2 = new Koa()
+      const router2 = createRouter()
+      router2.route({
+        method: 'post',
+        path: '/ilp',
+        handler: async (ctx: Koa.Context) => {
+          const ildcpResponse: IldcpResponse = {
+            assetCode: 'USD',
+            assetScale: 2,
+            clientAddress: 'test.drew.fred'
+          } 
+          ctx.set('content-type', 'application/octet-stream')
+          ctx.body = serializeIldcpResponse(ildcpResponse)
+        }
       })
-      const newAppClient = connect('http://localhost:8082')
-      parentServer.listen(8085)
-      parent2Server.listen(8086)
+      koaAppParent2.use(router2.middleware())
+      const parentServer = koaAppParent.listen(8085)
+      const parent2Server = koaAppParent2.listen(8086)
       
       assert.equal(newApp.connector.getOwnAddress(), 'unknown')
   
@@ -357,7 +360,6 @@ describe('Test App', function () {
       newApp.shutdown()
       parentServer.close()
       parent2Server.close()
-      newAppClient.close()
       newDB.teardown()
     })
 

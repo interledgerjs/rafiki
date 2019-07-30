@@ -9,7 +9,8 @@ const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
   host?: string,
-  port?: number
+  port?: number,
+  useAuthentication?: boolean
 }
 
 export interface AdminApiServices {
@@ -24,12 +25,13 @@ export class AdminApi {
   private server?: Server
   private host: string
   private port: number
-
-  constructor ({ host, port }: AdminApiOptions, { app, authService }: AdminApiServices) {
+  private useAuthentication: boolean
+  constructor ({ host, port, useAuthentication }: AdminApiOptions, { app, authService }: AdminApiServices) {
     this.app = app
     this._auth = authService
     if (host) this.host = host
     if (port) this.port = port
+    if (useAuthentication) this.useAuthentication = useAuthentication
   }
 
   shutdown () {
@@ -49,6 +51,19 @@ export class AdminApi {
     const koa = new Koa()
     const router = createRouter()
     router.use(bodyParser())
+    if (this.useAuthentication) {
+      router.use(async (ctx: Context, next) => {
+        const token = this._getBearerToken(ctx.request)
+        const peerId = await this._auth.getPeerIdByToken(token)
+
+        if (peerId !== 'self') {
+          ctx.response.status = 401
+          return
+        }
+
+        await next()
+      })
+    }
     router.route({
       method: 'get',
       path: '/health',
@@ -110,5 +125,17 @@ export class AdminApi {
     koa.use(router.middleware())
 
     return koa
+  }
+
+  private _getBearerToken (request: Koa.Request): string {
+    const { header } = request
+    if (header['authorization']) {
+      const splitAuthHeader = header['authorization'].split(' ')
+      if (splitAuthHeader.length === 2 && splitAuthHeader[0] === 'Bearer') {
+        return splitAuthHeader[1]
+      }
+    }
+
+    return ''
   }
 }

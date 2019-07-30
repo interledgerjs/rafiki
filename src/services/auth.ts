@@ -8,10 +8,8 @@ const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 
 export class AuthService {
 
-  private _accountTokensMap: Map<string, string>
-
   constructor (private _knex: Knex) {
-    this._accountTokensMap = new Map()
+
   }
 
   async getPeerIdByToken (token: string) {

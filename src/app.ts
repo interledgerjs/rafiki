@@ -1,4 +1,5 @@
 import { log } from './winston'
+import Koa from 'koa'
 import {
     Balance,
     Endpoint,
@@ -35,7 +36,7 @@ import { AuthFunction, EndpointInfo, EndpointManager } from './endpoints'
 
 import { IlpPrepare, IlpReply, isReject } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
-import { createServer, Http2Server } from 'http2'
+import { Server } from 'net'
 import { PluginEndpoint } from './legacy/plugin-endpoint'
 import { MAX_INT_64, MIN_INT_64, STATIC_CONDITION } from './constants'
 import { PeerNotFoundError } from './errors/peer-not-found-error'
@@ -55,7 +56,8 @@ export class App {
   private _packetCacheMap: Map<string, PacketCache>
   private _rateLimitBucketMap: Map<string, TokenBucket>
   private _throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
-  private _http2Server: Http2Server
+  private _ilpOverHttpApp: Koa
+  private _httpServer: Server
   private _endpointManager: EndpointManager
   private _businessRulesMap: Map<string, Rule[]>
   private _balanceMap: Map<string, Balance>
@@ -82,9 +84,10 @@ export class App {
 
     this.connector.routingTable.setGlobalPrefix(this._config.env === 'production' ? 'g' : 'test')
 
-    this._http2Server = createServer()
+    this._ilpOverHttpApp = new Koa()
     this._endpointManager = new EndpointManager({
-      http2Server: this._http2Server,
+      httpServer: this._ilpOverHttpApp,
+      httpServerPath: opts.httpServerPath,
       authService: authService
     })
 
@@ -93,12 +96,12 @@ export class App {
 
   public async start () {
     logger.info('starting connector....')
-    logger.info('starting HTTP2 server on port ' + this._config.http2ServerPort)
+    logger.info('starting HTTP2 server on port ' + this._config.httpServerPort)
 
     if (this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) // config loads ilpAddress as 'unknown' by default
 
     await this.loadFromDataStore()
-    this._http2Server.listen(this._config.http2ServerPort)
+    this._httpServer = this._ilpOverHttpApp.listen(this._config.httpServerPort)
   }
 
   public connector: Connector
@@ -176,7 +179,9 @@ export class App {
     this._rateLimitBucketMap.clear()
     this._throughputBucketsMap.clear()
     this._endpointManager.closeAll()
-    this._http2Server.close()
+    if (this._httpServer) {
+      this._httpServer.close()
+    }
   }
 
   public getRules (peerId: string): Rule[] {

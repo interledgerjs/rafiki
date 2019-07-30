@@ -20,12 +20,13 @@ describe('Admin Api', function () {
   let app: App
   let adminApi: AdminApi
   let db: DB
+  let authService: AuthService
   const config = new Config()
   
   beforeEach(async function () {
     db = new DB()
     await db.setup()
-    const authService = new AuthService(db.knex())
+    authService = new AuthService(db.knex())
     const authFunction: AuthFunction = (token: string) => Promise.resolve('bob') 
     app = new App(config, authFunction, db.knex())
     adminApi = new AdminApi({},{ app, authService })
@@ -347,4 +348,31 @@ describe('Admin Api', function () {
       })
     })
   })
+
+  it('rejects unauthorized requests if useAuthentication is true', async function () {
+    const authedAdminApi = new AdminApi({ port: 3000, useAuthentication: true }, { app, authService })
+    await authedAdminApi.listen()
+    try {
+      await axios.get('http://127.0.0.1:3000/routes')
+    } catch (error) {
+      assert.equal(error.response.status, 401)
+      await authedAdminApi.shutdown()
+      return
+    }
+
+    assert.fail('Did not throw unauthorized error')
+    await authedAdminApi.shutdown()
+  })
+
+  it('allows authorized requests if useAuthentication is true', async () => {
+    const authToken = await AuthToken.query(db.knex()).where('peerId', 'self').first()
+    const authedAdminApi = new AdminApi({ port: 3000, useAuthentication: true }, { app, authService })
+    await authedAdminApi.listen()
+
+    const response = await axios.get('http://127.0.0.1:3000/routes', { headers: { 'Authorization': 'Bearer ' +  authToken!.id} })
+
+    assert.equal(response.status, 200)
+    await authedAdminApi.shutdown()
+  })
+
 })

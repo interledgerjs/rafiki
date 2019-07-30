@@ -38,12 +38,17 @@
       "type": "integer",
       "default": 30000
     },
-    "http2ServerPort": {
-      "description": "Which port the http2 server for incoming ilp over http requests should listen on. Default: 8843",
+    "httpServerPort": {
+      "description": "Which port the http server for incoming ilp over http requests should listen on. Default: 8843",
       "type": "integer",
       "minimum": 0,
       "maximum": 65535,
       "default": 8443
+    },
+    "httpServerPath": {
+      "description": "Path to receive incoming ilp-over-http requests. Default: /ilp",
+      "type": "string",
+      "default": "/ilp"
     },
     "adminApiPort": {
       "description": "Which port the admin API should listen on. Default: 7780",
@@ -56,6 +61,11 @@
       "description": "Host for the admin api to bind to. Warning: The admin API interface is public by default: '0.0.0.0'",
       "type": "string",
       "default": "0.0.0.0"
+    },
+    "adminApiAuth": {
+      "description": "Boolean to determine whether the admin api endpoints should use authentication.",
+      "type": "boolean",
+      "default": true
     },
     "settlementAdminApiPort": {
       "description": "Which port the settlement admin API should listen on. Default: 7781",

@@ -1,12 +1,11 @@
-import { Http2Endpoint } from './http2'
+import Koa from 'koa'
 import { Endpoint } from '../types'
 import { IlpPrepare, IlpReply } from 'ilp-packet'
-import { Http2EndpointManager } from './http2-server'
-import { Http2Server } from 'http2'
 import { PluginEndpoint } from '../legacy/plugin-endpoint'
 import { InMemoryMapStore } from '../stores/in-memory'
 import compat from 'ilp-compat-plugin'
-export * from './http2'
+import { HttpEndpointManager } from './http-server'
+import { HttpEndpoint } from './http'
 export * from './request-stream'
 export * from './request-stream-ws'
 
@@ -32,20 +31,21 @@ export interface EndpointInfo {
 
 // TODO: Support other endpoint types
 export interface EndpointManagerServices {
-  http2Server?: Http2Server,
+  httpServer?: Koa,
+  httpServerPath?: string,
   authService?: AuthFunction
 }
 
 export class EndpointManager {
 
-  private _http2Endpoints?: Http2EndpointManager
+  private _httpEndpoints?: HttpEndpointManager
   private _pluginEndpoints: Map<string, PluginEndpoint> = new Map()
   private _pluginStores: Map<string, InMemoryMapStore> = new Map()
 
-  constructor ({ http2Server, authService }: EndpointManagerServices) {
-    if (http2Server) {
+  constructor ({ httpServer: httpServer, authService, httpServerPath }: EndpointManagerServices) {
+    if (httpServer) {
       if (!authService) throw new Error('Auth Service required for Http2 Endpoints')
-      this._http2Endpoints = new Http2EndpointManager(http2Server, authService)
+      this._httpEndpoints = new HttpEndpointManager(httpServer, authService, httpServerPath)
     }
   }
 
@@ -58,15 +58,15 @@ export class EndpointManager {
     const { type } = endpointInfo
     switch (type) {
       case ('http'):
-        if (this._http2Endpoints) {
+        if (this._httpEndpoints) {
           if (!endpointInfo.httpOpts) {
             throw new Error('Http Options need to be specified for given user')
           }
-          const endpoint = new Http2Endpoint(endpointInfo.httpOpts)
-          this._http2Endpoints.set(peerId, endpoint)
+          const endpoint = new HttpEndpoint(endpointInfo.httpOpts)
+          this._httpEndpoints.set(peerId, endpoint)
           return endpoint
         } else {
-          throw new Error(`HTTP2 endpoint type not configured`)
+          throw new Error(`HTTP endpoint type not configured`)
         }
       case ('plugin'):
         if (!endpointInfo.pluginOpts) {
@@ -92,11 +92,10 @@ export class EndpointManager {
    * @param peerId id of the peer that is being disconnected
    */
   public async closeEndpoints (peerId: string) {
-    if (this._http2Endpoints) {
-      const endpoint = this._http2Endpoints.get(peerId)
+    if (this._httpEndpoints) {
+      const endpoint = this._httpEndpoints.get(peerId)
       if (endpoint) {
-        endpoint.close()
-        this._http2Endpoints.delete(peerId)
+        this._httpEndpoints.delete(peerId)
       }
     }
     if (this._pluginEndpoints.get(peerId)) {
@@ -113,9 +112,6 @@ export class EndpointManager {
    * Close all endpoints
    */
   public closeAll () {
-    if (this._http2Endpoints) {
-      this._http2Endpoints.forEach(endpoint => endpoint.close())
-    }
     this._pluginEndpoints.forEach(endpoint => endpoint.close())
   }
 
