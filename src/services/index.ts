@@ -1,3 +1,5 @@
 export * from './admin-api'
 export * from './config'
 export * from './stats'
+export * from './auth/auth'
+export * from './auth/remoteAuth'

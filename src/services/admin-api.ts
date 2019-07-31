@@ -4,7 +4,7 @@ import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server, createServer } from 'http'
 import { App } from '../app'
-import { AuthService } from './auth'
+import { AuthService } from '../types/auth'
 const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
