@@ -4,4 +4,5 @@ export interface AuthService {
   setPeerToken: (peerId: string, token: string) => Promise<void>
   removePeerToken: (peerId: string) => Promise<void>
   generateAuthToken: (peerId?: string) => Promise<string>
+  isAdminToken: (token: string) => Promise<boolean>
 }

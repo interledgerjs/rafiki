@@ -54,9 +54,9 @@ export class AdminApi {
     if (this.useAuthentication) {
       router.use(async (ctx: Context, next) => {
         const token = this._getBearerToken(ctx.request)
-        const peerId = await this._auth.getPeerIdByToken(token)
+        const isAdmin = await this._auth.isAdminToken(token)
 
-        if (peerId !== 'self') {
+        if (!isAdmin) {
           ctx.response.status = 401
           return
         }
