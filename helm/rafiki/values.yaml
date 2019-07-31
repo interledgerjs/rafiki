@@ -15,6 +15,7 @@ fullnameOverride: ""
 config:
   ilpAddress: 'test.rafiki'
   databaseConnectionString: 'mysql://<username>:<password>@<host>:<port>/<db_name>'
+  authProviderUrl: 'http(s)://<hostname>'
 
 service:
   type: NodePort

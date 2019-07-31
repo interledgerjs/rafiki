@@ -33,7 +33,7 @@ winston.configure({
 const config = new Config()
 config.loadFromEnv()
 knex = Knex(config.databaseConnectionString)
-const authService = config.authProviderUrl ? new RemoteAuthService(config.authProviderUrl) : new AuthService(knex)
+const authService = config.authProviderUrl !== '' ? new RemoteAuthService(config.authProviderUrl) : new AuthService(knex)
 const app = new App(config, authService.getPeerIdByToken.bind(authService), knex)
 const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort, useAuthentication: config.adminApiAuth }, { app, authService })
 const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })

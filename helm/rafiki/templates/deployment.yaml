@@ -45,6 +45,11 @@ spec:
                 configMapKeyRef:
                   name: {{.Chart.Name}}-configmap
                   key: CONNECTOR_DATABASE_CONNECTION_STRING
+            - name: CONNECTOR_AUTH_PROVIDER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{.Chart.Name}}-configmap
+                  key: CONNECTOR_AUTH_PROVIDER_URL
             - name: LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
