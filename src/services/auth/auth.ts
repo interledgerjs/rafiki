@@ -45,4 +45,9 @@ export class AuthService implements AuthServiceInterface {
     return token
   }
 
+  async isAdminToken (token: string): Promise<boolean> {
+    const peerId = await this.getPeerIdByToken(token)
+    return peerId === 'self'
+  }
+
 }
