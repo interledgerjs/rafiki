@@ -82,7 +82,7 @@
     "authProviderUrl": {
       "description": "Url for the remote authentication provider where you exchange an auth token for a peerId.",
       "type": "string",
-      "default": null
+      "default": ""
     }
   },
   "additionalProperties": false

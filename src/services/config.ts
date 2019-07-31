@@ -36,6 +36,7 @@ export class Config extends ConfigSchemaTyping {
   public ilpAddress!: string
   public databaseEnv!: 'test' | 'development' | 'production'
   public databaseConnectionString!: string
+  public authProviderUrl!: string
 
   protected _validate: Ajv.ValidateFunction
 
