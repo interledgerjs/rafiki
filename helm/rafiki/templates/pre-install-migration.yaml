@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "rafiki.fullname" . }}
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    app.kubernetes.io/name: {{ include "rafiki.fullname" . }}
+  annotations:
+    "helm.sh/hook": post-install,pre-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  template:
+    metadata:
+      name: {{ include "rafiki.fullname" . }}
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ include "rafiki.name" . }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: pre-install-migration
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # All we're going to do is sleep for a while, then exit.
+          args: ["migrate"]
+          env:
+            - name: CONNECTOR_DATABASE_CONNECTION_STRING
+              valueFrom:
+                configMapKeyRef:
+                  name: {{.Chart.Name}}-configmap
+                  key: CONNECTOR_DATABASE_CONNECTION_STRING
