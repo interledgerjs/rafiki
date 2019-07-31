@@ -1,12 +1,13 @@
 import nanoid from 'nanoid/generate'
 import Knex from 'knex'
-import { log } from '../winston'
-import { AuthToken } from '../models/AuthToken'
+import { log } from '../../winston'
+import { AuthToken } from '../../models/AuthToken'
+import { AuthService as AuthServiceInterface } from '../../types/auth'
 
 const logger = log.child({ component: 'auth-service' })
 const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
-export class AuthService {
+export class AuthService implements AuthServiceInterface {
 
   constructor (private _knex: Knex) {
 
