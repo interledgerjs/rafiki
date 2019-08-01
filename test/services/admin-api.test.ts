@@ -212,6 +212,48 @@ describe('Admin Api', function () {
 
       assert.deepEqual(response.data, expectedBalances)
     })
+
+    it('returns balance details for a specific peer', async () => {
+      const alicePeerInfo: PeerInfo = {
+        id: 'alice',
+        assetCode: 'USD',
+        assetScale: 2,
+        relation: 'peer',
+        rules: [{
+          name: 'balance',
+          minimum: '0',
+          maximum: '400',
+          initialBalance: '100'
+        }],
+        protocols: []
+      }
+      const aliceEndpointInfo: EndpointInfo = {
+        type: 'http',
+        httpOpts: {
+          peerUrl: 'http://localhost:8084'
+        }
+      }
+
+      await axios.post('http://127.0.0.1:7780/peer', { peerInfo: alicePeerInfo, endpointInfo: aliceEndpointInfo })
+
+      const { status, data } = await axios.get('http://127.0.0.1:7780/balance/alice')
+      assert.equal(status, 200)
+      assert.deepEqual(data, {
+        balance: '100',
+        minimum: '0',
+        maximum: '400',
+      })
+    })
+
+    it('returns 404 when requesting a balance of non-existent peer', async () => {
+      try {
+        await axios.get('http://127.0.0.1:7780/balance/alice')
+      } catch (error) {
+        assert.equal(error.response.status, 404)
+        return
+      }
+      assert.fail('Did not throw expected error')
+    })
   })
 
   describe('addPeer', function () {
