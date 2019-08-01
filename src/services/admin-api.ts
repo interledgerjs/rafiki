@@ -4,7 +4,7 @@ import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server, createServer } from 'http'
 import { App } from '../app'
-import { AuthService } from './auth'
+import { AuthService } from '../types/auth'
 const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
@@ -54,9 +54,9 @@ export class AdminApi {
     if (this.useAuthentication) {
       router.use(async (ctx: Context, next) => {
         const token = this._getBearerToken(ctx.request)
-        const peerId = await this._auth.getPeerIdByToken(token)
+        const isAdmin = await this._auth.isAdminToken(token)
 
-        if (peerId !== 'self') {
+        if (!isAdmin) {
           ctx.response.status = 401
           return
         }

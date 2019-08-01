@@ -78,6 +78,11 @@
       "description": "Host for the settlement admin api to bind to. Note: The settlement admin API interface is private: '127.0.0.1'",
       "type": "string",
       "default": "127.0.0.1"
+    },
+    "authProviderUrl": {
+      "description": "Url for the remote authentication provider where you exchange an auth token for a peerId.",
+      "type": "string",
+      "default": ""
     }
   },
   "additionalProperties": false

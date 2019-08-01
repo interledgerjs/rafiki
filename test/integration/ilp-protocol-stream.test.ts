@@ -5,7 +5,7 @@ import chaiAsPromised from 'chai-as-promised'
 import {App, Config, EndpointInfo, PeerInfo} from '../../src'
 import {createConnection, DataAndMoneyStream, Server} from 'ilp-protocol-stream'
 import crypto from 'crypto'
-import {AuthService} from '../../src/services/auth'
+import {AuthService} from '../../src/services'
 import {DB} from '../helpers/db'
 
 const PluginHttp = require('ilp-plugin-http')

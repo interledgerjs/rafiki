@@ -3,10 +3,9 @@
 import * as winston from 'winston'
 import Knex from 'knex'
 import { App } from './app'
-import { AdminApi } from './services'
+import { AdminApi, AuthService, RemoteAuthService } from './services'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { Config } from './index'
-import { AuthService } from './services/auth'
 
 let knex: Knex
 
@@ -34,8 +33,7 @@ winston.configure({
 const config = new Config()
 config.loadFromEnv()
 knex = Knex(config.databaseConnectionString)
-
-const authService = new AuthService(knex)
+const authService = config.authProviderUrl !== '' ? new RemoteAuthService(knex, config.authProviderUrl) : new AuthService(knex)
 const app = new App(config, authService.getPeerIdByToken.bind(authService), knex)
 const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort, useAuthentication: config.adminApiAuth }, { app, authService })
 const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })

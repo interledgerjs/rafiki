@@ -42,7 +42,6 @@
   "author": "Interledger Team <info@interledger.org>",
   "license": "Apache-2.0",
   "dependencies": {
-    "@types/knex": "^0.16.1",
     "@types/koa": "^2.0.48",
     "@types/koa-bodyparser": "^4.3.0",
     "@types/koa-joi-router": "^5.2.2",

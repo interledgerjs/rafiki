@@ -8,7 +8,7 @@ import { PeerInfo } from '../../src/types'
 import { App } from '../../src'
 import { EndpointInfo, AuthFunction } from '../../src'
 import { Config } from '../../src'
-import { AuthService } from '../../src/services/auth'
+import { AuthService } from '../../src/services'
 import { DB } from '../helpers/db'
 import { Peer } from '../../src/models/Peer'
 import { AuthToken } from '../../src/models/AuthToken';
