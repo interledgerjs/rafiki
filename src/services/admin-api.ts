@@ -85,6 +85,17 @@ export class AdminApi {
       handler: async (ctx: Context) => ctx.body = this.app.getBalances()
     })
     router.route({
+      method: 'get',
+      path: '/balance/:id',
+      handler: async (ctx: Context) => {
+        try {
+          ctx.body = this.app.getBalance(ctx.request.params['id'])
+        } catch (error) {
+          ctx.response.status = 404
+        }
+      }
+    })
+    router.route({
       method: 'post',
       path: '/peer',
       validate: {
