@@ -54,9 +54,9 @@ export class AdminApi {
     if (this.useAuthentication) {
       router.use(async (ctx: Context, next) => {
         const token = this._getBearerToken(ctx.request)
-        const peerId = await this._auth.getPeerIdByToken(token)
+        const isAdmin = await this._auth.isAdminToken(token)
 
-        if (peerId !== 'self') {
+        if (!isAdmin) {
           ctx.response.status = 401
           return
         }
@@ -83,6 +83,17 @@ export class AdminApi {
       method: 'get',
       path: '/balance',
       handler: async (ctx: Context) => ctx.body = this.app.getBalances()
+    })
+    router.route({
+      method: 'get',
+      path: '/balance/:id',
+      handler: async (ctx: Context) => {
+        try {
+          ctx.body = this.app.getBalance(ctx.request.params['id'])
+        } catch (error) {
+          ctx.response.status = 404
+        }
+      }
     })
     router.route({
       method: 'post',
