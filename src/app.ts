@@ -31,7 +31,7 @@ import {
     ValidateFulfillmentRule
 } from './rules'
 import { TokenBucket } from './lib/token-bucket'
-import { Config, Stats } from './services'
+import { Config, Stats, WalletConfig } from './services'
 import { EndpointInfo, EndpointManager } from './endpoints'
 
 import { IlpPrepare, IlpReply, isReject } from 'ilp-packet'
@@ -61,7 +61,7 @@ export class App {
   private _endpointManager: EndpointManager
   private _businessRulesMap: Map<string, Rule[]>
   private _balanceMap: Map<string, Balance>
-  private _config: Config
+  private _config: Config | WalletConfig
   private _knex: Knex
 
     /**
@@ -70,7 +70,7 @@ export class App {
      * @param koaMiddleware middleware to apply to incoming HTTP requests (at a minimum is must perform auth)
      * @param knex database object for persistence
      */
-  constructor (opts: Config, koaMiddleware: KoaMiddleware, knex: Knex) {
+  constructor (opts: Config | WalletConfig, koaMiddleware: KoaMiddleware, knex: Knex) {
 
     this.connector = new Connector()
     this.stats = new Stats()
@@ -98,7 +98,7 @@ export class App {
     logger.info('starting connector....')
     logger.info('starting HTTP server on port ' + this._config.httpServerPort)
 
-    if (this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) // config loads ilpAddress as 'unknown' by default
+    if (this._config instanceof Config && this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) // config loads ilpAddress as 'unknown' by default
 
     await this.loadFromDataStore()
     this._httpServer = this._koaApp.listen(this._config.httpServerPort)
