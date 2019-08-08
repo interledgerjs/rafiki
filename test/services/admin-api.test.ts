@@ -6,12 +6,14 @@ import {AdminApi} from '../../src/services'
 import axios from 'axios'
 import { PeerInfo } from '../../src/types'
 import { App } from '../../src'
-import { EndpointInfo, AuthFunction } from '../../src'
+import { EndpointInfo } from '../../src'
 import { Config } from '../../src'
-import { AuthService } from '../../src/services'
 import { DB } from '../helpers/db'
+import { MockTokenService } from '../mocks/mockTokenService'
 import { Peer } from '../../src/models/Peer'
 import { AuthToken } from '../../src/models/AuthToken';
+import { authenticate } from '../../src/koa/token-auth-middleware';
+import { TokenService } from '../../src/types/token-service';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -20,16 +22,15 @@ describe('Admin Api', function () {
   let app: App
   let adminApi: AdminApi
   let db: DB
-  let authService: AuthService
+  let tokenService: TokenService
   const config = new Config()
   
   beforeEach(async function () {
     db = new DB()
     await db.setup()
-    authService = new AuthService(db.knex())
-    const authFunction: AuthFunction = (token: string) => Promise.resolve('bob') 
-    app = new App(config, authFunction, db.knex())
-    adminApi = new AdminApi({},{ app, authService })
+    tokenService = new MockTokenService()
+    app = new App(config, authenticate(tokenService), db.knex())
+    adminApi = new AdminApi({},{ app, tokenService })
     adminApi.listen()
   })
 
@@ -391,8 +392,8 @@ describe('Admin Api', function () {
     })
   })
 
-  it('rejects unauthorized requests if useAuthentication is true', async function () {
-    const authedAdminApi = new AdminApi({ port: 3000, useAuthentication: true }, { app, authService })
+  it('rejects unauthorized requests if authentication is false', async function () {
+    const authedAdminApi = new AdminApi({ port: 3000 }, { app, middleware: authenticate(tokenService, tokenInfo => false), tokenService })
     await authedAdminApi.listen()
     try {
       await axios.get('http://127.0.0.1:3000/routes')
@@ -406,12 +407,11 @@ describe('Admin Api', function () {
     await authedAdminApi.shutdown()
   })
 
-  it('allows authorized requests if useAuthentication is true', async () => {
-    const authToken = await AuthToken.query(db.knex()).where('peerId', 'self').first()
-    const authedAdminApi = new AdminApi({ port: 3000, useAuthentication: true }, { app, authService })
+  it('allows authorized requests if authentication is true', async () => {
+    const authedAdminApi = new AdminApi({ port: 3000 }, { app, middleware: authenticate(tokenService, tokenInfo => true), tokenService })
     await authedAdminApi.listen()
 
-    const response = await axios.get('http://127.0.0.1:3000/routes', { headers: { 'Authorization': 'Bearer ' +  authToken!.id} })
+    const response = await axios.get('http://127.0.0.1:3000/routes')
 
     assert.equal(response.status, 200)
     await authedAdminApi.shutdown()

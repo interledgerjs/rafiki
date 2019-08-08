@@ -1,5 +1,5 @@
 import { log } from './winston'
-import Koa from 'koa'
+import Koa, { Middleware as KoaMiddleware } from 'koa'
 import {
     Balance,
     Endpoint,
@@ -32,7 +32,7 @@ import {
 } from './rules'
 import { TokenBucket } from './lib/token-bucket'
 import { Config, Stats } from './services'
-import { AuthFunction, EndpointInfo, EndpointManager } from './endpoints'
+import { EndpointInfo, EndpointManager } from './endpoints'
 
 import { IlpPrepare, IlpReply, isReject } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
@@ -56,7 +56,7 @@ export class App {
   private _packetCacheMap: Map<string, PacketCache>
   private _rateLimitBucketMap: Map<string, TokenBucket>
   private _throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
-  private _ilpOverHttpApp: Koa
+  private _koaApp: Koa
   private _httpServer: Server
   private _endpointManager: EndpointManager
   private _businessRulesMap: Map<string, Rule[]>
@@ -65,12 +65,12 @@ export class App {
   private _knex: Knex
 
     /**
-     * Instantiates an http2 server which handles posts to ilp/:peerId and passes the packet on to the appropriate peer's endpoint.
+     * Instantiates an http server which handles posts to /ilp and passes the packet on to the appropriate peer's endpoint.
      * @param opts Options for the application
-     * @param authService Auth function for incoming connections
+     * @param koaMiddleware middleware to apply to incoming HTTP requests (at a minimum is must perform auth)
      * @param knex database object for persistence
      */
-  constructor (opts: Config, authService: AuthFunction, knex: Knex) {
+  constructor (opts: Config, koaMiddleware: KoaMiddleware, knex: Knex) {
 
     this.connector = new Connector()
     this.stats = new Stats()
@@ -84,11 +84,11 @@ export class App {
 
     this.connector.routingTable.setGlobalPrefix(this._config.env === 'production' ? 'g' : 'test')
 
-    this._ilpOverHttpApp = new Koa()
+    this._koaApp = new Koa()
+    this._koaApp.use(koaMiddleware)
     this._endpointManager = new EndpointManager({
-      httpServer: this._ilpOverHttpApp,
-      httpServerPath: opts.httpServerPath,
-      authService: authService
+      koaApp: this._koaApp,
+      path: opts.httpServerPath
     })
 
     this._knex = knex
@@ -96,12 +96,12 @@ export class App {
 
   public async start () {
     logger.info('starting connector....')
-    logger.info('starting HTTP2 server on port ' + this._config.httpServerPort)
+    logger.info('starting HTTP server on port ' + this._config.httpServerPort)
 
     if (this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) // config loads ilpAddress as 'unknown' by default
 
     await this.loadFromDataStore()
-    this._httpServer = this._ilpOverHttpApp.listen(this._config.httpServerPort)
+    this._httpServer = this._koaApp.listen(this._config.httpServerPort)
   }
 
   public connector: Connector
@@ -224,7 +224,7 @@ export class App {
     balance.update(scaledAmountDiff)
   }
 
-  public forwardSettlementMessage = async (to: string, message: Buffer): Promise<Buffer> => {
+  public async forwardSettlementMessage (to: string, message: Buffer): Promise<Buffer> {
     logger.debug('Forwarding settlement message', { to, message: message.toString() })
     const packet: IlpPrepare = {
       amount: '0',

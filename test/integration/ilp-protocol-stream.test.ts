@@ -5,8 +5,9 @@ import chaiAsPromised from 'chai-as-promised'
 import {App, Config, EndpointInfo, PeerInfo} from '../../src'
 import {createConnection, DataAndMoneyStream, Server} from 'ilp-protocol-stream'
 import crypto from 'crypto'
-import {AuthService} from '../../src/services'
+import {KnexTokenService} from '../../src/services'
 import {DB} from '../helpers/db'
+import { authenticate } from '../../src/koa/token-auth-middleware';
 
 const PluginHttp = require('ilp-plugin-http')
 
@@ -177,9 +178,9 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
     db = new DB()
     await db.setup()
     const config = new Config()
-    const authService = new AuthService(db.knex())
+    const tokenService = new KnexTokenService(db.knex())
     config.loadFromEnv()
-    rafiki = new App(config, authService.getPeerIdByToken.bind(authService), db.knex())
+    rafiki = new App(config, authenticate(tokenService), db.knex())
     await rafiki.start()
     await rafiki.addPeer(serverPeerInfo, serverEndpointInfo)
     await rafiki.addPeer(clientPeerInfo, clientEndpointInfo)

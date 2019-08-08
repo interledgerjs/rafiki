@@ -12,7 +12,7 @@
  /**
   * A request handler takes a request and asynchronously returns a reply.
   */
-export type RequestHandler<Request, Reply> = (request: Request) => Promise<Reply>
+export type RequestHandler<Request, Reply> = (request: Request, context?: {[key: string]: any }) => Promise<Reply>
 
 /**
  * Connect a pipeline of bidirectional duplex streams together.

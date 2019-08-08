@@ -9,7 +9,7 @@ import {isEndpoint, PeerInfo} from '../src/types'
 import {ErrorHandlerRule} from '../src/rules'
 import {IldcpResponse, serializeIldcpResponse} from 'ilp-protocol-ildcp'
 import {PeerNotFoundError} from '../src/errors/peer-not-found-error'
-
+import {authenticate} from '../src/koa/token-auth-middleware'
 import {Peer} from '../src/models/Peer'
 import {Rule} from '../src/models/Rule'
 import {Protocol} from '../src/models/Protocol'
@@ -20,6 +20,7 @@ import Axios from 'axios'
 import Koa from 'koa'
 import createRouter from 'koa-joi-router'
 import { Server } from 'net'
+import { MockTokenService } from './mocks/mockTokenService';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -90,18 +91,10 @@ describe('Test App', function () {
   }
   const config = new Config()
   config.loadFromOpts({ ilpAddress: 'test.harry', httpServerPort: 8083 })
-  const authFunction = (token: string) => new Promise<string>((resolve, reject) => {
-    switch(token) {
-      case "aliceToken":
-        resolve('alice')
-      case "bobToken":
-          resolve('bob')
-      case "drew":
-          resolve('drewToken')
-      default:
-        reject()
-    }
-  })
+  const tokenService = new MockTokenService()
+  tokenService.store("alicetoken", { active: true, sub: 'alice' })
+  tokenService.store("bobtoken", { active: true, sub: 'bob' })
+  tokenService.store("drewToken", { active: true, sub: 'drew' })
 
   const aliceResponse: IlpFulfill = {
     data: Buffer.from(''),
@@ -125,7 +118,7 @@ describe('Test App', function () {
   })
 
   beforeEach(async () => {
-    app = new App(config, authFunction, db.knex())
+    app = new App(config, authenticate(tokenService), db.knex())
     addPeerSpyForAppConstructor = sinon.spy(app, 'addPeer')
     await app.start()
     const koaApp = new Koa()
@@ -277,7 +270,7 @@ describe('Test App', function () {
       config.loadFromOpts({ httpServerPort: 8082 })
       const newDB = new DB()
       await newDB.setup()
-      const newApp = new App(config, authFunction, newDB.knex())
+      const newApp = new App(config, authenticate(tokenService), newDB.knex())
       await newApp.start()
       const koaAppParent = new Koa()
       const router = createRouter()
@@ -313,7 +306,7 @@ describe('Test App', function () {
       config.loadFromOpts({ httpServerPort: 8082 })
       const newDB = new DB()
       await newDB.setup()
-      const newApp = new App(config, authFunction, newDB.knex())
+      const newApp = new App(config, authenticate(tokenService), newDB.knex())
       await newApp.start()
       const koaAppParent = new Koa()
       const router = createRouter()

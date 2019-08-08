@@ -22,8 +22,8 @@ describe('Endpoint Manager', function () {
   beforeEach(async () => {
     ilpOverHttpApp = new Koa()
     endpointManager = new EndpointManager({
-      httpServer: ilpOverHttpApp,
-      authService: (token: string) => Promise.resolve('bob')
+      koaApp: ilpOverHttpApp,
+      path: '/ilp'
     })
     server = await ilpOverHttpApp.listen(6969)
   })

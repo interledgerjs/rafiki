@@ -1,65 +1,37 @@
 import { HttpEndpoint } from './http'
 import Koa from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
-const getRawBody = require('raw-body')
-
-type AuthFunction = (token: string) => Promise<string>
-
+import { parseIlpPacket } from '../koa/ilp-packet-middleware'
 export class HttpEndpointManager extends Map<string, HttpEndpoint> {
 
-  private _auth: AuthFunction
-
-  constructor (server: Koa, auth: AuthFunction, path: string = '/ilp') {
+  constructor (app: Koa, path: string = '/ilp') {
     super()
-    this._auth = auth
+
+    app.use(parseIlpPacket)
 
     const router = createRouter()
 
     router.route({
       method: 'post',
       path: path,
-      handler: async (ctx: Koa.Context, next) => {
+      handler: async (ctx: Koa.Context, next: () => Promise<any>) => {
+        ctx.assert(ctx.state.user, 401, 'Unauthenticated.')
+
         try {
-          const token = this._getBearerToken(ctx.request)
-
-          const peerId = await this._auth(token)
-          if (!peerId) {
-            ctx.response.status = 400
-            return
-          }
-
-          const endpoint = this.get(peerId)
+          const endpoint = this.get(ctx.state.user.sub)
           if (!endpoint) {
             // TODO: Unknown peer. Handle unsolicited peer logic here
             ctx.response.status = 403
             return
           }
-
-          const buffer = await getRawBody(ctx.req)
-          const response = await endpoint.handleIncomingRequest(buffer)
-
-          ctx.set('content-type', 'application/octet-stream')
-          ctx.body = response
+          await endpoint.handleIncomingRequest(ctx, next)
         } catch (error) {
           ctx.status = 500
         }
       }
     })
 
-    server.use(router.middleware())
+    app.use(router.middleware())
 
   }
-
-  private _getBearerToken (request: Koa.Request): string {
-    const { header } = request
-    if (header['authorization']) {
-      const splitAuthHeader = header['authorization'].split(' ')
-      if (splitAuthHeader.length === 2 && splitAuthHeader[0] === 'Bearer') {
-        return splitAuthHeader[1]
-      }
-    }
-
-    return ''
-  }
-
 }

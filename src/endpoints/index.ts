@@ -5,11 +5,16 @@ import { PluginEndpoint } from '../legacy/plugin-endpoint'
 import { InMemoryMapStore } from '../stores/in-memory'
 import compat from 'ilp-compat-plugin'
 import { HttpEndpointManager } from './http-server'
-import { HttpEndpoint } from './http'
+import { HttpEndpoint, HttpEndpointConfig } from './http'
 export * from './request-stream'
 export * from './request-stream-ws'
 
-export type AuthFunction = (token: string) => Promise<string>
+export interface RequestContext {
+  [ key: string ]: string
+  principal: string
+  account: string
+  agreement: string
+}
 
 export interface PluginOpts {
   name: string,
@@ -18,35 +23,28 @@ export interface PluginOpts {
   }
 }
 
-export interface HttpOpts {
-  peerUrl?: string,
-  peerAuthToken?: string
-}
-
 export interface EndpointInfo {
   type: string,
   pluginOpts?: PluginOpts,
-  httpOpts?: HttpOpts
+  httpOpts?: HttpEndpointConfig
 }
 
 // TODO: Support other endpoint types
 export interface EndpointManagerServices {
-  httpServer?: Koa,
-  httpServerPath?: string,
-  authService?: AuthFunction
+  koaApp: Koa,
+  path: string,
 }
 
 export class EndpointManager {
 
   private _httpEndpoints?: HttpEndpointManager
+
+  // TODO: Pull this into a proxy
   private _pluginEndpoints: Map<string, PluginEndpoint> = new Map()
   private _pluginStores: Map<string, InMemoryMapStore> = new Map()
 
-  constructor ({ httpServer: httpServer, authService, httpServerPath }: EndpointManagerServices) {
-    if (httpServer) {
-      if (!authService) throw new Error('Auth Service required for Http2 Endpoints')
-      this._httpEndpoints = new HttpEndpointManager(httpServer, authService, httpServerPath)
-    }
+  constructor ({ koaApp, path }: EndpointManagerServices) {
+    this._httpEndpoints = new HttpEndpointManager(koaApp, path)
   }
 
   /**

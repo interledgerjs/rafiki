@@ -3,8 +3,9 @@
 import * as winston from 'winston'
 import Knex from 'knex'
 import { App } from './app'
-import { AdminApi, AuthService, RemoteAuthService } from './services'
+import { AdminApi, KnexTokenService, RemoteTokenService } from './services'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
+import { authenticate } from './koa/token-auth-middleware'
 import { Config } from './index'
 
 let knex: Knex
@@ -30,13 +31,38 @@ winston.configure({
   ]
 })
 
+// Load config from ENV vars
 const config = new Config()
 config.loadFromEnv()
+
+// Connect to DB
 knex = Knex(config.databaseConnectionString)
-const authService = config.authProviderUrl !== '' ? new RemoteAuthService(knex, config.authProviderUrl) : new AuthService(knex)
-const app = new App(config, authService.getPeerIdByToken.bind(authService), knex)
-const adminApi = new AdminApi({ host: config.adminApiHost, port: config.adminApiPort, useAuthentication: config.adminApiAuth }, { app, authService })
-const settlementAdminApi = new SettlementAdminApi({ host: config.settlementAdminApiHost, port: config.settlementAdminApiPort }, { getAccountBalance: app.getBalance.bind(app), updateAccountBalance: app.updateBalance.bind(app), sendMessage: app.forwardSettlementMessage.bind(app) })
+
+// Remote vs Local token auth
+const tokenService = config.authProviderUrl !== '' ? new RemoteTokenService(config.authProviderUrl) : new KnexTokenService(knex)
+
+// Create Rafiki
+const app = new App(config, authenticate(tokenService), knex)
+
+// Create Admin API
+const adminApi = new AdminApi({
+  host: config.adminApiHost,
+  port: config.adminApiPort
+}, {
+  app,
+  tokenService,
+  middleware:  (config.adminApiAuth) ? authenticate(tokenService, token => { return token.sub === 'self' }) : undefined
+})
+
+// Create Settlement API
+const settlementAdminApi = new SettlementAdminApi({
+  host: config.settlementAdminApiHost,
+  port: config.settlementAdminApiPort
+}, {
+  getAccountBalance: app.getBalance.bind(app),
+  updateAccountBalance: app.updateBalance.bind(app),
+  sendMessage: app.forwardSettlementMessage.bind(app)
+})
 
 export const gracefulShutdown = async () => {
   winston.debug('shutting down.')
