@@ -9,7 +9,7 @@ export class ExpireRule extends Rule {
 
   constructor () {
     super({
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      outgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         const { expiresAt } = request
 
         const duration = expiresAt.getTime() - Date.now()

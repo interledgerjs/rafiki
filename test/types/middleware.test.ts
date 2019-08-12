@@ -81,7 +81,7 @@ describe('Rule', function () {
     it('adds process function to incoming pipeline', async function () {
       assert.equal(counter, 0)
       const rule = new Rule({
-        processIncoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
+        incoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter++
           return next(request)
         }
@@ -93,7 +93,7 @@ describe('Rule', function () {
     it('adds process function to outgoing pipeline', async function () {
       assert.equal(counter, 0)
       const rule = new Rule({
-        processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler) => {
+        outgoing: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter++
           return next(request)
         }
@@ -105,12 +105,12 @@ describe('Rule', function () {
     it('adds incoming and outgoing processing', async function () {
       assert.equal(counter, 0)
       const rule = new Rule({
-        processIncoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
+        incoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter++
           counter++
           return next(request)
         },
-        processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler) => {
+        outgoing: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter--
           return next(request)
         }
@@ -125,11 +125,11 @@ describe('Rule', function () {
         startup: async () => {
           counter = 100
         },
-        processIncoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
+        incoming: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter += 20
           return next(request)
         },
-        processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler) => {
+        outgoing: async (request: IlpPrepare, next: IlpRequestHandler) => {
           counter--
           return next(request)
         },

@@ -1,5 +1,5 @@
-import { IlpPrepare, IlpReply, IlpFulfill } from 'ilp-packet'
-import { Rule, IlpRequestHandler } from '../types/rule'
+import { IlpPrepare, IlpReply } from 'ilp-packet'
+import { Rule } from '../types/rule'
 import { Reader, Writer } from 'oer-utils'
 import { InvalidPacketError } from 'ilp-packet/dist/src/errors'
 import { log } from '../winston'
@@ -19,14 +19,14 @@ export interface EchoProtocolServices {
 export class EchoProtocol extends Rule {
   constructor ({ getOwnAddress, minMessageWindow }: EchoProtocolServices) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
-        return next(request)
+      incoming: async ({ state: { ilp } }, next) => {
+        await next()
       },
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      outgoing: async ({ state: { ilp } }, next) => {
 
-        const { destination, data, amount, expiresAt, executionCondition } = request
+        const { req: { data, amount, expiresAt, executionCondition }, outgoingPeer } = ilp
 
-        if (destination === getOwnAddress()) {
+        if (outgoingPeer === 'self') {
 
           if (data.length < MINIMUM_ECHO_PACKET_DATA_LENGTH) throw new InvalidPacketError('packet data too short for echo request. length=' + data.length)
           if (!data.slice(0, 16).equals(ECHO_DATA_PREFIX)) throw new InvalidPacketError('packet data does not start with ECHO prefix.')
@@ -43,20 +43,23 @@ export class EchoProtocol extends Rule {
 
             logger.verbose('responding to echo packet', { sourceAddress })
 
-            return this.incoming.write({
+            // TODO - Get handle on outgoing pipeline for this peer
+            const outgoing: IlpPrepare = {
               amount: amount,
               destination: sourceAddress,
               executionCondition: executionCondition,
               expiresAt: new Date(Number(expiresAt) - minMessageWindow),
               data: writer.getBuffer()
-            })
+            }
+            ilp.res = {} as IlpReply
+
           } else {
             logger.error('received unexpected echo response.')
             throw new Error('received unexpected echo response.')
           }
         }
 
-        return next(request)
+        await next()
 
       }
     })

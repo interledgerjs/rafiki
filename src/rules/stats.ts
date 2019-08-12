@@ -13,7 +13,7 @@ export interface StatsRuleServices {
 export class StatsRule extends Rule {
   constructor ({ stats, peerInfo }: StatsRuleServices) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         try {
           const reply = await next(request)
           if (isFulfill(reply)) {
@@ -27,7 +27,7 @@ export class StatsRule extends Rule {
           throw err
         }
       },
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      outgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         try {
           const reply = await next(request)
           if (isFulfill(reply)) {

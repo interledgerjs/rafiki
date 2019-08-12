@@ -5,10 +5,10 @@ export class MockRule extends Rule {
 
   constructor(handler: (packet: IlpPrepare) => Promise<IlpReply>){
     super({
-      processIncoming: (request) => {
+      incoming: (request) => {
         return handler(request)
       },
-      processOutgoing: (request) => {
+      outgoing: (request) => {
         return handler(request)
       },
     })

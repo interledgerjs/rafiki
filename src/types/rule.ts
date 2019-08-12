@@ -1,39 +1,32 @@
-import { BidirectionalDuplexRequestStream, RequestHandler, DuplexRequestStream, WritableRequestStream } from './request-stream'
-import { IlpPrepare, IlpReply } from 'ilp-packet'
-
-export type IlpRequestHandler = RequestHandler<IlpPrepare, IlpReply>
-export type RuleRequestHandler = (request: IlpPrepare, next: IlpRequestHandler) => Promise<IlpReply>
+import { Middleware, ParameterizedContext } from 'koa'
+import { IlpState, IlpMiddleWare } from '../koa/ilp-packet-middleware'
 
 export interface RuleFunctions {
   startup?: () => Promise<void>
   shutdown?: () => Promise<void>
-  processIncoming?: RuleRequestHandler
-  processOutgoing?: RuleRequestHandler
+  incoming?: IlpMiddleWare
+  outgoing?: IlpMiddleWare
 }
 
-const deadEndWritable: WritableRequestStream<IlpPrepare, IlpReply> = {
-  write (): Promise<IlpReply> {
-    throw new Error('handler not set')
-  }
-}
+const emptyMiddleware: IlpMiddleWare = async (ctx: ParameterizedContext<IlpState>, next) => { await next() }
 
-export class Rule implements BidirectionalDuplexRequestStream<IlpPrepare, IlpReply> {
+export class Rule {
 
-  private _incomingWritable: WritableRequestStream<IlpPrepare, IlpReply> = deadEndWritable
-  private _outgoingWritable: WritableRequestStream<IlpPrepare, IlpReply> = deadEndWritable
+  private _incoming: Middleware<IlpState> = emptyMiddleware
+  private _outgoing: Middleware<IlpState> = emptyMiddleware
 
-  constructor ({ startup, shutdown, processIncoming, processOutgoing }: RuleFunctions) {
+  constructor ({ startup, shutdown, incoming, outgoing }: RuleFunctions) {
     if (startup) {
       this._startup = startup
     }
     if (shutdown) {
       this._shutdown = shutdown
     }
-    if (processIncoming) {
-      this._processIncoming = processIncoming
+    if (incoming) {
+      this._incoming = incoming
     }
-    if (processOutgoing) {
-      this._processOutgoing = processOutgoing
+    if (outgoing) {
+      this._outgoing = outgoing
     }
   }
 
@@ -45,12 +38,12 @@ export class Rule implements BidirectionalDuplexRequestStream<IlpPrepare, IlpRep
     return
   }
 
-  protected _processIncoming: RuleRequestHandler = async (request: IlpPrepare, next: IlpRequestHandler, sentCallback?: () => void) => {
-    return next(request)
+  protected _processIncoming: Middleware<IlpState> = async (ctx, next) => {
+    await next()
   }
 
-  protected _processOutgoing: RuleRequestHandler = async (request: IlpPrepare, next: IlpRequestHandler, sentCallback?: () => void) => {
-    return next(request)
+  protected _processOutgoing: Middleware<IlpState> = async (ctx, next) => {
+    await next()
   }
 
   public async startup (): Promise<void> {
@@ -61,47 +54,6 @@ export class Rule implements BidirectionalDuplexRequestStream<IlpPrepare, IlpRep
     return this._shutdown()
   }
 
-  public incoming: DuplexRequestStream<IlpPrepare, IlpReply> = {
-    write: (request: IlpPrepare): Promise<IlpReply> => {
-      return this._processIncoming(request, (nextRequest: IlpPrepare) => {
-        return this._incomingWritable.write(nextRequest)
-      })
-    },
-    pipe: (writable: WritableRequestStream<IlpPrepare, IlpReply>) => {
-      this._incomingWritable = writable
-      return this.incoming
-    },
-    unpipe: () => {
-      this._incomingWritable = deadEndWritable
-      return this.incoming
-    }
-  }
-
-  public outgoing: DuplexRequestStream<IlpPrepare, IlpReply> = {
-    write: (request: IlpPrepare): Promise<IlpReply> => {
-      return this._processOutgoing(request, (nextRequest: IlpPrepare) => {
-        return this._outgoingWritable.write(nextRequest)
-      })
-    },
-    pipe: (writable: WritableRequestStream<IlpPrepare, IlpReply>) => {
-      this._outgoingWritable = writable
-      return this.outgoing
-    },
-    unpipe: () => {
-      this._outgoingWritable = deadEndWritable
-      return this.outgoing
-    }
-  }
-}
-
-/**
- * Sets the handler at the end of either the incoming or outgoing pipelines on a `BidirectionalDuplexRequestStream<IlpPrepare, IlpReply>` and returns the entry-point to that pipeline (write function).
- *
- * @param pipeline `incoming` or `outgoing` to indicate which pipeline to attach the handler to
- * @param bidirectionalPipeline the bidirectional pipelines to attach to
- * @param write the handler that accepts the writes at the end of the pipeline
- */
-export function setPipelineReader (pipeline: 'incoming' | 'outgoing', bidirectionalPipeline: BidirectionalDuplexRequestStream<IlpPrepare, IlpReply>, write: IlpRequestHandler): IlpRequestHandler {
-  bidirectionalPipeline[pipeline].pipe({ write })
-  return (request) => { return bidirectionalPipeline[pipeline].write(request) }
+  public get incoming () { return this._incoming }
+  public get outgoing () { return this._outgoing }
 }

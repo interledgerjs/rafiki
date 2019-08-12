@@ -7,7 +7,7 @@ import {createConnection, DataAndMoneyStream, Server} from 'ilp-protocol-stream'
 import crypto from 'crypto'
 import {KnexTokenService} from '../../src/services'
 import {DB} from '../helpers/db'
-import { authenticate } from '../../src/koa/token-auth-middleware';
+import { tokenAuthMiddleware } from '../../src/koa/token-auth-middleware';
 
 const PluginHttp = require('ilp-plugin-http')
 
@@ -180,7 +180,7 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
     const config = new Config()
     const tokenService = new KnexTokenService(db.knex())
     config.loadFromEnv()
-    rafiki = new App(config, authenticate(tokenService), db.knex())
+    rafiki = new App(config, tokenAuthMiddleware(tokenService), db.knex())
     await rafiki.start()
     await rafiki.addPeer(serverPeerInfo, serverEndpointInfo)
     await rafiki.addPeer(clientPeerInfo, clientEndpointInfo)

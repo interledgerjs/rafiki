@@ -5,7 +5,7 @@ import Knex from 'knex'
 import { App } from './app'
 import { AdminApi, KnexTokenService, RemoteTokenService } from './services'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
-import { authenticate } from './koa/token-auth-middleware'
+import { tokenAuthMiddleware } from './koa/token-auth-middleware'
 import { Config } from './index'
 
 let knex: Knex
@@ -42,7 +42,7 @@ knex = Knex(config.databaseConnectionString)
 const tokenService = config.authProviderUrl !== '' ? new RemoteTokenService(config.authProviderUrl) : new KnexTokenService(knex)
 
 // Create Rafiki
-const app = new App(config, authenticate(tokenService), knex)
+const app = new App(config, tokenAuthMiddleware(tokenService.introspect), knex)
 
 // Create Admin API
 const adminApi = new AdminApi({
@@ -51,7 +51,7 @@ const adminApi = new AdminApi({
 }, {
   app,
   tokenService,
-  middleware:  (config.adminApiAuth) ? authenticate(tokenService, token => { return token.sub === 'self' }) : undefined
+  middleware:  (config.adminApiAuth) ? tokenAuthMiddleware(tokenService.introspect, token => { return token.sub === 'self' }) : undefined
 })
 
 // Create Settlement API

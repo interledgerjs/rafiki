@@ -17,7 +17,7 @@ export class ErrorHandlerRule extends Rule {
 
   constructor ({ getOwnIlpAddress }: ErrorHandlerRuleServices) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         try {
           const response = await next(request)
 

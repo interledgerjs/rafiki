@@ -23,7 +23,7 @@ export interface RateLimitRuleServices {
 export class RateLimitRule extends Rule {
   constructor ({ peerInfo, bucket, stats }: RateLimitRuleServices) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (!bucket.take()) {
           logger.warn(`rate limited a packet`, { bucket, request, peerId: peerInfo.id })
           stats.rateLimitedPackets.increment(peerInfo, {})

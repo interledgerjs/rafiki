@@ -20,7 +20,7 @@ export class ThroughputRule extends Rule {
   constructor ({ incomingBucket, outgoingBucket }: ThroughputRuleServices) {
 
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (incomingBucket && isPrepare(request)) {
           if (!incomingBucket.take(BigInt(request.amount))) {
             logger.warn('throttling incoming packet due to bandwidth exceeding limit', { request })
@@ -31,7 +31,7 @@ export class ThroughputRule extends Rule {
           return next(request)
         }
       },
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      outgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (outgoingBucket && isPrepare(request)) {
           if (!outgoingBucket.take(BigInt(request.amount))) {
             logger.warn('throttling outgoing packet due to bandwidth exceeding limit', { request })

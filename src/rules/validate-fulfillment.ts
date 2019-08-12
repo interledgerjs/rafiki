@@ -9,7 +9,7 @@ export class ValidateFulfillmentRule extends Rule {
 
   constructor () {
     super({
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      outgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         const { executionCondition } = request
         const reply = await next(request)
         if (isFulfill(reply)) {

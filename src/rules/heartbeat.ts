@@ -27,7 +27,7 @@ export class HeartbeatRule extends Rule {
   endpoint: Endpoint<IlpPrepare,IlpReply>
   constructor (options: HeartbeatRuleServices) {
     super({
-      processIncoming: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>) => {
+      incoming: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>) => {
         const { destination, data } = request
 
         if (destination === 'peer.heartbeat') {

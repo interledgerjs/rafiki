@@ -15,7 +15,7 @@ export interface MaxPacketAmountRuleService {
 export class MaxPacketAmountRule extends Rule {
   constructor ({ maxPacketAmount }: MaxPacketAmountRuleService) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
         if (maxPacketAmount && isPrepare(request)) {
           const amount = BigInt(request.amount)
           if (amount > maxPacketAmount) {

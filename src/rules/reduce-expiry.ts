@@ -16,14 +16,14 @@ export class ReduceExpiryRule extends Rule {
 
   constructor ({ minIncomingExpirationWindow, minOutgoingExpirationWindow, maxHoldWindow }: ReduceExpiryRuleServices) {
     super({
-      processOutgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      outgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
 
         request.expiresAt = this.getDestinationExpiry(request, minOutgoingExpirationWindow, maxHoldWindow)
 
         return next(request)
 
       },
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
 
         request.expiresAt = this.getDestinationExpiry(request, minIncomingExpirationWindow, maxHoldWindow)
 

@@ -27,7 +27,7 @@ export class AlertRule extends Rule {
   constructor ({ createAlert }: AlertRuleServices) {
     super({
 
-      processOutgoing: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>) => {
+      outgoing: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>) => {
 
         const result = await next(request)
 

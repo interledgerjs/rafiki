@@ -1,5 +1,5 @@
 import { log } from './winston'
-import Koa, { Middleware as KoaMiddleware } from 'koa'
+import Koa, { compose, Middleware as KoaMiddleware, ParameterizedContext } from 'koa'
 import {
     Balance,
     Endpoint,
@@ -8,8 +8,7 @@ import {
     PeerInfo,
     PeerRelation,
     Rule,
-    RuleConfig,
-    setPipelineReader
+    RuleConfig
 } from './types'
 import { Connector } from './connector'
 import {
@@ -18,7 +17,6 @@ import {
     BalanceRule,
     createRateLimitBucketForPeer,
     createThroughputLimitBucketsForPeer,
-    DeduplicateRule,
     ErrorHandlerRule,
     ExpireRule,
     MaxPacketAmountRule,
@@ -33,6 +31,7 @@ import {
 import { TokenBucket } from './lib/token-bucket'
 import { Config, Stats } from './services'
 import { EndpointInfo, EndpointManager } from './endpoints'
+import createRouter, { Joi } from 'koa-joi-router'
 
 import { IlpPrepare, IlpReply, isReject } from 'ilp-packet'
 import { pipeline, RequestHandler } from './types/request-stream'
@@ -45,6 +44,10 @@ import Knex from 'knex'
 import { Route } from './models/Route'
 import { Rule as RuleModel } from './models/Rule'
 import { Protocol as ProtocolModel } from './models/Protocol'
+import { ilpPacketMiddleware, IlpState } from './koa/ilp-packet-middleware'
+import { TokenAuthState } from './koa/token-auth-middleware'
+import { peerMiddleWare } from './koa/peer-middleware'
+import { ilpClientMiddleware } from './koa/ilp-client-middleware';
 
 const logger = log.child({ component: 'App' })
 
@@ -53,7 +56,6 @@ const logger = log.child({ component: 'App' })
  */
 export class App {
 
-  private _packetCacheMap: Map<string, PacketCache>
   private _rateLimitBucketMap: Map<string, TokenBucket>
   private _throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
   private _koaApp: Koa
@@ -66,6 +68,7 @@ export class App {
 
     /**
      * Instantiates an http server which handles posts to /ilp and passes the packet on to the appropriate peer's endpoint.
+     *
      * @param opts Options for the application
      * @param koaMiddleware middleware to apply to incoming HTTP requests (at a minimum is must perform auth)
      * @param knex database object for persistence
@@ -75,7 +78,6 @@ export class App {
     this.connector = new Connector()
     this.stats = new Stats()
     this.alerts = new Alerts()
-    this._packetCacheMap = new Map()
     this._rateLimitBucketMap = new Map()
     this._throughputBucketsMap = new Map()
     this._businessRulesMap = new Map()
@@ -85,12 +87,42 @@ export class App {
     this.connector.routingTable.setGlobalPrefix(this._config.env === 'production' ? 'g' : 'test')
 
     this._koaApp = new Koa()
+
+    // Add any imported middleware
     this._koaApp.use(koaMiddleware)
-    this._endpointManager = new EndpointManager({
-      koaApp: this._koaApp,
-      path: opts.httpServerPath
+
+    const balance = new BalanceRule()
+
+    const mw = compose([
+      peerMiddleWare({
+        // Extract incoming peerId from auth and load state from connector
+        getIncomingPeer: (ctx: ParameterizedContext<TokenAuthState>) => {
+          ctx.assert(ctx.state.user, 401)
+          return this.connector.getPeer(ctx.state.user)
+        },
+        // Get outgoing peerId by querying connector routing table
+        getOutgoingPeer: (ctx: ParameterizedContext<IlpState>) => {
+          ctx.assert(ctx.state.ilp.req.destination, 500)
+          return this.connector.getNextHop(ctx.state.ilp.req.destination)
+        }
+      }),
+      ilpPacketMiddleware(),
+      balance.incoming,
+
+      // TODO Rules and connector
+
+      balance.outgoing,
+      ilpClientMiddleware(clients)
+    ])
+
+    const router = createRouter()
+    router.route({
+      method: 'post',
+      path: '/ilp',
+      handler: mw
     })
 
+    this._koaApp.use(router.middleware())
     this._knex = knex
   }
 
@@ -98,7 +130,8 @@ export class App {
     logger.info('starting connector....')
     logger.info('starting HTTP server on port ' + this._config.httpServerPort)
 
-    if (this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) // config loads ilpAddress as 'unknown' by default
+    // config loads ilpAddress as 'unknown' by default
+    if (this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) 
 
     await this.loadFromDataStore()
     this._httpServer = this._koaApp.listen(this._config.httpServerPort)
@@ -118,17 +151,14 @@ export class App {
    */
   public async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo, store: boolean = false) {
     logger.info('adding new peer: ' + peerInfo.id, { peerInfo, endpointInfo })
-    const rulesInstances: Rule[] = this._createRules(peerInfo)
-    this._businessRulesMap.set(peerInfo.id, rulesInstances)
     logger.info('creating new endpoint for peer', { endpointInfo })
-
     const endpoint = this._endpointManager.createEndpoint(peerInfo.id, endpointInfo)
 
-        // create incoming and outgoing pipelines for business rules
+    // create incoming and outgoing pipelines for business rules
     const combinedRule = pipeline(...rulesInstances)
     const sendOutgoing = rulesInstances.length > 0 ? setPipelineReader('outgoing', combinedRule, endpoint.sendOutgoingRequest.bind(endpoint)) : endpoint.sendOutgoingRequest.bind(endpoint)
 
-        // wrap endpoint and middleware pipelines in something that looks like an endpoint<IlpPrepare, IlpReply>
+    // wrap endpoint and middleware pipelines in something that looks like an endpoint<IlpPrepare, IlpReply>
     const wrapperEndpoint = {
       sendOutgoingRequest: async (request: IlpPrepare, sentCallback?: () => void): Promise<IlpReply> => {
         return sendOutgoing(request)

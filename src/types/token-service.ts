@@ -1,10 +1,12 @@
 
+export type IntrospectFunction = (token: string) => Promise<TokenInfo>
+
 export interface TokenService {
 
   /**
    * Introspect a token
    */
-  introspect: (token: string) => Promise<TokenInfo>
+  introspect: IntrospectFunction
 
   /**
    * Lookup a token given data about it

@@ -1,11 +1,26 @@
-// A Koa ILP packet parser middleware
-import { deserializeIlpPrepare, serializeIlpReply } from 'ilp-packet'
+/**
+ * Parse ILP packets
+ */
+import { deserializeIlpPrepare, serializeIlpReply, IlpPrepare, IlpReply, deserializeIlpReply } from 'ilp-packet'
 import getRawBody = require('raw-body')
 import * as Koa from 'koa'
-
-// TODO: If this becomes configurable then we should have a default export that returns a configured instanceof the parse function
+import { PeerInfo } from '../types'
 
 const CONTENT_TYPE = 'application/octet-stream'
+
+export interface IlpState {
+  ilp: {
+    req: IlpPrepare
+    res?: IlpReply
+    rawReq: Buffer
+    rawRes?: Buffer
+    outgoingAmount: BigInt
+    outgoingExpiry: Date
+    readonly outgoingRawReq: Buffer
+  }
+}
+
+export type IlpMiddleWare = Koa.Middleware<IlpState>
 
 /**
  *  1. Gets the raw body info a Buffer and stores in `ctx.state.requestPacket`
@@ -16,15 +31,67 @@ const CONTENT_TYPE = 'application/octet-stream'
  * @param ctx Koa context
  * @param next Next middleware context
  */
-export async function parseIlpPacket (ctx: Koa.Context, next: () => Promise<any>) {
+export function ilpPacketMiddleware (): IlpMiddleWare {
 
-  if (ctx.request.body !== undefined) return next()
+  return async function ilpPacket (ctx: Koa.ParameterizedContext<IlpState>, next: () => Promise<any>) {
 
-  ctx.assert(ctx.request.type === CONTENT_TYPE, 400, 'Expected Content-Type of ' + CONTENT_TYPE)
-  ctx.state.rawRequestPacket = await getRawBody(ctx.req)
-  ctx.state.requestPacket = deserializeIlpPrepare(ctx.state.ctx.state.rawRequestPacket)
-  await next()
-  ctx.assert(ctx.state.responsePacket, 500, 'No response packet.')
-  ctx.response.type = CONTENT_TYPE
-  ctx.body = serializeIlpReply(ctx.state.responsePacket)
+    ctx.assert(ctx.request.type === CONTENT_TYPE, 400, 'Expected Content-Type of ' + CONTENT_TYPE)
+
+    const _rawReq = await getRawBody(ctx.req)
+    const _req = deserializeIlpPrepare(_rawReq)
+    let _res: IlpReply | undefined = undefined
+    let _rawRes: Buffer | undefined = undefined
+    let _amount: BigInt | undefined = undefined
+    let _expiry: Date | undefined = undefined
+
+    ctx.state.ilp = {
+      req: _req,
+      rawReq: _rawReq,
+      set res (reply: IlpReply | undefined) {
+        _res = reply
+      },
+      get res () {
+        if (_res) return _res
+        if (_rawRes) _res = deserializeIlpReply(_rawRes)
+        return _res
+      },
+      set rawRes (reply: Buffer | undefined) {
+        _rawRes = reply
+      },
+      get rawRes () {
+        if (_rawRes) return _rawRes
+        if (_res) _rawRes = serializeIlpReply(_res)
+        return _rawRes
+      },
+
+      get outgoingAmount () {
+        if (_amount) return _amount
+        return BigInt(_req.amount)
+      },
+
+      set outgoingAmount (value: BigInt) {
+        _amount = value
+      },
+
+      get outgoingExpiry () {
+        if (_expiry) return _expiry
+        return _req.expiresAt
+      },
+
+      set outgoingExpiry (value: Date) {
+        _expiry = value
+      },
+
+      get outgoingRawReq () {
+        // TODO Splice in new amount and expiry if dirty
+        return _rawReq
+      }
+    }
+
+    await next()
+
+    ctx.response.type = CONTENT_TYPE
+    ctx.body = ctx.state.ilp.rawRes
+  }
+
 }

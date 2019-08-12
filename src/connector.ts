@@ -7,6 +7,9 @@ import { EchoProtocol, IldcpProtocol } from './protocols'
 import { PeerUnreachableError } from 'ilp-packet/dist/src/errors'
 import { log } from './winston'
 import { PeerNotFoundError } from './errors/peer-not-found-error'
+import compose from 'koa-compose'
+import { IlpMiddleWare, IlpState } from './koa/ilp-packet-middleware'
+import { ParameterizedContext } from 'koa'
 
 const logger = log.child({ component: 'connector' })
 
@@ -15,10 +18,41 @@ const { codes } = Errors
 export class Connector {
   routingTable: RoutingTable = new RoutingTable()
   routeManager: RouteManager = new RouteManager(this.routingTable)
-  outgoingIlpPacketHandlerMap: Map<string, (packet: IlpPrepare) => Promise<IlpReply> > = new Map()
-  peerRules: Map<string, Rule[]> = new Map()
+  outgoing: IlpMiddleWare
+  ccp: CcpProtocol
+  ildcp: IldcpProtocol
+  echo: EchoProtocol
 
   constructor () {
+
+    this.ccp = new CcpProtocol({
+      isSender: protocol.sendRoutes || false,
+      isReceiver: protocol.receiveRoutes || false,
+      peerId: peerInfo.id,
+      forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
+      getPeerRelation: this.getPeerRelation.bind(this),
+      getOwnAddress: this.getOwnAddress.bind(this),
+      addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
+      removeRoute: (peerId: string, prefix: string) => { this.routeManager.removeRoute(peerId, prefix) } ,
+      getRouteWeight: this.calculateRouteWeight.bind(this)
+    })
+
+    this.ildcp = new IldcpProtocol({
+      getPeerInfo: () => peerInfo,
+      getOwnAddress: this.getOwnAddress.bind(this)
+    })
+
+    this.echo = new EchoProtocol({ getOwnAddress: this.getOwnAddress.bind(this), minMessageWindow: 1500 })
+
+    const _incoming = compose([this.ildcp.incoming, this.ccp.incoming])
+    const _outgoing = compose([this.echo.outgoing, this.ccp.outgoing, this.ildcp.outgoing])
+
+    function sendOutgoing (ctx: ParameterizedContext<IlpState>) {
+      _outgoing(ctx, async () => {
+        await this.outgoing(ctx)
+      })
+    }
+
     this.addSelfPeer()
   }
 
@@ -30,36 +64,9 @@ export class Connector {
  * @param peerInfo Peer information
  * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
  */
-  async addPeer (peerInfo: PeerInfo, endpoint: Endpoint<IlpPrepare, IlpReply>) {
+  async addPeer (peerInfo: PeerInfo) {
     logger.info('adding peer', { peerInfo })
     this.routeManager.addPeer(peerInfo.id, peerInfo.relation)
-    const protocolMiddleware = this._createProtocols(peerInfo)
-    this.peerRules.set(peerInfo.id, protocolMiddleware)
-    const combinedMiddleware = pipeline(...protocolMiddleware)
-
-    const sendOutgoingRequest = (request: IlpPrepare): Promise<IlpReply> => {
-      try {
-        return endpoint.sendOutgoingRequest(request)
-      } catch (e) {
-
-        if (!e.ilpErrorCode) {
-          e.ilpErrorCode = codes.T01_PEER_UNREACHABLE
-        }
-
-        e.message = 'failed to send packet: ' + e.message
-
-        throw e
-      }
-    }
-
-    const sendIncoming = protocolMiddleware.length > 0 ? setPipelineReader('incoming', combinedMiddleware, this.sendIlpPacket.bind(this)) : this.sendIlpPacket.bind(this)
-    const sendOutgoing = protocolMiddleware.length > 0 ? setPipelineReader('outgoing', combinedMiddleware, sendOutgoingRequest) : sendOutgoingRequest
-    endpoint.setIncomingRequestHandler((request: IlpPrepare) => {
-      return sendIncoming(request)
-    })
-    this.outgoingIlpPacketHandlerMap.set(peerInfo.id, sendOutgoing)
-
-    protocolMiddleware.forEach(mw => mw.startup())
 
     if (peerInfo.relation === 'parent') {
       const ildcpProtocol = protocolMiddleware.find(mw => mw.constructor.name === 'IldcpProtocol')
@@ -84,28 +91,15 @@ export class Connector {
 
   async removePeer (id: string): Promise<void> {
     logger.info('removing peer', { peerId: id })
-    const peerMiddleware = this.getPeerRules(id)
-    if (peerMiddleware) peerMiddleware.forEach(mw => mw.shutdown())
-    this.peerRules.delete(id)
-    this.outgoingIlpPacketHandlerMap.delete(id)
     this.routeManager.removePeer(id)
   }
-  async sendIlpPacket (packet: IlpPrepare): Promise<IlpReply> {
-    const { destination } = packet
-    const nextHop = this.routingTable.nextHop(destination)
-    const handler = this.outgoingIlpPacketHandlerMap.get(nextHop)
 
-    if (!handler) {
-      logger.error('Handler not found for specified nextHop', { nextHop })
-      throw new Error(`No handler set for ${nextHop}`)
-    }
-
-    logger.silly('sending outgoing ILP Packet', { destination, nextHop })
-
-    return handler(packet)
+  public getNextHop (destination: string): string {
+    return this.routingTable.nextHop(destination)
   }
 
-  async sendOutgoingRequest (to: string, packet: IlpPrepare): Promise<IlpReply> {
+  async sendOutgoingRequest (peer: string, packet: IlpPrepare): Promise<IlpReply> {
+    // TODO: Fix this
     const handler = this.outgoingIlpPacketHandlerMap.get(to)
 
     if (!handler) {
@@ -138,9 +132,10 @@ export class Connector {
    * @returns string[] Array of addresses ordered by highest weighting first.
    */
   getOwnAddresses (): string[] {
-    const selfPeer = this.routeManager.getPeer('self')
-
-    return selfPeer ? selfPeer['routes']['prefixes'].sort((a: string, b: string) => selfPeer['routes']['items'][b]['weight'] - selfPeer['routes']['items'][a]['weight']) : []
+    const peer = this.routeManager.getPeer('self')
+    return peer
+      ? peer['routes']['prefixes'].sort((a: string, b: string) => peer['routes']['items'][b]['weight'] - peer['routes']['items'][a]['weight']) 
+      : []
   }
 
   removeAddress (address: string): void {
@@ -154,22 +149,6 @@ export class Connector {
   private addSelfPeer () {
     const selfPeerId = 'self'
     this.routeManager.addPeer(selfPeerId, 'local')
-    const protocolMiddleware = [
-      new EchoProtocol({ getOwnAddress: this.getOwnAddress.bind(this), minMessageWindow: 1500 }) // TODO need to fix the hard coded value
-    ]
-
-    this.peerRules.set(selfPeerId, [...protocolMiddleware])
-    const combinedMiddleware = pipeline(...protocolMiddleware)
-    const sendIncoming = setPipelineReader('incoming', combinedMiddleware, this.sendIlpPacket.bind(this))
-    const sendOutgoing = setPipelineReader('outgoing', combinedMiddleware, (request: IlpPrepare): Promise<IlpReply> => {
-
-      // Should throw an error as you are the intended recipient
-      throw new PeerUnreachableError('cant forward on packet addressed to self')
-    })
-
-    this.outgoingIlpPacketHandlerMap.set(selfPeerId, sendOutgoing)
-
-    protocolMiddleware.forEach(mw => mw.startup())
   }
 
   /**
@@ -208,43 +187,8 @@ export class Connector {
     }
   }
 
-  getPeerRules (id: string): Rule[] | undefined {
-    return this.peerRules.get(id)
-  }
-
   getPeerList () {
     return this.routeManager.getPeerList()
   }
 
-  private _createProtocols (peerInfo: PeerInfo): Rule[] {
-
-    logger.verbose('creating protocols for peer', { peerInfo })
-
-    const instantiateProtocol = (protocol: ProtocolConfig): Rule => {
-      switch (protocol.name) {
-        case('ccp'):
-          return new CcpProtocol({
-            isSender: protocol.sendRoutes || false,
-            isReceiver: protocol.receiveRoutes || false,
-            peerId: peerInfo.id,
-            forwardingRoutingTable: this.routingTable.getForwardingRoutingTable(),
-            getPeerRelation: this.getPeerRelation.bind(this),
-            getOwnAddress: this.getOwnAddress.bind(this),
-            addRoute: (route: IncomingRoute) => { this.routeManager.addRoute(route) } ,
-            removeRoute: (peerId: string, prefix: string) => { this.routeManager.removeRoute(peerId, prefix) } ,
-            getRouteWeight: this.calculateRouteWeight.bind(this)
-          })
-        case('ildcp'):
-          return new IldcpProtocol({
-            getPeerInfo: () => peerInfo,
-            getOwnAddress: this.getOwnAddress.bind(this)
-          })
-        default:
-          logger.error(`Protocol ${protocol.name} is not supported`, { peerInfo })
-          throw new Error(`Protocol ${protocol.name} undefined`)
-      }
-    }
-
-    return peerInfo.protocols.map(instantiateProtocol)
-  }
 }

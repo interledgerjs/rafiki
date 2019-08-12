@@ -2,7 +2,6 @@ import {
   CcpRouteControlRequest,
   CcpRouteUpdateRequest,
   Mode,
-  CcpRoute,
   ModeReverseMap,
   serializeCcpRouteUpdateRequest
 } from 'ilp-protocol-ccp'

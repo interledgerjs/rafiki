@@ -1,4 +1,4 @@
-import { Type, IlpPrepare, IlpReply, deserializeIlpPrepare, isFulfill, isReject } from 'ilp-packet'
+import { IlpPrepare, IlpReply, deserializeIlpPrepare, isFulfill, isReject } from 'ilp-packet'
 import {
   CcpRouteControlRequest,
   CcpRouteUpdateRequest,

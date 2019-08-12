@@ -1,4 +1,4 @@
-import { Rule, IlpRequestHandler, RuleRequestHandler } from '../../types'
+import { Rule } from '../../types'
 import { IlpPrepare, IlpReply, serializeIlpPrepare, deserializeIlpFulfill } from 'ilp-packet'
 import { deserializeCcpRouteUpdateRequest, serializeCcpResponse, deserializeCcpRouteControlRequest } from 'ilp-protocol-ccp'
 import { ForwardingRoutingTable, IncomingRoute, Relation } from 'ilp-routing'
@@ -6,6 +6,7 @@ import { CcpSender } from './ccp-sender'
 import { CcpReceiver } from './ccp-receiver'
 import { log } from '../../winston'
 import { TemporaryApplicationError } from 'ilp-packet/dist/src/errors'
+import { IlpMiddleWare } from '../../koa/ilp-packet-middleware';
 const logger = log.child({ component: 'ccp-protocol' })
 export interface CcpMiddlewareServices {
   isSender: boolean,
@@ -46,20 +47,20 @@ export class CcpProtocol extends Rule {
     }
   }
 
-  protected _processIncoming: RuleRequestHandler = async (request: IlpPrepare, next: IlpRequestHandler) => {
-    switch (request.destination) {
+  protected _processIncoming: IlpMiddleWare = async ({ state: { ilp } }, next) => {
+    switch (ilp.req.destination) {
       case 'peer.route.control': {
-        logger.silly('received peer.route.control', { request })
-        return this.handleCcpRouteControlMessage(request)
+        logger.silly('received peer.route.control', { request: ilp.req })
+        ilp.res = await this.handleCcpRouteControlMessage(ilp.req)
         break
       }
       case 'peer.route.update': {
-        logger.silly('received peer.route.update', { request })
-        return this.handleCcpRouteUpdateMessage(request)
+        logger.silly('received peer.route.update', { request: ilp.req })
+        ilp.res = await this.handleCcpRouteUpdateMessage(ilp.req)
         break
       }
       default: {
-        return next(request)
+        await next()
       }
     }
   }

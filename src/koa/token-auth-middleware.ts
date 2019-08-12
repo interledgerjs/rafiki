@@ -1,16 +1,39 @@
 import * as Koa from 'koa'
-import { TokenService, TokenInfo } from '../types/token-service'
+import { AuthState } from './auth-state'
+import { TokenInfo, IntrospectFunction } from '../types/token-service'
 
-export function authenticate (tokenService: TokenService, authCallback?: (tokenInfo: TokenInfo) => boolean) {
+export interface TokenAuthState extends AuthState {
+  token: string
+  tokenInfo: TokenInfo
+}
 
-  const auth = (authCallback) ? authCallback : (tokenInfo: TokenInfo) => tokenInfo.active
-  return async (ctx: Koa.Context, next: () => Promise<any>) => {
-    const token = getBearerToken(ctx)
-    ctx.assert(token, 401, 'Bearer token required in Authorization header')
-    // TODO - Need bang syntax below until https://github.com/microsoft/TypeScript/pull/32695 ships
-    ctx.state.user = tokenService.introspect(token!)
-    ctx.assert(auth(ctx.state.user), 401, 'Access denied')
+/**
+ * Create authentication middleware based on a Bearer token and an introspection service.
+ *
+ * The context will implement `TokenAuthState` after being processed by this middleware
+ *
+ * @param introspect A function that will introspect a token and return the TokenInfo
+ * @param authenticate A function that will authenticate the user based on the introspection result. Default is to check `tokenInfo.active == true`
+ */
+export function tokenAuthMiddleware (introspect: IntrospectFunction, authenticate?: (tokenInfo: TokenInfo) => boolean) {
+
+  const _auth = (authenticate) ? authenticate : (tokenInfo: TokenInfo) => tokenInfo.active
+  return async function auth (ctx: Koa.Context, next: () => Promise<any>) {
+
+    // Parse out Bearer token
+    ctx.state.token = getBearerToken(ctx)
+    ctx.assert(ctx.state.token, 401, 'Bearer token required in Authorization header')
+
+    // Introspect token
+    ctx.state.tokenInfo = await introspect(ctx.state.token)
+    ctx.assert(_auth(ctx.state.tokenInfo), 401, 'Access Denied - Invalid Token')
+
+    // PeerId is the subject of the token
+    ctx.assert(ctx.state.tokenInfo.sub, 401, 'Access Denied - No Subject in Token')
+    ctx.state.user = ctx.state.tokenInfo.sub
+
     await next()
+
   }
 }
 

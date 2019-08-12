@@ -1,6 +1,6 @@
 import { IlpPrepare, IlpReply, deserializeIlpReply, serializeIlpPrepare, deserializeIlpPacket, deserializeIlpPrepare, serializeIlpReply } from 'ilp-packet'
 import * as ILDCP from 'ilp-protocol-ildcp'
-import { Rule, IlpRequestHandler } from '../types/rule'
+import { Rule } from '../types/rule'
 import { PeerInfo } from '../types/peer'
 import { Endpoint } from '../types/endpoint'
 import { log } from '../winston'
@@ -16,8 +16,8 @@ export interface IldcpProtocolServices {
 export class IldcpProtocol extends Rule {
   constructor ({ getPeerInfo, getOwnAddress }: IldcpProtocolServices) {
     super({
-      processIncoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
-        if (request.destination === 'peer.config') {
+      incoming: async ({ state: { ilp } }, next) => {
+        if (ilp.req.destination === 'peer.config') {
           const { assetCode, assetScale, protocols, id, relation } = getPeerInfo()
           const ildcpProtocol = protocols.filter(protocol => protocol.name === 'ildcp')[0]
           if (relation !== 'child') {
@@ -28,37 +28,34 @@ export class IldcpProtocol extends Rule {
           logger.info('responding to ILDCP request from child', { address: clientAddress })
 
           // TODO: Remove unnecessary serialization from ILDCP module
-          return deserializeIlpReply(await ILDCP.serve({
-            requestPacket: serializeIlpPrepare(request),
+          ilp.rawRes = await ILDCP.serve({
+            requestPacket: ilp.rawReq,
             handler: () => Promise.resolve({
               clientAddress,
               assetScale,
               assetCode
             }),
             serverAddress: getOwnAddress()
-          }))
+          })
         }
-
-        return next(request)
-
       }
     })
   }
+}
 
-  async getAddressFrom (parentEndpoint: Endpoint<IlpPrepare, IlpReply>): Promise<string> {
-    const { clientAddress } = await ILDCP.fetch(async (data: Buffer): Promise<Buffer> => {
-      const ildcpRequest = deserializeIlpPrepare(data)
-      logger.info('sending ILDCP address to parent')
-      const reply = await parentEndpoint.sendOutgoingRequest(ildcpRequest)
-      return serializeIlpReply(reply)
-    })
+export async function getAddressFrom (parentEndpoint: Endpoint<IlpPrepare, IlpReply>): Promise<string> {
+  const { clientAddress } = await ILDCP.fetch(async (data: Buffer): Promise<Buffer> => {
+    const ildcpRequest = deserializeIlpPrepare(data)
+    logger.info('sending ILDCP address to parent')
+    const reply = await parentEndpoint.sendOutgoingRequest(ildcpRequest)
+    return serializeIlpReply(reply)
+  })
 
-    if (clientAddress === 'unknown') {
-      logger.error('Failed to get ILDCP address from parent.')
-      throw new Error('Failed to get ILDCP address from parent.')
-    }
-
-    logger.info('received ILDCP address from parent', { address: clientAddress })
-    return clientAddress
+  if (clientAddress === 'unknown') {
+    logger.error('Failed to get ILDCP address from parent.')
+    throw new Error('Failed to get ILDCP address from parent.')
   }
+
+  logger.info('received ILDCP address from parent', { address: clientAddress })
+  return clientAddress
 }
