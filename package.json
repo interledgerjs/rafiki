@@ -47,6 +47,7 @@
     "@types/koa-joi-router": "^5.2.2",
     "@types/nanoid": "^2.0.0",
     "@types/node-fetch": "^2.3.3",
+    "@types/rosie": "0.0.36",
     "ajv": "^6.9.1",
     "change-case": "^3.1.0",
     "extensible-error": "^1.0.2",
@@ -70,6 +71,7 @@
     "path-to-regexp": "^3.0.0",
     "prom-client": "^11.2.1",
     "raw-body": "^2.4.1",
+    "rosie": "^2.0.1",
     "sqlite3": "^4.0.9",
     "winston": "^3.2.1"
   },
