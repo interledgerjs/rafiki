@@ -38,7 +38,7 @@ export class KnexTokenService implements TokenService {
   }
 
   async delete (tokenOrtokenInfo: TokenInfo | string): Promise<void> {
-    const authToken = (typeof tokenOrtokenInfo === 'string') 
+    const authToken = (typeof tokenOrtokenInfo === 'string')
       ? await AuthToken.query(this._knex).where('id', tokenOrtokenInfo).first()
       : await AuthToken.query(this._knex).where('peerId', tokenOrtokenInfo.sub).first()
     if (authToken) {

@@ -1,5 +1,6 @@
 export * from './admin-api'
 export * from './config'
+export * from './wallet-config'
 export * from './stats'
 export * from './tokens/knex'
 export * from './tokens/remote'

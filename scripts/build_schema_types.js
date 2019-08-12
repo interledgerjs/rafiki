@@ -4,7 +4,7 @@ const fs = require('fs')
 const { resolve } = require('path')
 const { compileFromFile } = require('json-schema-to-typescript')
 
-const schemas = ['Config.json', 'BalanceUpdate.json']
+const schemas = ['Config.json', 'BalanceUpdate.json', 'WalletConfig.json']
 
 // compile from file
 ;(async function () {
@@ -14,7 +14,7 @@ const schemas = ['Config.json', 'BalanceUpdate.json']
     // working directory instead of the file's directory.
     let ts = await compileFromFile(resolve(__dirname, '../src/schemas/', schema), {})
 
-    if (schema === 'Config.json') {
+    if (schema === 'Config.json' || schema === 'WalletConfig.json') {
       ts = ts
         // This is the only way to let Config inherit from the interface without
         // redefining all the fields.
