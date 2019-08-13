@@ -1,6 +1,7 @@
-import { Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
-import { Rule, IlpRequestHandler } from '../types/rule'
+import { Errors, isPrepare } from 'ilp-packet'
+import { Rule } from '../types/rule'
 import { log } from '../winston'
+import { AppServices } from '../services'
 const logger = log.child({ component: 'expire-rule' })
 
 const { AmountTooLargeError } = Errors
@@ -13,20 +14,21 @@ export interface MaxPacketAmountRuleService {
  * @throws {AmountTooLargeError} Throws if the request amount is greater than the prescribed max packet amount.
  */
 export class MaxPacketAmountRule extends Rule {
-  constructor ({ maxPacketAmount }: MaxPacketAmountRuleService) {
-    super({
-      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
-        if (maxPacketAmount && isPrepare(request)) {
-          const amount = BigInt(request.amount)
-          if (amount > maxPacketAmount) {
-            logger.warn('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount, request })
-            throw new AmountTooLargeError(`packet size too large. maxAmount=${maxPacketAmount} actualAmount=${request.amount}`, {
-              receivedAmount: request.amount,
+  constructor (services: AppServices) {
+    super(services, {
+      incoming: async ({ state: { ilp, peers } }, next) => {
+        const { maxPacketAmount } = peers.incoming.rules
+        if (maxPacketAmount.maxPacketAmount && isPrepare(ilp.req)) {
+          const amount = BigInt(ilp.req.amount)
+          if (amount > maxPacketAmount.maxPacketAmount) {
+            logger.warn('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount, ilp })
+            throw new AmountTooLargeError(`packet size too large. maxAmount=${maxPacketAmount} actualAmount=${ilp.req.amount}`, {
+              receivedAmount: ilp.req.amount,
               maximumAmount: maxPacketAmount.toString()
             })
           }
         }
-        return next(request)
+        await next()
       }
     })
   }

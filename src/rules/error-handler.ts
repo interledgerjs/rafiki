@@ -1,6 +1,7 @@
-import { Rule, IlpRequestHandler } from '../types/rule'
-import { IlpPrepare, IlpReply, errorToIlpReject, isFulfill, isReject } from 'ilp-packet'
+import { Rule } from '../types/rule'
+import { errorToIlpReject, isFulfill, isReject } from 'ilp-packet'
 import { log } from '../winston'
+import { AppServices } from '../services'
 const logger = log.child({ component: 'error-handler-rule' })
 
 export interface ErrorHandlerRuleServices {
@@ -15,25 +16,22 @@ export interface ErrorHandlerRuleServices {
  */
 export class ErrorHandlerRule extends Rule {
 
-  constructor ({ getOwnIlpAddress }: ErrorHandlerRuleServices) {
-    super({
-      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+  constructor (services: AppServices, { getOwnIlpAddress }: ErrorHandlerRuleServices) {
+    super(services, {
+      incoming: async ({ state: { peers, ilp } }, next) => {
         try {
-          const response = await next(request)
-
-          if (!(isFulfill(response) || isReject(response))) {
-            logger.error('handler did not return a value.', { response: JSON.stringify(response) })
+          await next()
+          if (ilp.res && !(isFulfill(ilp.res) || isReject(ilp.res))) {
+            logger.error('handler did not return a valid value.', { response: JSON.stringify(ilp.res) })
             throw new Error('handler did not return a value.')
           }
-
-          return response
         } catch (e) {
           let err = e
           if (!err || typeof err !== 'object') {
             err = new Error('Non-object thrown: ' + e)
           }
           logger.error('Error thrown in incoming pipeline', { err })
-          return errorToIlpReject(getOwnIlpAddress(), err)
+          ilp.res = errorToIlpReject(getOwnIlpAddress(), err)
         }
       }
     })

@@ -2,9 +2,10 @@
  * Parse ILP packets
  */
 import { deserializeIlpPrepare, serializeIlpReply, IlpPrepare, IlpReply, deserializeIlpReply } from 'ilp-packet'
-import getRawBody = require('raw-body')
 import * as Koa from 'koa'
-import { PeerInfo } from '../types'
+import { PeerState } from './peer-middleware'
+import { AppServices } from '../services'
+import { Readable } from 'stream'
 
 const CONTENT_TYPE = 'application/octet-stream'
 
@@ -14,13 +15,18 @@ export interface IlpState {
     res?: IlpReply
     rawReq: Buffer
     rawRes?: Buffer
-    outgoingAmount: BigInt
+    outgoingAmount: bigint
     outgoingExpiry: Date
     readonly outgoingRawReq: Buffer
+    readonly incomingRawRes: Buffer
   }
 }
 
-export type IlpMiddleWare = Koa.Middleware<IlpState>
+export interface IlpPacketMiddlewareOptions {
+  getRawBody: (req: Readable) => Promise<Buffer>
+}
+
+export type IlpMiddleWare = Koa.Middleware<PeerState & IlpState>
 
 /**
  *  1. Gets the raw body info a Buffer and stores in `ctx.state.requestPacket`
@@ -31,7 +37,7 @@ export type IlpMiddleWare = Koa.Middleware<IlpState>
  * @param ctx Koa context
  * @param next Next middleware context
  */
-export function ilpPacketMiddleware (): IlpMiddleWare {
+export function ilpPacketMiddleware (services: AppServices, { getRawBody }: IlpPacketMiddlewareOptions): IlpMiddleWare {
 
   return async function ilpPacket (ctx: Koa.ParameterizedContext<IlpState>, next: () => Promise<any>) {
 
@@ -41,7 +47,7 @@ export function ilpPacketMiddleware (): IlpMiddleWare {
     const _req = deserializeIlpPrepare(_rawReq)
     let _res: IlpReply | undefined = undefined
     let _rawRes: Buffer | undefined = undefined
-    let _amount: BigInt | undefined = undefined
+    let _amount: bigint | undefined = undefined
     let _expiry: Date | undefined = undefined
 
     ctx.state.ilp = {
@@ -69,7 +75,7 @@ export function ilpPacketMiddleware (): IlpMiddleWare {
         return BigInt(_req.amount)
       },
 
-      set outgoingAmount (value: BigInt) {
+      set outgoingAmount (value: bigint) {
         _amount = value
       },
 
@@ -85,6 +91,13 @@ export function ilpPacketMiddleware (): IlpMiddleWare {
       get outgoingRawReq () {
         // TODO Splice in new amount and expiry if dirty
         return _rawReq
+      },
+
+      get incomingRawRes () {
+        // TODO Splice in new data if dirty
+        if (_rawRes) return _rawRes
+        if (_res) return serializeIlpReply(_res)
+        throw new Error('no response data set')
       }
     }
 

@@ -1,53 +1,43 @@
 import { log } from './winston'
-import Koa, { compose, Middleware as KoaMiddleware, ParameterizedContext } from 'koa'
+import Koa, { Middleware as KoaMiddleware, ParameterizedContext } from 'koa'
+import compose from 'koa-compose'
+import getRawBody = require('raw-body')
 import {
-    Balance,
-    Endpoint,
-    InMemoryBalance,
     JSONBalanceSummary,
     PeerInfo,
-    PeerRelation,
-    Rule,
-    RuleConfig
+    BalanceConfig
 } from './types'
 import { Connector } from './connector'
 import {
     AlertRule,
-    Alerts,
     BalanceRule,
-    createRateLimitBucketForPeer,
-    createThroughputLimitBucketsForPeer,
     ErrorHandlerRule,
     ExpireRule,
     MaxPacketAmountRule,
-    PacketCache,
-    PacketCacheOptions,
     RateLimitRule,
     ReduceExpiryRule,
     StatsRule,
     ThroughputRule,
-    ValidateFulfillmentRule
+    ValidateFulfillmentRule,
+    HeartbeatRule
 } from './rules'
-import { TokenBucket } from './lib/token-bucket'
-import { Config, Stats, WalletConfig } from './services'
-import { EndpointInfo, EndpointManager } from './endpoints'
+import { Config, Stats, WalletConfig, AppServices, Alerts } from './services'
 import createRouter, { Joi } from 'koa-joi-router'
 
-import { IlpPrepare, IlpReply, isReject } from 'ilp-packet'
-import { pipeline, RequestHandler } from './types/request-stream'
+import { isReject, serializeIlpPrepare, deserializeIlpReply } from 'ilp-packet'
 import { Server } from 'net'
-import { PluginEndpoint } from './legacy/plugin-endpoint'
-import { MAX_INT_64, MIN_INT_64, STATIC_CONDITION } from './constants'
+import { STATIC_CONDITION } from './constants'
 import { PeerNotFoundError } from './errors/peer-not-found-error'
 import { Peer } from './models/Peer'
 import Knex from 'knex'
 import { Route } from './models/Route'
-import { Rule as RuleModel } from './models/Rule'
-import { Protocol as ProtocolModel } from './models/Protocol'
 import { ilpPacketMiddleware, IlpState } from './koa/ilp-packet-middleware'
-import { TokenAuthState } from './koa/token-auth-middleware'
 import { peerMiddleWare } from './koa/peer-middleware'
-import { ilpClientMiddleware } from './koa/ilp-client-middleware';
+import { ilpClientMiddleware, HttpClientConfig } from './koa/ilp-client-middleware'
+import { AuthState } from './koa/auth-state'
+import { AxiosHttpClientService } from './services/client/axios'
+import { KnexPeerInfoService } from './services/peer-info/knex'
+import { InMemoryBalanceService } from './services/balance/in-memory'
 
 const logger = log.child({ component: 'App' })
 
@@ -56,13 +46,10 @@ const logger = log.child({ component: 'App' })
  */
 export class App {
 
-  private _rateLimitBucketMap: Map<string, TokenBucket>
-  private _throughputBucketsMap: Map<string, { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket }>
   private _koaApp: Koa
+  private _connector: Connector
   private _httpServer: Server
-  private _endpointManager: EndpointManager
-  private _businessRulesMap: Map<string, Rule[]>
-  private _balanceMap: Map<string, Balance>
+  private _services: AppServices
   private _config: Config | WalletConfig
   private _knex: Knex
 
@@ -70,77 +57,127 @@ export class App {
      * Instantiates an http server which handles posts to /ilp and passes the packet on to the appropriate peer's endpoint.
      *
      * @param opts Options for the application
-     * @param koaMiddleware middleware to apply to incoming HTTP requests (at a minimum is must perform auth)
+     * @param koaMiddleware middleware to apply to incoming HTTP requests (at a minimum it must perform auth)
      * @param knex database object for persistence
      */
-  constructor (opts: Config | WalletConfig, koaMiddleware: KoaMiddleware, knex: Knex) {
+  constructor (opts: Config, koaMiddleware: KoaMiddleware, knex: Knex) {
 
-    this.connector = new Connector()
-    this.stats = new Stats()
-    this.alerts = new Alerts()
-    this._rateLimitBucketMap = new Map()
-    this._throughputBucketsMap = new Map()
-    this._businessRulesMap = new Map()
-    this._balanceMap = new Map()
+    // TODO - Import as app services
     this._config = opts
+    this._knex = knex
 
-    this.connector.routingTable.setGlobalPrefix(this._config.env === 'production' ? 'g' : 'test')
-
+    // TODO: Pass these in?
+    this._services = {
+      clients: new AxiosHttpClientService(),
+      peers: new KnexPeerInfoService(this._knex),
+      balances: new InMemoryBalanceService(),
+      stats: new Stats(),
+      alerts: new Alerts()
+    }
     this._koaApp = new Koa()
+    // Create connector
+    this._connector = new Connector(this._services)
+    this._connector._routingTable.setGlobalPrefix(this._config.env === 'production' ? 'g' : 'test')
 
-    // Add any imported middleware
-    this._koaApp.use(koaMiddleware)
-
-    const balance = new BalanceRule()
-
-    const mw = compose([
-      peerMiddleWare({
-        // Extract incoming peerId from auth and load state from connector
-        getIncomingPeer: (ctx: ParameterizedContext<TokenAuthState>) => {
-          ctx.assert(ctx.state.user, 401)
-          return this.connector.getPeer(ctx.state.user)
+    const peer = peerMiddleWare(this._services, {
+      // Extract incoming peerId from auth and load state from connector
+      getIncomingPeerId: (ctx: ParameterizedContext<AuthState>) => {
+        ctx.assert(ctx.state.user, 401)
+        return ctx.state.user
+      },
+      // Get outgoing peerId by querying connector routing table
+      getOutgoingPeerId: (ctx: ParameterizedContext<IlpState>) => {
+        ctx.assert(ctx.state.ilp.req.destination, 500)
+        return this._connector.getNextHop(ctx.state.ilp.req.destination)
+      }
+    })
+    const ilpPacket = ilpPacketMiddleware(this._services, { getRawBody })
+    const rules = {
+      'alert': new AlertRule(this._services),
+      'balance': new BalanceRule(this._services),
+      'error-handler':  new ErrorHandlerRule(this._services, {
+        getOwnIlpAddress: () => this._connector.getOwnAddress()
+      }),
+      'expire': new ExpireRule(this._services),
+      'heartbeat': new HeartbeatRule(this._services, {
+        heartbeatInterval: 5 * 60 * 1000,
+        onFailedHeartbeat: (peerId: string) => {
+          // TODO: Handle failed heartbeat
         },
-        // Get outgoing peerId by querying connector routing table
-        getOutgoingPeer: (ctx: ParameterizedContext<IlpState>) => {
-          ctx.assert(ctx.state.ilp.req.destination, 500)
-          return this.connector.getNextHop(ctx.state.ilp.req.destination)
+        onSuccessfulHeartbeat: (peerId: string) => {
+          // TODO: Handle successful heartbeat
         }
       }),
-      ilpPacketMiddleware(),
-      balance.incoming,
-
-      // TODO Rules and connector
-
-      balance.outgoing,
-      ilpClientMiddleware(clients)
-    ])
+      'max-packet-amount': new MaxPacketAmountRule(this._services),
+      'rate-limit': new RateLimitRule(this._services),
+      'reduce-expiry': new ReduceExpiryRule(this._services, {
+        maxHoldWindow: this._config.maxHoldWindow,
+        minIncomingExpirationWindow: 0.5 * this._config.minExpirationWindow,
+        minOutgoingExpirationWindow: 0.5 * this._config.minExpirationWindow
+      }),
+      'stats': new StatsRule(this._services),
+      'throughput': new ThroughputRule(this._services),
+      'validate-fulfillment': new ValidateFulfillmentRule(this._services)
+    }
 
     const router = createRouter()
     router.route({
       method: 'post',
       path: '/ilp',
-      handler: mw
+      handler: compose([
+        // Add any imported middleware
+        koaMiddleware,
+
+        // Add peer info to context
+        peer,
+
+        // Serialize/Deserialize ILP packets
+        ilpPacket,
+
+        // Incoming Rules
+        rules['stats'].incoming,
+        rules['heartbeat'].incoming,
+        rules['error-handler'].incoming,
+        rules['max-packet-amount'].incoming,
+        rules['rate-limit'].incoming,
+        rules['throughput'].incoming,
+        rules['reduce-expiry'].incoming,
+        rules['balance'].incoming,
+
+        // Connector
+        this._connector.middleware(),
+
+        // Outgoing Rules
+        rules['stats'].outgoing,
+        rules['balance'].outgoing,
+        rules['throughput'].incoming,
+        rules['reduce-expiry'].outgoing,
+        rules['alert'].outgoing,
+        rules['expire'].outgoing,
+        rules['validate-fulfillment'].outgoing,
+
+        // Send outgoing packets
+        ilpClientMiddleware(this._services)
+      ])
     })
 
     this._koaApp.use(router.middleware())
-    this._knex = knex
   }
 
   public async start () {
-    logger.info('starting connector....')
-    logger.info('starting HTTP server on port ' + this._config.httpServerPort)
+    logger.info('starting rafiki....')
+
+    await (this._services.peers as KnexPeerInfoService).load()
 
     // config loads ilpAddress as 'unknown' by default
-    if (this._config instanceof Config && this._config.ilpAddress !== 'unknown') this.connector.addOwnAddress(this._config.ilpAddress) 
+    if (this._config instanceof Config && this._config.ilpAddress !== 'unknown') {
+      this._connector.addOwnAddress(this._config.ilpAddress)
+    }
+    await this._loadRoutesFromDataStore()
 
-    await this.loadFromDataStore()
+    logger.info('starting HTTP server on port ' + this._config.httpServerPort)
     this._httpServer = this._koaApp.listen(this._config.httpServerPort)
   }
-
-  public connector: Connector
-  public stats: Stats
-  public alerts: Alerts
-
   /**
    * Instantiates the business rules specified in the peer information and attaches it to a pipeline. Creates a wrapper endpoint which connects the pipeline to
    * the original endpoint. This is then passed into the connector's addPeer. The business rules are then started and the original endpoint stored. Tells connector
@@ -149,122 +186,113 @@ export class App {
    * @param endpoint An endpoint that communicates using IlpPrepares and IlpReplies
    * @param store Boolean to determine whether to persist peer and endpoint info to database
    */
-  public async addPeer (peerInfo: PeerInfo, endpointInfo: EndpointInfo, store: boolean = false) {
-    logger.info('adding new peer: ' + peerInfo.id, { peerInfo, endpointInfo })
-    logger.info('creating new endpoint for peer', { endpointInfo })
-    const endpoint = this._endpointManager.createEndpoint(peerInfo.id, endpointInfo)
+  public async addPeer (peerInfo: PeerInfo, httpClientInfo: HttpClientConfig, store: boolean = false) {
+    logger.info('adding new peer: ' + peerInfo.id, { peerInfo })
+    this._services.peers.set(peerInfo.id, peerInfo)
 
-    // create incoming and outgoing pipelines for business rules
-    const combinedRule = pipeline(...rulesInstances)
-    const sendOutgoing = rulesInstances.length > 0 ? setPipelineReader('outgoing', combinedRule, endpoint.sendOutgoingRequest.bind(endpoint)) : endpoint.sendOutgoingRequest.bind(endpoint)
+    logger.info('tracking balance for peer: ' + peerInfo.id, { balance: peerInfo.rules['balance'] })
+    this._services.balances.create(peerInfo.id, peerInfo.rules['balance'] as BalanceConfig)
 
-    // wrap endpoint and middleware pipelines in something that looks like an endpoint<IlpPrepare, IlpReply>
-    const wrapperEndpoint = {
-      sendOutgoingRequest: async (request: IlpPrepare, sentCallback?: () => void): Promise<IlpReply> => {
-        return sendOutgoing(request)
-      },
-      setIncomingRequestHandler: (handler: RequestHandler<IlpPrepare, IlpReply>): Endpoint<IlpPrepare, IlpReply> => {
-        const sendIncoming = rulesInstances.length > 0 ? setPipelineReader('incoming', combinedRule, handler) : handler
-        endpoint.setIncomingRequestHandler(sendIncoming)
-        return wrapperEndpoint
-      }
-    }
+    logger.info('creating new client for peer', { httpClientInfo })
+    this._services.clients.create(peerInfo.id, httpClientInfo)
 
-    await this.connector.addPeer(peerInfo, wrapperEndpoint)
-
-    if (endpoint instanceof PluginEndpoint) {
-      logger.info('Plugin endpoint connecting')
-      endpoint.connect().catch(() => logger.error('Plugin endpoint failed to connect'))
-    }
-
-    rulesInstances.forEach(rule => rule.startup())
+    logger.info('adding peer to connector', { httpClientInfo })
+    await this._connector.addPeer(peerInfo)
 
     if (store) {
-      await Peer.insertFromInfo(peerInfo, endpointInfo, this._knex)
+      await Peer.insertFromInfo(peerInfo, httpClientInfo, this._knex)
     }
   }
-
   public async removePeer (peerId: string, store: boolean = false) {
-    logger.info('Removing peer: ' + peerId, { peerId })
-    await this._endpointManager.closeEndpoints(peerId)
-    this._packetCacheMap.delete(peerId)
-    this._rateLimitBucketMap.delete(peerId)
-    this._throughputBucketsMap.delete(peerId)
-    await this.connector.removePeer(peerId)
-    Array.from(this.getRules(peerId)).forEach(rule => rule.shutdown())
 
+    logger.info('remove peer from connector', { peerId })
+    await this._connector.removePeer(peerId)
+
+    logger.info('removing balance tracking', { peerId })
+    this._services.balances.delete(peerId)
+
+    logger.info('removing peer', { peerId })
     if (store) {
       await Peer.deleteByIdWithRelations(peerId, this._knex)
     }
+    this._services.peers.delete(peerId)
+
+    logger.info('remove client for peer', { peerId })
+    this._services.clients.delete(peerId)
   }
 
-    /**
-     * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's protocols.
-     */
+  /**
+   * Tells connector to remove its peers and clears the stored packet caches and token buckets. The connector is responsible for shutting down the peer's protocols.
+   */
   public async shutdown () {
-    logger.info('Shutting down app...')
-    this.connector.getPeerList().forEach((peerId: string) => this.removePeer(peerId))
-    Array.from(this._packetCacheMap.values()).forEach(cache => cache.dispose())
-    this._packetCacheMap.clear()
-    this._rateLimitBucketMap.clear()
-    this._throughputBucketsMap.clear()
-    this._endpointManager.closeAll()
+    logger.info('shutting down app...')
+
+    // TODO: Shutdown connector?
+
     if (this._httpServer) {
-      this._httpServer.close()
+      await new Promise((resolve, reject) => {
+        this._httpServer.close((err?: Error) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
+      })
     }
   }
 
-  public getRules (peerId: string): Rule[] {
-    return this._businessRulesMap.get(peerId) || []
-  }
+  // public getRules (peerId: string): Rule[] {
+  //   return this._businessRulesMap.get(peerId) || []
+  // }
 
   public getBalance = (peerId: string): JSONBalanceSummary => {
-    const balance = this._balanceMap.get(peerId)
-
+    const balance = this._services.balances.get(peerId)
     if (!balance) {
-      throw new Error(`Cannot find balance for peerId=${peerId}`)
+      throw new PeerNotFoundError(peerId)
     }
-
     return balance.toJSON()
   }
 
   public getBalances = () => {
     let balances = {}
-    this._balanceMap.forEach((value, key) => balances[key] = value.toJSON())
+    this._services.balances.forEach((value, key) => balances[key] = value.toJSON())
     return balances
   }
 
   public updateBalance = (peerId: string, amountDiff: bigint, scale: number): void => {
-    const balance = this._balanceMap.get(peerId)
+    const balance = this._services.balances.get(peerId)
 
     if (!balance) {
       throw new PeerNotFoundError(peerId)
     }
 
     const scaleDiff = balance.scale - scale
-      // TODO: update to check whether scaledAmountDiff is an integer
+    // TODO: update to check whether scaledAmountDiff is an integer
     if (scaleDiff < 0) {
       logger.warn('Could not adjust balance due to scale differences', { amountDiff, scale })
+      // TODO: should probably throw an error
       return
     }
 
     const scaleRatio = Math.pow(10, scaleDiff)
     const scaledAmountDiff = amountDiff * BigInt(scaleRatio)
 
-    balance.update(scaledAmountDiff)
+    balance.adjust(scaledAmountDiff)
   }
 
   public async forwardSettlementMessage (to: string, message: Buffer): Promise<Buffer> {
     logger.debug('Forwarding settlement message', { to, message: message.toString() })
-    const packet: IlpPrepare = {
+    const packet = serializeIlpPrepare({
       amount: '0',
       destination: 'peer.settle',
       executionCondition: STATIC_CONDITION,
       expiresAt: new Date(Date.now() + 60000),
       data: message
-    }
+    })
 
-    const ilpReply = await this.connector.sendOutgoingRequest(to, packet)
+    const ilpReply = deserializeIlpReply(await this._services.clients.getOrThrow(to).send(packet))
+
     if (isReject(ilpReply)) {
       throw new Error('IlpPacket to settlement engine was rejected')
     }
@@ -274,13 +302,13 @@ export class App {
 
   public addRoute (targetPrefix: string, peerId: string, store: boolean = false) {
     logger.info('adding route', { targetPrefix, peerId })
-    const peer = this.connector.routeManager.getPeer(peerId)
+    const peer = this._connector._routeManager.getPeer(peerId)
     if (!peer) {
       const msg = 'Cannot add route for unknown peerId=' + peerId
       logger.error(msg)
       throw new Error(msg)
     }
-    this.connector.routeManager.addRoute({
+    this._connector._routeManager.addRoute({
       peer: peerId,
       prefix: targetPrefix,
       path: []
@@ -294,100 +322,7 @@ export class App {
     }
   }
 
-    /**
-     * Creates the business rules specified in the peer information. Custom rules should be added to the list.
-     * @param peerInfo Peer information
-     * @returns An array of rules
-     */
-  private _createRules (peerInfo: PeerInfo): Rule[] {
-
-    logger.verbose('Creating rules for peer', { peerInfo })
-
-    const instantiateRule = (rule: RuleConfig): Rule => {
-      switch (rule.name) {
-        case('errorHandler'):
-          return new ErrorHandlerRule({ getOwnIlpAddress: () => this.connector.getOwnAddress() || '' })
-        case('expire'):
-          return new ExpireRule()
-        case('reduceExpiry'):
-          return new ReduceExpiryRule({
-            minIncomingExpirationWindow: 0.5 * this._config.minExpirationWindow,
-            minOutgoingExpirationWindow: 0.5 * this._config.minExpirationWindow,
-            maxHoldWindow: this._config.maxHoldWindow
-          })
-        case('rateLimit'):
-          const rateLimitBucket: TokenBucket = createRateLimitBucketForPeer(peerInfo)
-          this._rateLimitBucketMap.set(peerInfo.id, rateLimitBucket)
-          return new RateLimitRule({ peerInfo, stats: this.stats, bucket: rateLimitBucket })
-        case('maxPacketAmount'):
-          return new MaxPacketAmountRule({ maxPacketAmount: rule.maxPacketAmount })
-        case('throughput'):
-          const throughputBuckets = createThroughputLimitBucketsForPeer(peerInfo)
-          this._throughputBucketsMap.set(peerInfo.id, throughputBuckets)
-          return new ThroughputRule(throughputBuckets)
-        case('deduplicate'):
-          const cache = new PacketCache(rule as PacketCacheOptions || {}) // Could make this a global cache to allow for checking across different peers?
-          this._packetCacheMap.set(peerInfo.id, cache)
-          return new DeduplicateRule({ cache })
-        case('validateFulfillment'):
-          return new ValidateFulfillmentRule()
-        case('stats'):
-          return new StatsRule({ stats: this.stats, peerInfo })
-        case('alert'):
-          return new AlertRule({ createAlert: (triggeredBy: string, message: string) => this.alerts.createAlert(peerInfo.id, triggeredBy, message) })
-        case('balance'):
-          if (!rule.minimum && !rule.maximum) {
-            logger.warn(`(!!!) balance bounds NOT defined for peer, this peer can spend UNLIMITED funds peerId=${peerInfo.id}`)
-          }
-          if (rule.settlement && !rule.settlement.url) {
-            logger.error('config error for peerId=' + peerInfo.id + '. Url for settlement engine needs to be a string')
-            throw new Error('config error for peerId=' + peerInfo.id + '. Url for settlement engine needs to be a string')
-          }
-          const minimum = rule.minimum ? BigInt(rule.minimum) : MIN_INT_64
-          const maximum = rule.maximum ? BigInt(rule.maximum) : MAX_INT_64
-          const settleTo = rule.settlement && rule.settlement.settleTo ? BigInt(rule.settlement.settleTo) : BigInt(0)
-          const settleThreshold = rule.settlement && rule.settlement.settleThreshold ? BigInt(rule.settlement.settleThreshold) : BigInt(0)
-          const url = rule.settlement && rule.settlement.url ? rule.settlement.url : ''
-          const settlementInfo = rule.settlement ? { url, settleTo, settleThreshold } : undefined
-          const initialBalance = rule.initialBalance ? BigInt(rule.initialBalance) : 0n
-          logger.info('initializing in-memory balance for peer', {
-            peerId: peerInfo.id,
-            minimum: minimum.toString(),
-            maximum: maximum.toString(),
-            initialBalance: initialBalance.toString()
-          })
-          const balance = new InMemoryBalance({ initialBalance, minimum, maximum, scale: peerInfo.assetScale }) // In future can get from a balance service
-          this._balanceMap.set(peerInfo.id, balance)
-          return new BalanceRule({ peerInfo, stats: this.stats, balance }, settlementInfo)
-        default:
-          throw new Error('Rule identifier undefined')
-      }
-    }
-    return peerInfo.rules.map(instantiateRule)
-  }
-
-  private loadFromDataStore = async () => {
-    const peers = await Peer.query(this._knex).eager('[rules,protocols,endpoint]')
-    peers.forEach(peer => {
-      const rules = peer['rules'].map((rule: RuleModel) => {
-        return rule.config || { name: rule.name }
-      })
-      const protocols = peer['protocols'].map((protocol: ProtocolModel) => {
-        return protocol.config || { name: protocol.name }
-      })
-      const peerInfo: PeerInfo = {
-        id: peer.id,
-        assetCode: peer.assetCode,
-        assetScale: peer.assetScale,
-        relation: peer.relation as PeerRelation,
-        rules: rules,
-        protocols: protocols
-      }
-      const endpointOptions = peer['endpoint'].type === 'http' ? { httpOpts: peer['endpoint'].options } : { pluginOpts: peer['endpoint'].options }
-      const endpointInfo: EndpointInfo = Object.assign({ type: peer['endpoint'].type }, endpointOptions)
-      this.addPeer(peerInfo, endpointInfo).catch(error => logger.error('Could not load peer.', { error: error.toString() }))
-    })
-
+  private _loadRoutesFromDataStore = async () => {
     const routes = await Route.query(this._knex)
     routes.forEach(entry => this.addRoute(entry.targetPrefix, entry.peerId))
   }

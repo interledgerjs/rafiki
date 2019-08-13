@@ -1,8 +1,6 @@
 import { log } from '../../winston'
 import axios from 'axios'
-import Knex from 'knex'
-import { TokenService, TokenInfo } from '../../types/token-service'
-import { AuthToken } from '../../models/AuthToken'
+import { TokenService, TokenInfo } from '.'
 
 const logger = log.child({ component: 'remote-auth-service' })
 

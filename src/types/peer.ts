@@ -8,8 +8,8 @@ export interface PeerInfo {
   id: string,
   assetCode: string,
   assetScale: number,
-  rules: RuleConfig[],
-  protocols: ProtocolConfig[]
+  rules: { [name: string]: RuleConfig, },
+  protocols: { [name: string]: ProtocolConfig }
 }
 export interface RuleConfig {
   name: string,

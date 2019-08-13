@@ -1,62 +1,57 @@
-import { Rule, IlpRequestHandler } from '../types/rule'
+import { Rule } from '../types/rule'
 import { PeerInfo } from '../types/peer'
 import { TokenBucket } from '../lib/token-bucket'
 import { Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
 import { log } from '../winston'
+import { AppServices } from '../services'
 const logger = log.child({ component: 'throughput-rule' })
 const { InsufficientLiquidityError } = Errors
 
 const DEFAULT_REFILL_PERIOD = 1000 // 1 second
 
-export interface ThroughputRuleServices {
-  incomingBucket?: TokenBucket,
-  outgoingBucket?: TokenBucket
-}
-
 /**
  * The Throughput rule throttles throughput based on the amount in the packets.
  */
 export class ThroughputRule extends Rule {
-  constructor ({ incomingBucket, outgoingBucket }: ThroughputRuleServices) {
+  _incomingBuckets = new Map<string,TokenBucket>()
+  _outgoingBuckets = new Map<string,TokenBucket>()
+  constructor (services: AppServices) {
 
-    super({
-      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
-        if (incomingBucket && isPrepare(request)) {
-          if (!incomingBucket.take(BigInt(request.amount))) {
-            logger.warn('throttling incoming packet due to bandwidth exceeding limit', { request })
+    super(services, {
+      incoming: async ({ state: { ilp, peers } }, next) => {
+        let incomingBucket = this._incomingBuckets.get(peers.incoming.id)
+        if (!incomingBucket) {
+          incomingBucket = createThroughputLimitBucketsForPeer(peers.incoming, 'incoming')
+          if (incomingBucket) this._incomingBuckets.set(peers.incoming.id, incomingBucket)
+        }
+        if (incomingBucket) {
+          if (!incomingBucket.take(BigInt(ilp.req.amount))) {
+            logger.warn('throttling incoming packet due to bandwidth exceeding limit', { ilp })
             throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
           }
-          return next(request)
-        } else {
-          return next(request)
         }
+        await next()
       },
-      outgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
-        if (outgoingBucket && isPrepare(request)) {
-          if (!outgoingBucket.take(BigInt(request.amount))) {
-            logger.warn('throttling outgoing packet due to bandwidth exceeding limit', { request })
+      outgoing: async ({ state: { ilp, peers } }, next) => {
+        let outgoingBucket = this._outgoingBuckets.get(peers.outgoing.id)
+        if (!outgoingBucket) {
+          outgoingBucket = createThroughputLimitBucketsForPeer(peers.outgoing, 'outgoing')
+          if (outgoingBucket) this._outgoingBuckets.set(peers.outgoing.id, outgoingBucket)
+        }
+        if (outgoingBucket) {
+          if (!outgoingBucket.take(ilp.outgoingAmount)) {
+            logger.warn('throttling outgoing packet due to bandwidth exceeding limit', { ilp })
             throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
           }
-          return next(request)
-        } else {
-          return next(request)
         }
+        await next()
       }
     })
   }
 }
 
-export function createThroughputLimitBucketsForPeer (peerInfo: PeerInfo): { incomingBucket?: TokenBucket, outgoingBucket?: TokenBucket } {
-
-  const buckets = {
-    incomingBucket: undefined,
-    outgoingBucket : undefined
-  } as {
-    incomingBucket?: TokenBucket,
-    outgoingBucket?: TokenBucket
-  }
-
-  const throughput = peerInfo.rules.filter(rule => rule.name === 'throughput')[0]
+export function createThroughputLimitBucketsForPeer (peerInfo: PeerInfo, inOrOut: 'incoming' | 'outgoing'): TokenBucket | undefined {
+  const throughput = peerInfo.rules['throughput']
   if (throughput) {
     const {
       refillPeriod = DEFAULT_REFILL_PERIOD,
@@ -64,17 +59,15 @@ export function createThroughputLimitBucketsForPeer (peerInfo: PeerInfo): { inco
       outgoingAmount = false
     } = throughput || {}
 
-    if (incomingAmount) {
+    if (inOrOut === 'incoming' && incomingAmount) {
       // TODO: When we add the ability to update middleware, our state will get
       //   reset every update, which may not be desired.
-      buckets.incomingBucket = new TokenBucket({ refillPeriod, refillCount: BigInt(incomingAmount) })
+      return new TokenBucket({ refillPeriod, refillCount: BigInt(incomingAmount) })
     }
-    if (outgoingAmount) {
+    if (inOrOut === 'outgoing' && outgoingAmount) {
       // TODO: When we add the ability to update middleware, our state will get
       //   reset every update, which may not be desired.
-      buckets.outgoingBucket = new TokenBucket({ refillPeriod, refillCount: BigInt(outgoingAmount) })
+      return new TokenBucket({ refillPeriod, refillCount: BigInt(outgoingAmount) })
     }
   }
-
-  return buckets
 }

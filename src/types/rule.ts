@@ -1,5 +1,10 @@
 import { Middleware, ParameterizedContext } from 'koa'
 import { IlpState, IlpMiddleWare } from '../koa/ilp-packet-middleware'
+import { PeerState } from '../koa/peer-middleware'
+import { PeerInfoService } from '../services/peer-info'
+import { BalanceService } from '../services/balance'
+import { AppServices } from '../services';
+import { App } from '../app';
 
 export interface RuleFunctions {
   startup?: () => Promise<void>
@@ -8,14 +13,14 @@ export interface RuleFunctions {
   outgoing?: IlpMiddleWare
 }
 
-const emptyMiddleware: IlpMiddleWare = async (ctx: ParameterizedContext<IlpState>, next) => { await next() }
+const emptyMiddleware: IlpMiddleWare = async (ctx: ParameterizedContext<PeerState & IlpState>, next) => { await next() }
 
 export class Rule {
 
-  private _incoming: Middleware<IlpState> = emptyMiddleware
-  private _outgoing: Middleware<IlpState> = emptyMiddleware
+  private _incoming: Middleware<PeerState & IlpState> = emptyMiddleware
+  private _outgoing: Middleware<PeerState & IlpState> = emptyMiddleware
 
-  constructor ({ startup, shutdown, incoming, outgoing }: RuleFunctions) {
+  constructor (protected _services: AppServices, { startup, shutdown, incoming, outgoing }: RuleFunctions) {
     if (startup) {
       this._startup = startup
     }
@@ -38,11 +43,11 @@ export class Rule {
     return
   }
 
-  protected _processIncoming: Middleware<IlpState> = async (ctx, next) => {
+  protected _processIncoming: Middleware<PeerState & IlpState> = async (ctx, next) => {
     await next()
   }
 
-  protected _processOutgoing: Middleware<IlpState> = async (ctx, next) => {
+  protected _processOutgoing: Middleware<PeerState & IlpState> = async (ctx, next) => {
     await next()
   }
 

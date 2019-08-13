@@ -1,33 +1,24 @@
-import { Errors, IlpPrepare, IlpReply } from 'ilp-packet'
-import { Rule, IlpRequestHandler } from '../types/rule'
+import { Errors } from 'ilp-packet'
+import { Rule } from '../types/rule'
 import { log } from '../winston'
+import { AppServices } from '../services'
 const logger = log.child({ component: 'expire-rule' })
 
 const { TransferTimedOutError } = Errors
 
 export class ExpireRule extends Rule {
 
-  constructor () {
-    super({
-      outgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
-        const { expiresAt } = request
-
+  constructor (services: AppServices) {
+    super(services, {
+      outgoing: async ({ state: { ilp } }, next) => {
+        const { expiresAt } = ilp.req
         const duration = expiresAt.getTime() - Date.now()
-
-        const promise = next(request)
-
-        let timeout: NodeJS.Timeout
-        const timeoutPromise: Promise<IlpReply> = new Promise((resolve, reject) => {
-          timeout = setTimeout(() => {
-            logger.debug('packet expired', { request })
-            reject(new TransferTimedOutError('packet expired.'))
-          }, duration)
-        })
-
-        return Promise.race([
-          promise.then((data) => { clearTimeout(timeout); return data }),
-          timeoutPromise
-        ])
+        const timeout = setTimeout(() => {
+          logger.debug('packet expired', { ilp })
+          throw new TransferTimedOutError('packet expired.')
+        }, duration)
+        await next()
+        clearTimeout(timeout)
       }
     })
   }

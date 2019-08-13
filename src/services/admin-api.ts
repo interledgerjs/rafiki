@@ -4,7 +4,7 @@ import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server } from 'http'
 import { App as RafikiApp } from '../app'
-import { TokenService } from '../types/token-service'
+import { TokenService } from './tokens'
 const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
@@ -58,12 +58,12 @@ export class AdminApi {
     router.route({
       method: 'get',
       path: '/stats',
-      handler: async (ctx: Context) => ctx.body = app.stats.getStatus()
+      handler: async (ctx: Context) => ctx.body = app._stats.getStatus()
     })
     router.route({
       method: 'get',
       path: '/alerts',
-      handler: async (ctx: Context) => ctx.body = { alerts: app.alerts.getAlerts() }
+      handler: async (ctx: Context) => ctx.body = { alerts: app._alerts.getAlerts() }
     })
     router.route({
       method: 'get',
@@ -102,7 +102,7 @@ export class AdminApi {
     router.route({
       method: 'get',
       path: '/peer',
-      handler: async (ctx: Context) => ctx.body = app.connector.getPeerList()
+      handler: async (ctx: Context) => ctx.body = app._connector.getPeerList()
     })
     router.route({
       method: 'get',
@@ -117,7 +117,7 @@ export class AdminApi {
     router.route({
       method: 'get',
       path: '/routes',
-      handler: async (ctx: Context) => ctx.body = app.connector.routingTable.getRoutingTable()['items']
+      handler: async (ctx: Context) => ctx.body = app._connector._routingTable.getRoutingTable()['items']
     })
     return router
   }
