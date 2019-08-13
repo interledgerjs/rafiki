@@ -1,7 +1,7 @@
 import { serializeIlpPrepare } from 'ilp-packet'
 import { Rule } from '../types/rule'
 import { log } from '../winston'
-import { AppServices } from '../services'
+import { RafikiContext } from '../rafiki'
 const logger = log.child({ component: 'heartbeat-rule' })
 
 const DEFAULT_HEARTBEAT_INTERVAL = 30 * 1000
@@ -22,8 +22,8 @@ export class HeartbeatRule extends Rule {
   _interval: number
   _onSuccessfulHeartbeat: (peerId: string) => void
   _onFailedHeartbeat: (peerId: string) => void
-  constructor (services: AppServices, options: HeartbeatRuleServices) {
-    super(services, {
+  constructor (options: HeartbeatRuleServices) {
+    super({
       incoming: async ({ state: { ilp } }, next) => {
         const { destination, data } = ilp.req
         if (destination === 'peer.heartbeat') {
@@ -36,13 +36,13 @@ export class HeartbeatRule extends Rule {
         }
         await next()
       },
-      startup: async () => {
+      startup: async (ctx: RafikiContext) => {
         this._heartbeat = setInterval(async () => {
           // TODO: Stagger the sending
-          for (let peerId in this._services.peers) {
+          for (let peerId in ctx.services.peers) {
             try {
               logger.debug('sending heartbeat', { peerId })
-              await this._services.clients.getOrThrow(peerId).send(
+              await ctx.services.peers.getOrThrow(peerId).client.send(
                 serializeIlpPrepare({
                   amount: '0',
                   executionCondition: Buffer.alloc(0),

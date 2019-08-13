@@ -1,6 +1,5 @@
 import { IlpPrepare, Errors } from 'ilp-packet'
 import { Rule } from '../types/rule'
-import { AppServices } from '../services'
 import { log } from '../winston'
 const { InsufficientTimeoutError } = Errors
 const logger = log.child({ component: 'reduce-expiry-rule' })
@@ -16,8 +15,8 @@ export interface ReduceExpiryRuleServices {
  */
 export class ReduceExpiryRule extends Rule {
 
-  constructor (services: AppServices, { minIncomingExpirationWindow, minOutgoingExpirationWindow, maxHoldWindow }: ReduceExpiryRuleServices) {
-    super(services, {
+  constructor ({ minIncomingExpirationWindow, minOutgoingExpirationWindow, maxHoldWindow }: ReduceExpiryRuleServices) {
+    super({
       incoming: async ({ state: { ilp } }, next) => {
         // TODO: Validate this logic. Do we want to change the expiry on the incoming packet?
         ilp.req.expiresAt = this.getDestinationExpiry(ilp.req, minIncomingExpirationWindow, maxHoldWindow)

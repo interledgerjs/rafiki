@@ -3,14 +3,15 @@ import {
   CcpRouteControlRequest,
   CcpRouteUpdateRequest,
   Mode,
-  serializeCcpRouteControlRequest
+  serializeCcpRouteControlRequest,
+  CcpRouteUpdateResponse
 } from 'ilp-protocol-ccp'
 import { IncomingRoute } from 'ilp-routing'
 import { log } from './../../winston'
-import { PeerServiceBase } from '../../services'
+import { ServiceBase } from '../../services'
 const logger = log.child({ component: 'ccp-receiver' })
 
-export class CcpReceiverService extends PeerServiceBase<CcpReceiver> {
+export class CcpReceiverService extends ServiceBase<CcpReceiver> {
 }
 
 export interface CcpReceiverOpts {
@@ -72,7 +73,7 @@ export class CcpReceiver {
     holdDownTime,
     newRoutes,
     withdrawnRoutes
-  }: CcpRouteUpdateRequest) {
+  }: CcpRouteUpdateRequest): Promise<CcpRouteUpdateResponse> {
     this._bump(holdDownTime)
 
     if (this._routingTableId !== routingTableId) {
@@ -120,6 +121,8 @@ export class CcpReceiver {
     this._epoch = toEpochIndex
 
     logger.verbose('applied route update', { count: changedPrefixes.length, fromEpoch: fromEpochIndex, toEpoch: toEpochIndex })
+
+    return {} as CcpRouteUpdateResponse
   }
 
   public async sendRouteControl (sendOnce: boolean = false): Promise<void> {

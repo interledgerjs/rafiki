@@ -21,12 +21,12 @@ export interface SettlementInfo {
 
 export class BalanceRule extends Rule {
 
-  constructor (services: AppServices) {
-    super(services, {
-      incoming: async ({ state: { peers, ilp } }, next) => {
+  constructor () {
+    super({
+      incoming: async ({ services, state: { peers, ilp } }, next) => {
         const { amount } = ilp.req
         const peer = peers.incoming
-        const balance = this._services.balances.getOrThrow(peer.id)
+        const balance = services.balances.getOrThrow(peer.id)
 
         // TODO - Move to dedicated middleware
         // Handle peer.settle
@@ -85,10 +85,10 @@ export class BalanceRule extends Rule {
           // this.stats.incomingDataPacketValue.increment(peer, { result: 'rejected' }, + amount)
         }
       },
-      outgoing: async ({ state: { peers, ilp } }, next) => {
+      outgoing: async ({ services, state: { peers, ilp } }, next) => {
         const { amount, destination } = ilp.req
         const peer = peers.outgoing
-        const balance = this._services.balances.getOrThrow(peer.id)
+        const balance = services.balances.getOrThrow(peer.id)
 
         if (destination.startsWith('peer.settle')) {
           await next()

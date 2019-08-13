@@ -1,5 +1,4 @@
 export * from './alert'
-export * from './deduplicate'
 export * from './error-handler'
 export * from './expire'
 export * from './heartbeat'

@@ -1,9 +1,8 @@
 import { Rule } from '../types/rule'
 import { PeerInfo } from '../types/peer'
 import { TokenBucket } from '../lib/token-bucket'
-import { Errors, IlpPrepare, IlpReply, isPrepare } from 'ilp-packet'
+import { Errors } from 'ilp-packet'
 import { log } from '../winston'
-import { AppServices } from '../services'
 const logger = log.child({ component: 'throughput-rule' })
 const { InsufficientLiquidityError } = Errors
 
@@ -15,9 +14,8 @@ const DEFAULT_REFILL_PERIOD = 1000 // 1 second
 export class ThroughputRule extends Rule {
   _incomingBuckets = new Map<string,TokenBucket>()
   _outgoingBuckets = new Map<string,TokenBucket>()
-  constructor (services: AppServices) {
-
-    super(services, {
+  constructor () {
+    super({
       incoming: async ({ state: { ilp, peers } }, next) => {
         let incomingBucket = this._incomingBuckets.get(peers.incoming.id)
         if (!incomingBucket) {

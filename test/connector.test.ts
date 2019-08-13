@@ -2,7 +2,7 @@ import 'mocha'
 import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import {Connector} from '../src'
+import {InMemoryConnector} from '../src'
 import {PeerInfo} from '../src/types'
 import {MockIlpEndpoint} from './mocks/mockIlpEndpoint'
 import {Errors, IlpFulfill, IlpPrepare} from 'ilp-packet'
@@ -15,7 +15,7 @@ const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 const { codes } = Errors
 
 describe('Connector', function () {
-  let connector: Connector
+  let connector: InMemoryConnector
   const peerInfo: PeerInfo = {
     id: 'alice',
     relation: 'child',
@@ -46,7 +46,7 @@ describe('Connector', function () {
   }
 
   beforeEach(function () {
-    connector = new Connector()
+    connector = new InMemoryConnector()
   })
 
   afterEach(function () {
@@ -243,10 +243,10 @@ describe('Connector', function () {
   })
 
   describe('getPeerList', async function () {
-    let conn: Connector
+    let conn: InMemoryConnector
 
     beforeEach(function () {
-      conn = new Connector()
+      conn = new InMemoryConnector()
     })
 
     afterEach(function () {

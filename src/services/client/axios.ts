@@ -1,20 +1,8 @@
-import { ClientService, Client } from '.'
-import { PeerServiceBase } from '..'
-import { HttpClientConfig } from '../../koa/ilp-client-middleware'
+import { Client } from '.'
 import Axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import Agent from 'agentkeepalive'
 
-export class AxiosHttpClientService extends PeerServiceBase<Client> implements ClientService {
-  public create (peerId: string, config: HttpClientConfig) {
-    const axiosConfig = { responseType: 'arraybuffer', headers: {} }
-    if (config.peerAuthToken) axiosConfig.headers = { 'Authorization': `Bearer ${config.peerAuthToken}` }
-    const client = new AxiosClient(config.peerUrl, axiosConfig)
-    this.set(peerId, client)
-    return client
-  }
-}
-
-class AxiosClient implements Client {
+export class AxiosClient implements Client {
   readonly axiosInstance: AxiosInstance
   readonly keepAliveAgent: Agent
 
@@ -25,7 +13,7 @@ class AxiosClient implements Client {
       baseURL: _url,
       timeout: 30000,
       httpAgent: this.keepAliveAgent,
-      httpsAgent: this.keepAliveAgent,
+      httpsAgent: this.keepAliveAgent
     })
   }
   public async send (data: Buffer) {

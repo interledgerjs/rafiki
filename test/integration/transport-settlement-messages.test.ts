@@ -126,8 +126,8 @@ describe('Connector and settlement engine linking', function () {
     await mockSe2Server.post('/accounts').thenReply(200)
     rafiki1 = new App(config1, (string) => Promise.resolve('bob'), db1.knex())
     rafiki2 = new App(config2, (string) => Promise.resolve('alice'), db2.knex())    
-    await rafiki1.start()
-    await rafiki2.start()
+    await rafiki1.listen()
+    await rafiki2.listen()
     await rafiki1.addPeer(bobInfo, bobEndpointInfo)
     await rafiki2.addPeer(aliceInfo, aliceEndpointInfo)
   })
@@ -135,8 +135,8 @@ describe('Connector and settlement engine linking', function () {
   afterEach(async () => {
     await mockSe1Server.delete('/accounts/alice').thenReply(200)
     await mockSe2Server.delete('/accounts/bob').thenReply(200)
-    rafiki1.shutdown()
-    rafiki2.shutdown()
+    rafiki1.close()
+    rafiki2.close()
     await new Promise(resolve => setTimeout(() => resolve(), 100)) //wait for delete account requests to reach mock se
     mockSe1Server.stop()
     mockSe2Server.stop()

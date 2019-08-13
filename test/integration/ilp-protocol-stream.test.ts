@@ -181,7 +181,7 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
     const tokenService = new KnexTokenService(db.knex())
     config.loadFromEnv()
     rafiki = new App(config, tokenAuthMiddleware(tokenService), db.knex())
-    await rafiki.start()
+    await rafiki.listen()
     await rafiki.addPeer(serverPeerInfo, serverEndpointInfo)
     await rafiki.addPeer(clientPeerInfo, clientEndpointInfo)
     await Promise.all([
@@ -193,7 +193,7 @@ describe('ilp-protocol-stream using ilp-plugin-http', function () {
 
   afterEach(async function () {
     await Promise.all([
-      rafiki.shutdown(),
+      rafiki.close(),
       clientPlugin.disconnect(),
       serverPlugin.disconnect(),
       db.teardown()

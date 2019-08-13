@@ -1,13 +1,12 @@
-import { IlpPrepare, IlpReply, isFulfill, IlpReject } from 'ilp-packet'
+import { isFulfill, IlpReject } from 'ilp-packet'
 import { Rule } from '../types/rule'
-import { AppServices } from '../services'
 
 /**
  * The stats rule tracks the number of fulfilled/rejected/failed to send packets on the incoming and outgoing pipelines.
  */
 export class StatsRule extends Rule {
-  constructor (services: AppServices) {
-    super(services, {
+  constructor () {
+    super({
       incoming: async ({ state: { ilp, peers } }, next) => {
         try {
           await next()

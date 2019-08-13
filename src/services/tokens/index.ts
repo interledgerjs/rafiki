@@ -30,7 +30,7 @@ export interface TokenService {
 }
 
 /**
- * An implementation RFC 7662 token introspection response
+ * An implementation of an RFC 7662 token introspection response
  */
 export interface TokenInfo {
   /**

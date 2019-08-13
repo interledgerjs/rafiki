@@ -1,7 +1,6 @@
 import { Errors, isPrepare } from 'ilp-packet'
 import { Rule } from '../types/rule'
 import { log } from '../winston'
-import { AppServices } from '../services'
 const logger = log.child({ component: 'expire-rule' })
 
 const { AmountTooLargeError } = Errors
@@ -14,8 +13,8 @@ export interface MaxPacketAmountRuleService {
  * @throws {AmountTooLargeError} Throws if the request amount is greater than the prescribed max packet amount.
  */
 export class MaxPacketAmountRule extends Rule {
-  constructor (services: AppServices) {
-    super(services, {
+  constructor () {
+    super({
       incoming: async ({ state: { ilp, peers } }, next) => {
         const { maxPacketAmount } = peers.incoming.rules
         if (maxPacketAmount.maxPacketAmount && isPrepare(ilp.req)) {

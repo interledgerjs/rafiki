@@ -3,15 +3,16 @@ import {
   CcpRouteUpdateRequest,
   Mode,
   ModeReverseMap,
-  serializeCcpRouteUpdateRequest
+  serializeCcpRouteUpdateRequest,
+  CcpRouteControlResponse
 } from 'ilp-protocol-ccp'
 import { ForwardingRoutingTable, BroadcastRoute, Relation, RouteUpdate } from 'ilp-routing'
 import { randomBytes } from 'crypto'
 import { log } from './../../winston'
-import { PeerServiceBase } from '../../services'
+import { ServiceBase } from '../../services'
 const logger = log.child({ component: 'ccp-sender' })
 
-export class CcpSenderService extends PeerServiceBase<CcpSender> {
+export class CcpSenderService extends ServiceBase<CcpSender> {
   public stopAll () {
     this.forEach(ccpSender => ccpSender.stop())
   }
@@ -88,7 +89,8 @@ export class CcpSender {
     lastKnownRoutingTableId,
     lastKnownEpoch,
     features
-  }: CcpRouteControlRequest) {
+  }: CcpRouteControlRequest): Promise<CcpRouteControlResponse> {
+
     if (this._mode !== mode) {
       logger.silly('peer requested changing routing mode', { oldMode: ModeReverseMap[this._mode], newMode: ModeReverseMap[mode] })
     }
@@ -114,6 +116,7 @@ export class CcpSender {
         this._sendRouteUpdateTimer = undefined
       }
     }
+    return {} as CcpRouteControlResponse
   }
 
   private _scheduleRouteUpdate () {

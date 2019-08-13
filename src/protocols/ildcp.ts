@@ -12,8 +12,8 @@ export interface IldcpProtocolServices {
  * Intercepts and handles peer.config messages otherwise passes the request onto next.
  */
 export class IldcpProtocol extends Rule {
-  constructor (services: AppServices, { getOwnAddress }: IldcpProtocolServices) {
-    super(services, {
+  constructor () {
+    super({
       incoming: async ({ state: { ilp, peers } }, next) => {
         if (ilp.req.destination === 'peer.config') {
           const { assetCode, assetScale, protocols: { ildcp }, id, relation } = peers.incoming

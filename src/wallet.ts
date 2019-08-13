@@ -77,7 +77,7 @@ const openInfo: PeerInfo = {
 }
 export const gracefulShutdown = async () => {
   winston.debug('shutting down.')
-  await app.shutdown()
+  await app.close()
   winston.debug('completed graceful shutdown.')
 }
 export const start = async () => {
@@ -107,7 +107,7 @@ export const start = async () => {
   await app.addPeer(openInfo, { type: 'http', httpOpts: {} }) // currently can only receive ilp requests
   await app.addPeer(uplinkInfo, { type: 'http', httpOpts: { peerUrl: config.uplinkUrl, peerAuthToken: config.uplinkAuthToken } })
 
-  await app.start()
+  await app.listen()
   winston.info('🐒 has 🚀. Get ready for 🍌🍌🍌🍌🍌')
 }
 if (!module.parent) {

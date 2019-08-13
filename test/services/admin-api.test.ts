@@ -36,7 +36,7 @@ describe('Admin Api', function () {
 
   afterEach(async function () {
     adminApi.shutdown()
-    app.shutdown()
+    app.close()
     db.teardown()
   })
 

@@ -2,7 +2,6 @@ import { Errors } from 'ilp-packet'
 import { Rule } from '../types/rule'
 import { TokenBucket } from '../lib/token-bucket'
 import { PeerInfo } from '../types/peer'
-import { AppServices } from '../services'
 import { log } from '../winston'
 const logger = log.child({ component: 'rate-limit-rule' })
 
@@ -16,9 +15,9 @@ const DEFAULT_REFILL_COUNT = 10000n
  */
 export class RateLimitRule extends Rule {
   _buckets = new Map<string, TokenBucket>()
-  constructor (services: AppServices) {
-    super(services, {
-      incoming: async ({ state: { ilp, peers } }, next) => {
+  constructor () {
+    super({
+      incoming: async ({ services, state: { ilp, peers } }, next) => {
         let bucket = this._buckets.get(peers.incoming.id)
         if (!bucket) {
           bucket = createRateLimitBucketForPeer(peers.incoming)
@@ -26,7 +25,7 @@ export class RateLimitRule extends Rule {
         }
         if (!bucket.take()) {
           logger.warn(`rate limited a packet`, { bucket, ilp, peer: peers.incoming })
-          this._services.stats.rateLimitedPackets.increment(peers.incoming, {})
+          services.stats.rateLimitedPackets.increment(peers.incoming, {})
           throw new RateLimitedError('too many requests, throttling.')
         }
         await next()

@@ -2,10 +2,8 @@
  * Parse ILP packets
  */
 import { deserializeIlpPrepare, serializeIlpReply, IlpPrepare, IlpReply, deserializeIlpReply } from 'ilp-packet'
-import * as Koa from 'koa'
-import { PeerState } from './peer-middleware'
-import { AppServices } from '../services'
 import { Readable } from 'stream'
+import { RafikiContext } from '../rafiki';
 
 const CONTENT_TYPE = 'application/octet-stream'
 
@@ -26,8 +24,6 @@ export interface IlpPacketMiddlewareOptions {
   getRawBody: (req: Readable) => Promise<Buffer>
 }
 
-export type IlpMiddleWare = Koa.Middleware<PeerState & IlpState>
-
 /**
  *  1. Gets the raw body info a Buffer and stores in `ctx.state.requestPacket`
  *  2. Parses it as an ILP prepare and stores in `ctx.state.requestPacket`
@@ -37,9 +33,9 @@ export type IlpMiddleWare = Koa.Middleware<PeerState & IlpState>
  * @param ctx Koa context
  * @param next Next middleware context
  */
-export function ilpPacketMiddleware (services: AppServices, { getRawBody }: IlpPacketMiddlewareOptions): IlpMiddleWare {
+export function ilpPacketMiddleware ({ getRawBody }: IlpPacketMiddlewareOptions) {
 
-  return async function ilpPacket (ctx: Koa.ParameterizedContext<IlpState>, next: () => Promise<any>) {
+  return async function ilpPacket (ctx: RafikiContext, next: () => Promise<any>) {
 
     ctx.assert(ctx.request.type === CONTENT_TYPE, 400, 'Expected Content-Type of ' + CONTENT_TYPE)
 

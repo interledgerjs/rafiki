@@ -1,7 +1,6 @@
 import { Rule } from '../types/rule'
 import { errorToIlpReject, isFulfill, isReject } from 'ilp-packet'
 import { log } from '../winston'
-import { AppServices } from '../services'
 const logger = log.child({ component: 'error-handler-rule' })
 
 export interface ErrorHandlerRuleServices {
@@ -16,9 +15,9 @@ export interface ErrorHandlerRuleServices {
  */
 export class ErrorHandlerRule extends Rule {
 
-  constructor (services: AppServices, { getOwnIlpAddress }: ErrorHandlerRuleServices) {
-    super(services, {
-      incoming: async ({ state: { peers, ilp } }, next) => {
+  constructor () {
+    super({
+      incoming: async ({ services, state: { ilp } }, next) => {
         try {
           await next()
           if (ilp.res && !(isFulfill(ilp.res) || isReject(ilp.res))) {
@@ -31,7 +30,7 @@ export class ErrorHandlerRule extends Rule {
             err = new Error('Non-object thrown: ' + e)
           }
           logger.error('Error thrown in incoming pipeline', { err })
-          ilp.res = errorToIlpReject(getOwnIlpAddress(), err)
+          ilp.res = errorToIlpReject(services.connector.getOwnAddress(), err)
         }
       }
     })

@@ -3,12 +3,15 @@
 import * as winston from 'winston'
 import Knex from 'knex'
 import { App } from './app'
-import { AdminApi, KnexTokenService, RemoteTokenService } from './services'
+import { AdminApi, KnexTokenService, RemoteTokenService, Stats, Alerts } from './services'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { tokenAuthMiddleware } from './koa/token-auth-middleware'
 import { Config } from './index'
-
-let knex: Knex
+import { AxiosHttpClientService } from './services/client/axios';
+import { KnexPeerInfoService } from './services/peer-info/knex';
+import { InMemoryBalanceService } from './services/balance/in-memory';
+import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet';
+import { STATIC_CONDITION } from './constants'
 
 // Logging
 // tslint:disable-next-line
@@ -36,10 +39,15 @@ const config = new Config()
 config.loadFromEnv()
 
 // Connect to DB
-knex = Knex(config.databaseConnectionString)
+const knex = Knex(config.databaseConnectionString)
 
 // Remote vs Local token auth
 const tokenService = config.authProviderUrl !== '' ? new RemoteTokenService(config.authProviderUrl) : new KnexTokenService(knex)
+const clients = new AxiosHttpClientService()
+const peers = new KnexPeerInfoService(knex)
+const balances = new InMemoryBalanceService()
+const stats = new Stats()
+const alerts = new Alerts()
 
 // Create Rafiki
 const app = new App(config, tokenAuthMiddleware(tokenService.introspect), knex)
@@ -59,14 +67,42 @@ const settlementAdminApi = new SettlementAdminApi({
   host: config.settlementAdminApiHost,
   port: config.settlementAdminApiPort
 }, {
-  getAccountBalance: app.getBalance.bind(app),
-  updateAccountBalance: app.updateBalance.bind(app),
-  sendMessage: app.forwardSettlementMessage.bind(app)
+  getAccountBalance: (id: string) => balances.getOrThrow(id).toJSON() ,
+  updateAccountBalance: (id: string, amountDiff: bigint, scale: number) => {
+    const balance = balances.getOrThrow(id)
+    const scaleDiff = balance.scale - scale
+    // TODO: update to check whether scaledAmountDiff is an integer
+    if (scaleDiff < 0) {
+      // TODO: should probably throw an error
+      // logger.warn('Could not adjust balance due to scale differences', { amountDiff, scale })
+      return
+    }
+    const scaleRatio = Math.pow(10, scaleDiff)
+    const scaledAmountDiff = amountDiff * BigInt(scaleRatio)
+    balance.adjust(scaledAmountDiff)
+  },
+  sendMessage: async (id: string, message: Buffer) => {
+    const packet = serializeIlpPrepare({
+      amount: '0',
+      destination: 'peer.settle',
+      executionCondition: STATIC_CONDITION,
+      expiresAt: new Date(Date.now() + 60000),
+      data: message
+    })
+
+    const ilpReply = deserializeIlpReply(await clients.getOrThrow(id).send(packet))
+
+    if (isReject(ilpReply)) {
+      throw new Error('IlpPacket to settlement engine was rejected')
+    }
+
+    return ilpReply.data
+  }
 })
 
 export const gracefulShutdown = async () => {
   winston.debug('shutting down.')
-  await app.shutdown()
+  await app.close()
   adminApi.shutdown()
   settlementAdminApi.shutdown()
   winston.debug('completed graceful shutdown.')
@@ -108,11 +144,13 @@ export const start = async () => {
     }
   }
 
-  await app.start()
+  await app.listen()
   adminApi.listen()
   settlementAdminApi.listen()
   winston.info('🐒 has 🚀. Get ready for 🍌🍌🍌🍌🍌')
 }
+
+// If this script is run directly, start the server
 if (!module.parent) {
   start().catch(e => {
     const errInfo = (e && typeof e === 'object' && e.stack) ? e.stack : e

@@ -120,7 +120,7 @@ describe('Test App', function () {
   beforeEach(async () => {
     app = new App(config, tokenAuthMiddleware(tokenService.introspect), db.knex())
     addPeerSpyForAppConstructor = sinon.spy(app, 'addPeer')
-    await app.start()
+    await app.listen()
     const koaApp = new Koa()
     const router = createRouter()
     router.route({
@@ -139,7 +139,7 @@ describe('Test App', function () {
   })
 
   afterEach(() => {
-    app.shutdown()
+    app.close()
     aliceServer.close()
     mockSEServer.stop()
     addPeerSpyForAppConstructor.restore()
@@ -215,7 +215,7 @@ describe('Test App', function () {
     it('tells connector to remove all peers', async function () {
       const removePeerSpy = sinon.spy(app._connector, 'removePeer')
 
-      await app.shutdown()
+      await app.close()
 
       sinon.assert.calledWith(removePeerSpy, 'alice')
     })
@@ -223,7 +223,7 @@ describe('Test App', function () {
     it('disposes of packet caches', async function () {
       const packetCacheSpies = Array.from(app['_packetCacheMap'].values()).map(cache => sinon.spy(cache, 'dispose'))
 
-      await app.shutdown()
+      await app.close()
 
       packetCacheSpies.forEach(spy => sinon.assert.calledOnce(spy))
     })
@@ -232,7 +232,7 @@ describe('Test App', function () {
       await app.addPeer(peerInfo, endpointInfo)
       const removePeerSpy = sinon.spy(app, 'removePeer')
 
-      await app.shutdown()
+      await app.close()
 
       sinon.assert.calledTwice(removePeerSpy)
       assert.equal(removePeerSpy.args[0][0], 'self')
@@ -271,7 +271,7 @@ describe('Test App', function () {
       const newDB = new DB()
       await newDB.setup()
       const newApp = new App(config, tokenAuthMiddleware(tokenService.introspect), newDB.knex())
-      await newApp.start()
+      await newApp.listen()
       const koaAppParent = new Koa()
       const router = createRouter()
       router.route({
@@ -295,7 +295,7 @@ describe('Test App', function () {
       await newApp.addPeer(parentInfo, parentEndpointInfo)
   
       assert.equal('test.alice.fred', newApp._connector.getOwnAddress())
-      newApp.shutdown()
+      newApp.close()
       parentServer.close()
       newDB.teardown()
     })
@@ -307,7 +307,7 @@ describe('Test App', function () {
       const newDB = new DB()
       await newDB.setup()
       const newApp = new App(config, tokenAuthMiddleware(tokenService.introspect), newDB.knex())
-      await newApp.start()
+      await newApp.listen()
       const koaAppParent = new Koa()
       const router = createRouter()
       router.route({
@@ -350,7 +350,7 @@ describe('Test App', function () {
   
       assert.equal(newApp._connector.getOwnAddress(), 'test.drew.fred')
       assert.deepEqual(newApp._connector.getOwnAddresses(), ['test.drew.fred', 'test.alice.fred'])
-      newApp.shutdown()
+      newApp.close()
       parentServer.close()
       parent2Server.close()
       newDB.teardown()

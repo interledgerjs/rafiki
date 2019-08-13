@@ -3,8 +3,7 @@ import { Rule } from '../types/rule'
 import { Reader, Writer } from 'oer-utils'
 import { InvalidPacketError } from 'ilp-packet/dist/src/errors'
 import { log } from '../winston'
-import { AppServices } from '../services'
-import { SELF_PEER_ID } from '../connector';
+import { SELF_PEER_ID } from '../services/connector/in-memory';
 const logger = log.child({ component: 'echo-protocol' })
 
 const MINIMUM_ECHO_PACKET_DATA_LENGTH = 16 + 1
@@ -18,8 +17,8 @@ export interface EchoProtocolServices {
  * Intercepts and handles messages addressed to the connector otherwise forwards it onto next.
  */
 export class EchoProtocol extends Rule {
-  constructor (services: AppServices, { minMessageWindow }: EchoProtocolServices) {
-    super(services, {
+  constructor ({ minMessageWindow }: EchoProtocolServices) {
+    super({
       outgoing: async ({ state: { ilp, peers } }) => {
 
         const { req: { data, amount, expiresAt, executionCondition } } = ilp
