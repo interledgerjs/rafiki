@@ -6,6 +6,6 @@ export const PeerInfoFactory = Factory.define<PeerInfo>('PeerInfo').attrs({
   relation: 'child',
   assetCode: 'XRP',
   assetScale: 9,
-  protocols: [],
-  rules: []
+  protocols: {},
+  rules: {}
 })
