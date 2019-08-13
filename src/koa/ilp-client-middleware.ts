@@ -3,7 +3,7 @@ import { ParameterizedContext } from 'koa'
 import { log } from '../winston'
 import { IlpState } from './ilp-packet-middleware'
 import { PeerState } from './peer-middleware'
-import { AppServices } from '../services';
+import { AppServices } from '../services'
 const logger = log.child({ component: 'http-endpoint' })
 
 export interface HttpClientConfig {
@@ -14,9 +14,10 @@ export interface HttpClientConfig {
 export function ilpClientMiddleware (services: AppServices) {
   return async function ilpClient (ctx: ParameterizedContext<PeerState & IlpState>) {
 
-    ctx.assert(ctx.state.peers.outgoing, 500, 'No outgoing peer in ctx')
-    const client = services.clients.get(ctx.state.peers.outgoing.id)
+    const outgoingPeer = ctx.state.peers.outgoing
+    ctx.assert(outgoingPeer, 500, 'No outgoing peer in ctx')
 
+    const client = services.clients.get(outgoingPeer.id)
     if (!client) {
       logger.error('No peer URL set for outgoing HTTP Endpoint')
       throw new Error('No URL set for remote peer')

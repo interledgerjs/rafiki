@@ -4,6 +4,7 @@
 import { deserializeIlpPrepare, serializeIlpReply, IlpPrepare, IlpReply, deserializeIlpReply } from 'ilp-packet'
 import { Readable } from 'stream'
 import { RafikiContext } from '../rafiki';
+import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from '../lib/utils'
 
 const CONTENT_TYPE = 'application/octet-stream'
 
@@ -51,6 +52,7 @@ export function ilpPacketMiddleware ({ getRawBody }: IlpPacketMiddlewareOptions)
       rawReq: _rawReq,
       set res (reply: IlpReply | undefined) {
         _res = reply
+        _rawRes = reply ? serializeIlpReply(reply) : undefined
       },
       get res () {
         if (_res) return _res
@@ -85,12 +87,12 @@ export function ilpPacketMiddleware ({ getRawBody }: IlpPacketMiddlewareOptions)
       },
 
       get outgoingRawReq () {
-        // TODO Splice in new amount and expiry if dirty
+        if (_amount) modifySerializedIlpPrepareAmount(_rawReq, _amount)
+        if (_expiry) modifySerializedIlpPrepareExpiry(_rawReq, _expiry)
         return _rawReq
       },
 
       get incomingRawRes () {
-        // TODO Splice in new data if dirty
         if (_rawRes) return _rawRes
         if (_res) return serializeIlpReply(_res)
         throw new Error('no response data set')
@@ -99,7 +101,7 @@ export function ilpPacketMiddleware ({ getRawBody }: IlpPacketMiddlewareOptions)
 
     await next()
 
-    ctx.response.type = CONTENT_TYPE
+    ctx.type = CONTENT_TYPE
     ctx.body = ctx.state.ilp.rawRes
   }
 
