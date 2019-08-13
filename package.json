@@ -48,6 +48,7 @@
     "@types/nanoid": "^2.0.0",
     "@types/node-fetch": "^2.3.3",
     "@types/rosie": "0.0.36",
+    "agentkeepalive": "^4.0.2",
     "ajv": "^6.9.1",
     "change-case": "^3.1.0",
     "extensible-error": "^1.0.2",
