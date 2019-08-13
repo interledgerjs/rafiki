@@ -138,7 +138,7 @@ describe('Connector', function () {
     })
 
     it('adds child peer to routing table', async function () {
-      const addRouteSpy = sinon.spy(connector.routeManager, 'addRoute')
+      const addRouteSpy = sinon.spy(connector._routeManager, 'addRoute')
       const endpoint = new MockIlpEndpoint(async (packet: IlpPrepare) => fulfillPacket)
       
       connector.addOwnAddress('test.connie')
@@ -181,7 +181,7 @@ describe('Connector', function () {
     })
 
     it('tells route manager to remove the peer', async function () {
-      const removePeerSpy = sinon.spy(connector.routeManager, 'removePeer')
+      const removePeerSpy = sinon.spy(connector._routeManager, 'removePeer')
 
       await connector.removePeer(peerInfo.id)
 
@@ -285,25 +285,25 @@ describe('Connector', function () {
     it('points address to self peer with a default weight of 500', function () {
       connector.addOwnAddress('test.harry')
   
-      assert.equal(connector.routingTable.nextHop('test.harry'), 'self')
-      assert.equal(connector.routingTable.getRoutingTable()['items']['test.harry'].weight, 500)
+      assert.equal(connector._routingTable.nextHop('test.harry'), 'self')
+      assert.equal(connector._routingTable.getRoutingTable()['items']['test.harry'].weight, 500)
     })
 
     it('points address to self peer with a prescribed weighting', async function () {
       connector.addOwnAddress('test.harry', 1000)
   
-      assert.equal(connector.routingTable.nextHop('test.harry'), 'self')
-      assert.equal(connector.routingTable.getRoutingTable()['items']['test.harry'].weight, 1000)
+      assert.equal(connector._routingTable.nextHop('test.harry'), 'self')
+      assert.equal(connector._routingTable.getRoutingTable()['items']['test.harry'].weight, 1000)
     })
 
     it('can add multiple addresses pointing to self with different weightings', async function () {
       connector.addOwnAddress('test.harry', 100)
       connector.addOwnAddress('test.rafiki', 200)
 
-      assert.equal(connector.routingTable.nextHop('test.harry'), 'self')
-      assert.equal(connector.routingTable.nextHop('test.rafiki'), 'self')
-      assert.equal(connector.routingTable.getRoutingTable()['items']['test.harry'].weight, 100)
-      assert.equal(connector.routingTable.getRoutingTable()['items']['test.rafiki'].weight, 200)
+      assert.equal(connector._routingTable.nextHop('test.harry'), 'self')
+      assert.equal(connector._routingTable.nextHop('test.rafiki'), 'self')
+      assert.equal(connector._routingTable.getRoutingTable()['items']['test.harry'].weight, 100)
+      assert.equal(connector._routingTable.getRoutingTable()['items']['test.rafiki'].weight, 200)
     })
   })
 
@@ -338,7 +338,7 @@ describe('Connector', function () {
       connector.addOwnAddress('test.rafiki')
       assert.deepEqual(connector.getOwnAddresses(), ['test.rafiki'])
 
-      connector.removeAddress('test.rafiki')
+      connector.removeOwnAddress('test.rafiki')
 
       assert.isEmpty(connector.getOwnAddresses())
       assert.equal(connector.getOwnAddress(), 'unknown')
@@ -347,7 +347,7 @@ describe('Connector', function () {
     it('does nothing if address doesn\'t exist', async function () {
       connector.addOwnAddress('test.rafiki')
       
-      connector.removeAddress('test.harry')
+      connector.removeOwnAddress('test.harry')
       
       assert.deepEqual(connector.getOwnAddresses(), ['test.rafiki'])
       assert.equal(connector.getOwnAddress(), 'test.rafiki')

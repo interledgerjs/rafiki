@@ -8,7 +8,7 @@ const logger = log.child({ component: 'in-memory-balance' })
  * TODO: Need a description for the convention used for balance. IE what is minimum, what is maximum. What does a add and subtract represent (DR or CR? etc)
  */
 
-export interface BalanceOpts {
+export interface BalanceConfig {
   initialBalance?: bigint
   minimum?: bigint
   maximum?: bigint
@@ -23,7 +23,7 @@ export interface JSONBalanceSummary {
 
 export interface Balance {
   scale: number
-  update: (amount: bigint) => void
+  adjust: (amount: bigint) => void
   getValue: () => bigint
   toJSON: () => JSONBalanceSummary
 }
@@ -36,16 +36,16 @@ export class InMemoryBalance implements Balance {
   constructor ({
     initialBalance = 0n,
     minimum = 0n,
-    maximum = BigInt(MAX_UINT_64),
+    maximum = MAX_UINT_64,
     scale = 6
-  }: BalanceOpts) {
+  }: BalanceConfig) {
     this.balance = initialBalance
     this.minimum = minimum
     this.maximum = maximum
     this.scale = scale
   }
 
-  update (amount: bigint) {
+  adjust (amount: bigint) {
     const newBalance = this.balance + amount
     if (newBalance > this.maximum) {
       logger.error(`exceeded maximum balance. proposedBalance=${newBalance.toString()} maximum balance=${this.maximum.toString()}`)

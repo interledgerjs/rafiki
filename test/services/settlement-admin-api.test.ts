@@ -104,7 +104,7 @@ describe('Settlement Admin Api', function () {
 
     it('calls sendMessageService', async () => {
       const clock = sinon.useFakeTimers()
-      const connectorSendOutgoingRequestStub = sinon.stub(app.connector, 'sendOutgoingRequest').resolves({
+      const connectorSendOutgoingRequestStub = sinon.stub(app._connector, 'sendOutgoingRequest').resolves({
         fulfillment: STATIC_FULFILLMENT,
         data: Buffer.allocUnsafe(0)
       } as IlpFulfill)

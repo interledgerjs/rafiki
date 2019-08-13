@@ -165,7 +165,7 @@ describe('Test App', function () {
 
   describe('start', function () {
     it('loads routes from db', async () => {
-      const routes = app.connector.routingTable.getRoutingTable()
+      const routes = app._connector._routingTable.getRoutingTable()
 
       assert.deepEqual(routes.get('test.other.rafiki.bob'), { nextHop: 'alice', path: [], weight: undefined, auth: undefined })
     })
@@ -213,7 +213,7 @@ describe('Test App', function () {
 
   describe('shutdown', function () {
     it('tells connector to remove all peers', async function () {
-      const removePeerSpy = sinon.spy(app.connector, 'removePeer')
+      const removePeerSpy = sinon.spy(app._connector, 'removePeer')
 
       await app.shutdown()
 
@@ -242,7 +242,7 @@ describe('Test App', function () {
 
   describe('addPeer', async function () {
     it('creates endpoint to be used by connector to add peer', async function () {
-      const addPeerStub = sinon.stub(app.connector, 'addPeer').resolves()
+      const addPeerStub = sinon.stub(app._connector, 'addPeer').resolves()
 
       await app.addPeer(peerInfo, endpointInfo)
 
@@ -290,11 +290,11 @@ describe('Test App', function () {
       koaAppParent.use(router.middleware())
       const parentServer = koaAppParent.listen(8085)
       
-      assert.equal(newApp.connector.getOwnAddress(), 'unknown')
+      assert.equal(newApp._connector.getOwnAddress(), 'unknown')
 
       await newApp.addPeer(parentInfo, parentEndpointInfo)
   
-      assert.equal('test.alice.fred', newApp.connector.getOwnAddress())
+      assert.equal('test.alice.fred', newApp._connector.getOwnAddress())
       newApp.shutdown()
       parentServer.close()
       newDB.teardown()
@@ -343,13 +343,13 @@ describe('Test App', function () {
       const parentServer = koaAppParent.listen(8085)
       const parent2Server = koaAppParent2.listen(8086)
       
-      assert.equal(newApp.connector.getOwnAddress(), 'unknown')
+      assert.equal(newApp._connector.getOwnAddress(), 'unknown')
   
       await newApp.addPeer(parentInfo, parentEndpointInfo)
       await newApp.addPeer(parent2Info, parent2EndpointInfo)
   
-      assert.equal(newApp.connector.getOwnAddress(), 'test.drew.fred')
-      assert.deepEqual(newApp.connector.getOwnAddresses(), ['test.drew.fred', 'test.alice.fred'])
+      assert.equal(newApp._connector.getOwnAddress(), 'test.drew.fred')
+      assert.deepEqual(newApp._connector.getOwnAddresses(), ['test.drew.fred', 'test.alice.fred'])
       newApp.shutdown()
       parentServer.close()
       parent2Server.close()
@@ -592,7 +592,7 @@ describe('Test App', function () {
   describe('forwardSettlementMessage', function () {
     it('packs message into peer.settle ilpPacket', async () => {
       const clock = sinon.useFakeTimers(Date.now())
-      const connectorSendOutgoingRequestSpy = sinon.spy(app.connector, 'sendOutgoingRequest')
+      const connectorSendOutgoingRequestSpy = sinon.spy(app._connector, 'sendOutgoingRequest')
       const settlementMessage = Buffer.from(JSON.stringify({
         type: 'config',
         data: {
@@ -629,11 +629,11 @@ describe('Test App', function () {
   })
   describe('add route', function () {
     it('adds the route to the connectors routing table', async function () {
-      assert.notInclude(app.connector.routingTable.getRoutingTable()['prefixes'], 'test.alice')
+      assert.notInclude(app._connector._routingTable.getRoutingTable()['prefixes'], 'test.alice')
 
       app.addRoute('test.alice', 'alice')
 
-      assert.include(app.connector.routingTable.getRoutingTable()['prefixes'], 'test.alice')
+      assert.include(app._connector._routingTable.getRoutingTable()['prefixes'], 'test.alice')
     })
 
     it('throws error if specified peer does not exist', async function () {

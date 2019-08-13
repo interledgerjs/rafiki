@@ -3,13 +3,14 @@ import { Rule } from '../types/rule'
 import { Reader, Writer } from 'oer-utils'
 import { InvalidPacketError } from 'ilp-packet/dist/src/errors'
 import { log } from '../winston'
+import { AppServices } from '../services'
+import { SELF_PEER_ID } from '../connector';
 const logger = log.child({ component: 'echo-protocol' })
 
 const MINIMUM_ECHO_PACKET_DATA_LENGTH = 16 + 1
 const ECHO_DATA_PREFIX = Buffer.from('ECHOECHOECHOECHO', 'ascii')
 
 export interface EchoProtocolServices {
-  getOwnAddress: () => string,
   minMessageWindow: number
 }
 
@@ -17,16 +18,13 @@ export interface EchoProtocolServices {
  * Intercepts and handles messages addressed to the connector otherwise forwards it onto next.
  */
 export class EchoProtocol extends Rule {
-  constructor ({ getOwnAddress, minMessageWindow }: EchoProtocolServices) {
-    super({
-      incoming: async ({ state: { ilp } }, next) => {
-        await next()
-      },
-      outgoing: async ({ state: { ilp } }, next) => {
+  constructor (services: AppServices, { minMessageWindow }: EchoProtocolServices) {
+    super(services, {
+      outgoing: async ({ state: { ilp, peers } }) => {
 
-        const { req: { data, amount, expiresAt, executionCondition }, outgoingPeer } = ilp
+        const { req: { data, amount, expiresAt, executionCondition } } = ilp
 
-        if (outgoingPeer === 'self') {
+        if (peers.outgoing.id === SELF_PEER_ID) {
 
           if (data.length < MINIMUM_ECHO_PACKET_DATA_LENGTH) throw new InvalidPacketError('packet data too short for echo request. length=' + data.length)
           if (!data.slice(0, 16).equals(ECHO_DATA_PREFIX)) throw new InvalidPacketError('packet data does not start with ECHO prefix.')
@@ -58,9 +56,6 @@ export class EchoProtocol extends Rule {
             throw new Error('received unexpected echo response.')
           }
         }
-
-        await next()
-
       }
     })
   }

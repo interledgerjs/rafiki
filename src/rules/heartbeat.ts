@@ -1,16 +1,14 @@
-import { IlpPrepare, Errors as IlpPacketErrors, IlpReply, isFulfill, IlpFulfill } from 'ilp-packet'
-import { RequestHandler } from '../types/request-stream'
+import { serializeIlpPrepare } from 'ilp-packet'
 import { Rule } from '../types/rule'
-import { Endpoint } from '../types/endpoint'
 import { log } from '../winston'
+import { AppServices } from '../services'
 const logger = log.child({ component: 'heartbeat-rule' })
 
 const DEFAULT_HEARTBEAT_INTERVAL = 30 * 1000
 
 export interface HeartbeatRuleServices {
-  endpoint: Endpoint<IlpPrepare, IlpReply>,
-  onSuccessfulHeartbeat: () => void,
-  onFailedHeartbeat: () => void,
+  onSuccessfulHeartbeat: (peerId: string) => void,
+  onFailedHeartbeat: (peerId: string) => void,
   heartbeatInterval?: number
 }
 
@@ -20,53 +18,53 @@ export interface HeartbeatRuleServices {
  */
 export class HeartbeatRule extends Rule {
 
-  heartbeat: NodeJS.Timeout
-  interval: number
-  onSuccessfulHeartbeat: () => void
-  onFailedHeartbeat: () => void
-  endpoint: Endpoint<IlpPrepare,IlpReply>
-  constructor (options: HeartbeatRuleServices) {
-    super({
-      incoming: async (request: IlpPrepare, next: RequestHandler<IlpPrepare, IlpReply>) => {
-        const { destination, data } = request
-
+  _heartbeat: NodeJS.Timeout
+  _interval: number
+  _onSuccessfulHeartbeat: (peerId: string) => void
+  _onFailedHeartbeat: (peerId: string) => void
+  constructor (services: AppServices, options: HeartbeatRuleServices) {
+    super(services, {
+      incoming: async ({ state: { ilp } }, next) => {
+        const { destination, data } = ilp.req
         if (destination === 'peer.heartbeat') {
           logger.debug('received incoming heartbeat')
-          return {
+          ilp.res = {
             fulfillment: data.slice(0, 32),
             data
-          } as IlpFulfill
+          }
+          return
         }
-
-        return next(request)
+        await next()
       },
       startup: async () => {
-        this.heartbeat = setInterval(async () => {
-          try {
-            logger.debug('sending heartbeat')
-            const reply = await this.endpoint.sendOutgoingRequest({
-              amount: '0',
-              executionCondition: Buffer.alloc(0),
-              destination: 'peer.heartbeat',
-              expiresAt: new Date(Date.now() + 2000),
-              data: Buffer.alloc(0)
-            })
-            logger.debug('heartbeat successful')
-
-            this.onSuccessfulHeartbeat()
-          } catch (e) {
-            logger.debug('heartbeat failed')
-            this.onFailedHeartbeat()
+        this._heartbeat = setInterval(async () => {
+          // TODO: Stagger the sending
+          for (let peerId in this._services.peers) {
+            try {
+              logger.debug('sending heartbeat', { peerId })
+              await this._services.clients.getOrThrow(peerId).send(
+                serializeIlpPrepare({
+                  amount: '0',
+                  executionCondition: Buffer.alloc(0),
+                  destination: 'peer.heartbeat',
+                  expiresAt: new Date(Date.now() + 2000),
+                  data: Buffer.alloc(0)
+                }))
+              logger.debug('heartbeat successful')
+              this._onSuccessfulHeartbeat(peerId)
+            } catch (e) {
+              logger.debug('heartbeat failed')
+              this._onFailedHeartbeat(peerId)
+            }
           }
-        }, this.interval)
+        }, this._interval)
       },
-      shutdown: async () => clearInterval(this.heartbeat)
+      shutdown: async () => clearInterval(this._heartbeat)
     })
 
-    this.interval = options.heartbeatInterval || DEFAULT_HEARTBEAT_INTERVAL
-    this.endpoint = options.endpoint
-    this.onSuccessfulHeartbeat = options.onSuccessfulHeartbeat
-    this.onFailedHeartbeat = options.onFailedHeartbeat
+    this._interval = options.heartbeatInterval || DEFAULT_HEARTBEAT_INTERVAL
+    this._onSuccessfulHeartbeat = options.onSuccessfulHeartbeat
+    this._onFailedHeartbeat = options.onFailedHeartbeat
   }
 
 }

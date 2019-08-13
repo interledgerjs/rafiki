@@ -1,4 +1,4 @@
-import { TokenService, TokenInfo } from '../../src/types/token-service'
+import { TokenService, TokenInfo } from '../../src/services/tokens'
 import { uuid } from '../../src/lib/utils'
 
 export class MockTokenService implements TokenService {

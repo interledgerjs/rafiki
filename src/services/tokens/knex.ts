@@ -2,7 +2,7 @@ import nanoid from 'nanoid/generate'
 import Knex from 'knex'
 import { log } from '../../winston'
 import { AuthToken } from '../../models/AuthToken'
-import { TokenService, TokenInfo } from '../../types/token-service'
+import { TokenService, TokenInfo } from '.'
 import * as assert from 'assert'
 
 const logger = log.child({ component: 'auth-service' })

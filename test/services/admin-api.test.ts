@@ -13,7 +13,7 @@ import { MockTokenService } from '../mocks/mockTokenService'
 import { Peer } from '../../src/models/Peer'
 import { AuthToken } from '../../src/models/AuthToken';
 import { tokenAuthMiddleware } from '../../src/koa/token-auth-middleware';
-import { TokenService } from '../../src/types/token-service';
+import { TokenService } from '../../src/services/tokens';
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

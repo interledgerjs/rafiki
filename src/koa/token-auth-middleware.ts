@@ -1,6 +1,6 @@
 import * as Koa from 'koa'
 import { AuthState } from './auth-state'
-import { TokenInfo, IntrospectFunction } from '../types/token-service'
+import { TokenInfo, IntrospectFunction } from '../services/tokens'
 
 export interface TokenAuthState extends AuthState {
   token: string

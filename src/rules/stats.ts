@@ -1,44 +1,37 @@
-import { IlpPrepare, IlpReply, isFulfill } from 'ilp-packet'
-import { Rule, IlpRequestHandler } from '../types/rule'
-import { Stats } from '../services/stats'
-import { PeerInfo } from '../types/peer'
-export interface StatsRuleServices {
-  peerInfo: PeerInfo,
-  stats: Stats
-}
+import { IlpPrepare, IlpReply, isFulfill, IlpReject } from 'ilp-packet'
+import { Rule } from '../types/rule'
+import { AppServices } from '../services'
 
 /**
  * The stats rule tracks the number of fulfilled/rejected/failed to send packets on the incoming and outgoing pipelines.
  */
 export class StatsRule extends Rule {
-  constructor ({ stats, peerInfo }: StatsRuleServices) {
-    super({
-      incoming: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+  constructor (services: AppServices) {
+    super(services, {
+      incoming: async ({ state: { ilp, peers } }, next) => {
         try {
-          const reply = await next(request)
-          if (isFulfill(reply)) {
-            stats.incomingDataPackets.increment(peerInfo, { result: 'fulfilled' })
+          await next()
+          if (ilp.res && isFulfill(ilp.res)) {
+            this._services.stats.incomingDataPackets.increment(peers.incoming, { result: 'fulfilled' })
           } else {
-            stats.incomingDataPackets.increment(peerInfo, { result: 'rejected' })
+            this._services.stats.incomingDataPackets.increment(peers.incoming, { result: 'rejected' })
           }
-          return reply
         } catch (err) {
-          stats.incomingDataPackets.increment(peerInfo, { result: 'failed' })
+          this._services.stats.incomingDataPackets.increment(peers.incoming, { result: 'failed' })
           throw err
         }
       },
-      outgoing: async (request: IlpPrepare, next: IlpRequestHandler): Promise<IlpReply> => {
+      outgoing: async ({ state: { ilp, peers } }, next) => {
         try {
-          const reply = await next(request)
-          if (isFulfill(reply)) {
-            stats.outgoingDataPackets.increment(peerInfo, { result: 'fulfilled' })
+          await next()
+          if (ilp.res && isFulfill(ilp.res)) {
+            this._services.stats.outgoingDataPackets.increment(peers.incoming, { result: 'fulfilled' })
           } else {
-            const { code } = reply
-            stats.outgoingDataPackets.increment(peerInfo, { result: 'rejected', code })
+            const { code } = ilp.res as IlpReject
+            this._services.stats.outgoingDataPackets.increment(peers.incoming, { result: 'rejected', code })
           }
-          return reply
         } catch (err) {
-          stats.outgoingDataPackets.increment(peerInfo, { result: 'failed' })
+          this._services.stats.outgoingDataPackets.increment(peers.incoming, { result: 'failed' })
           throw err
         }
       }
