@@ -1,27 +1,20 @@
-import 'mocha'
-import * as sinon from 'sinon'
-import * as Chai from 'chai'
-import chaiAsPromised from 'chai-as-promised'
-import {IlpFulfill, IlpPrepare, IlpReject} from 'ilp-packet'
-import {AlertRule, Alerts} from '../../src/rules/alert'
-import {PeerInfo} from '../../src/types/peer'
-import {setPipelineReader} from '../../src/types/rule'
+import { Context } from 'koa'
+import { ilpPacketMiddleware } from "../../src/koa/ilp-packet-middleware"
+import { IlpPrepareFactory } from '../factories/ilpPacket'
 
 test('Koa: ILP Packet Middleware', async () => {
+  const prepare = IlpPrepareFactory.build()
   const ctx = {
-    response: { 
-      set: sinon.mock()
-    }
-    /* ADD OTHER MOCKS */
-  }
-  const next = sinon.mock(() => {
+    state: {}
+  } as Context
+  const next = jest.fn().mockImplementation(() => {
     expect(ctx).toMatchSnapshot()
   })
-  
-  await expect(greetings(ctx, next)).resolves.toBeUndefined()
+  const middleware = ilpPacketMiddleware()
 
-  expect(next).toHaveBeenCalledTimes(1)  
+  await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+  expect(next).toHaveBeenCalledTimes(1)
   expect(ctx).toMatchSnapshot()
-  expect(ctx.response.set.mock.calls).toMatchSnapshot()
 
 })
