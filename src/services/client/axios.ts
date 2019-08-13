@@ -1,7 +1,8 @@
 import { ClientService, Client } from '.'
 import { PeerServiceBase } from '..'
 import { HttpClientConfig } from '../../koa/ilp-client-middleware'
-import Axios, { AxiosRequestConfig } from 'axios'
+import Axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
+import Agent from 'agentkeepalive'
 
 export class AxiosHttpClientService extends PeerServiceBase<Client> implements ClientService {
   public create (peerId: string, config: HttpClientConfig) {
@@ -14,11 +15,21 @@ export class AxiosHttpClientService extends PeerServiceBase<Client> implements C
 }
 
 class AxiosClient implements Client {
+  readonly axiosInstance: AxiosInstance
+  readonly keepAliveAgent: Agent
+
   constructor (private _url: string, private _config: AxiosRequestConfig) {
+    // TODO just using keepAlive defaults for now
+    this.keepAliveAgent = new Agent({ keepAlive: true })
+    this.axiosInstance = Axios.create({
+      baseURL: _url,
+      timeout: 30000,
+      httpAgent: this.keepAliveAgent,
+      httpsAgent: this.keepAliveAgent,
+    })
   }
   public async send (data: Buffer) {
-    // TODO: Connection pooling
-    const res = await Axios.post<Buffer>(this._url, data, this._config)
+    const res = await this.axiosInstance.post<Buffer>('', data, this._config)
     if (res.headers['callback-url']) {
       // TODO - Update config if new value provided in callback-url and callback-auth headers
     }
