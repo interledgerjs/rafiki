@@ -90,7 +90,7 @@ export function createApp (config: Config, { auth, peers, connector }: Partial<R
     connector
   })
 
-  app.use(authMiddleware(auth))
+  app.use(createAuthMiddleware(auth))
 
   app.useIlp()
 
@@ -170,7 +170,7 @@ export function createApp (config: Config, { auth, peers, connector }: Partial<R
   return app
 }
 
-export function authMiddleware (auth?: RafikiMiddleware | Partial<TokenAuthConfig>): RafikiMiddleware {
+export function createAuthMiddleware (auth?: RafikiMiddleware | Partial<TokenAuthConfig>): RafikiMiddleware {
   if (typeof auth === 'function') {
     return auth
   } else {

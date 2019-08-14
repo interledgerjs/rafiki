@@ -50,7 +50,9 @@ export class ReduceExpiryRule extends Rule {
 
     if (destinationExpiryTime < Date.now() + minExpirationWindow) {
       logger.verbose('incoming packet expires too soon to complete payment', { request })
-      throw new InsufficientTimeoutError('source transfer expires too soon to complete payment. actualSourceExpiry=' + request.expiresAt.toISOString() + ' requiredSourceExpiry=' + (new Date(Date.now() + 2 * minExpirationWindow).toISOString()) + ' currentTime=' + (new Date().toISOString()))
+      throw new InsufficientTimeoutError('source transfer expires too soon to complete payment. actualSourceExpiry=' + request.expiresAt.toISOString()
+      + ' requiredSourceExpiry=' + (new Date(Date.now() + 2 * minExpirationWindow).toISOString())
+      + ' currentTime=' + (new Date().toISOString()))
     }
 
     return new Date(destinationExpiryTime)

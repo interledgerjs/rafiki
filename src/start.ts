@@ -2,15 +2,15 @@
 
 import * as winston from 'winston'
 import Knex from 'knex'
-import { AdminApi } from './services'
-import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
+import { AdminApi, TokenInfo, sendToPeer } from './services'
+import { SettlementAdminApi } from './servers/settlement-admin-api/settlement-admin-api'
 import { tokenAuthMiddleware } from './koa/token-auth-middleware'
 import { Config } from './index'
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
 import { STATIC_CONDITION } from './constants'
 import { InMemoryPeers } from './services/peers/in-memory'
 import { InMemoryConnector } from './services/connector/in-memory'
-import { createApp } from './rafiki'
+import { createApp, RafikiContext } from './rafiki'
 import { RemoteTokenService } from './services/tokens/remote'
 import { KnexTokenService } from './services/tokens/knex'
 import { Server } from 'net'
@@ -59,12 +59,21 @@ const app = createApp(config, {
 })
 
 // Create Admin API
+// TODO: Clean this up
+const auth = (config.adminApiAuth)
+  ? {
+    introspect: tokens.introspect,
+    authenticate: (token: TokenInfo) => { return token.sub === 'self' }
+  }
+  : async (ctx: RafikiContext, next: Function) => { await next() }
+
 const adminApi = new AdminApi({
   host: config.adminApiHost,
   port: config.adminApiPort
 }, {
-  tokens,
-  middleware:  (config.adminApiAuth) ? tokenAuthMiddleware(tokens.introspect, token => { return token.sub === 'self' }) : undefined
+  connector,
+  peers,
+  auth
 })
 
 // Create Settlement API
@@ -72,10 +81,11 @@ const settlementAdminApi = new SettlementAdminApi({
   host: config.settlementAdminApiHost,
   port: config.settlementAdminApiPort
 }, {
-  getAccountBalance: (id: string) => peers.getOrThrow(id).balance.toJSON() ,
-  updateAccountBalance: (id: string, amountDiff: bigint, scale: number) => {
-    const balance = peers.getOrThrow(id).balance
-    const scaleDiff = balance.scale - scale
+  updateAccountBalance: async (id: string, amountDiff: bigint, scale: number) => {
+    const peer = await peers.getOrThrow(id)
+    const balance = await peer.balance
+    const scaleDiff = peer.info.assetScale - scale
+
     // TODO: update to check whether scaledAmountDiff is an integer
     if (scaleDiff < 0) {
       // TODO: should probably throw an error
@@ -84,7 +94,9 @@ const settlementAdminApi = new SettlementAdminApi({
     }
     const scaleRatio = Math.pow(10, scaleDiff)
     const scaledAmountDiff = amountDiff * BigInt(scaleRatio)
-    balance.adjust(scaledAmountDiff)
+
+    const { maximum, minimum } = peer.info.balance
+    await balance.adjust(scaledAmountDiff, minimum, maximum)
   },
   sendMessage: async (id: string, message: Buffer) => {
     const packet = serializeIlpPrepare({
@@ -95,7 +107,7 @@ const settlementAdminApi = new SettlementAdminApi({
       data: message
     })
 
-    const ilpReply = deserializeIlpReply(await peers.getOrThrow(id).client.send(packet))
+    const ilpReply = deserializeIlpReply(await sendToPeer(id, packet, peers))
 
     if (isReject(ilpReply)) {
       throw new Error('IlpPacket to settlement engine was rejected')

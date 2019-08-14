@@ -4,10 +4,6 @@ import { log } from '../winston'
 import { SELF_PEER_ID } from '../constants'
 const logger = log.child({ component: 'error-handler-rule' })
 
-export interface ErrorHandlerRuleServices {
-  getOwnIlpAddress: () => string
-}
-
 /**
  * Catch errors that bubble back along the pipeline and convert to an ILP Reject
  *

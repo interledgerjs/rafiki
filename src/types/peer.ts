@@ -10,15 +10,15 @@ export interface PeerInfo {
   id: string,
   assetCode: string,
   assetScale: number,
-  client?: ClientConfig,
-  balance?: BalanceConfig,
+  client: ClientConfig,
+  balance: BalanceConfig,
   CcpConfig?: CcpConfig,
   rules: { [name: string]: RuleConfig },
   protocols: { [name: string]: ProtocolConfig }
 }
 
 export interface ClientConfig {
-  url: string,
+  url?: string,
   authToken?: string
 }
 

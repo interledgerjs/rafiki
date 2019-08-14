@@ -17,7 +17,8 @@ export class RateLimitRule extends Rule {
   _buckets = new Map<string, TokenBucket>()
   constructor () {
     super({
-      incoming: async ({ services, state: { ilp, peers: { incoming : { info } } } }, next) => {
+      incoming: async ({ state: { ilp, peers: { incoming } } }, next) => {
+        const { info } = await incoming
         let bucket = this._buckets.get(info.id)
         if (!bucket) {
           bucket = createRateLimitBucketForPeer(info)

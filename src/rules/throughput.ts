@@ -16,7 +16,8 @@ export class ThroughputRule extends Rule {
   _outgoingBuckets = new Map<string,TokenBucket>()
   constructor () {
     super({
-      incoming: async ({ state: { ilp, peers: { incoming : { info } } } }, next) => {
+      incoming: async ({ state: { ilp, peers: { incoming } } }, next) => {
+        const { info } = await incoming
         let incomingBucket = this._incomingBuckets.get(info.id)
         if (!incomingBucket) {
           incomingBucket = createThroughputLimitBucketsForPeer(info, 'incoming')
@@ -30,7 +31,8 @@ export class ThroughputRule extends Rule {
         }
         await next()
       },
-      outgoing: async ({ state: { ilp, peers: { outgoing : { info } } } }, next) => {
+      outgoing: async ({ state: { ilp, peers: { outgoing } } }, next) => {
+        const { info } = await outgoing
         let outgoingBucket = this._outgoingBuckets.get(info.id)
         if (!outgoingBucket) {
           outgoingBucket = createThroughputLimitBucketsForPeer(info, 'outgoing')

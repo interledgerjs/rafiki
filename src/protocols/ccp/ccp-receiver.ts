@@ -8,10 +8,15 @@ import {
 } from 'ilp-protocol-ccp'
 import { IncomingRoute } from 'ilp-routing'
 import { log } from './../../winston'
-import { ServiceBase } from '../../services'
+import { PeerNotFoundError } from '../../errors/peer-not-found-error'
 const logger = log.child({ component: 'ccp-receiver' })
 
-export class CcpReceiverService extends ServiceBase<CcpReceiver> {
+export class CcpReceiverService extends Map<string,CcpReceiver> {
+  public getOrThrow (id: string): CcpReceiver {
+    const receiver = this.get(id)
+    if (!receiver) throw new PeerNotFoundError(id)
+    return receiver
+  }
 }
 
 export interface CcpReceiverOpts {

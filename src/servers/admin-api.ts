@@ -1,12 +1,12 @@
-import { log } from './../winston'
-import Koa, { Context } from 'koa'
+import { log } from '../winston'
+import { Context } from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server } from 'http'
-import { TokenService } from './tokens'
-import { Connector } from './connector';
-import { Rafiki, authMiddleware, RafikiMiddleware } from '../rafiki';
-import { TokenAuthConfig } from '../koa/token-auth-middleware';
+import { Connector } from '../services/connector'
+import { Rafiki, RafikiMiddleware, createAuthMiddleware } from '../rafiki'
+import { TokenAuthConfig } from '../koa/token-auth-middleware'
+import { PeerService } from '../services/peers'
 const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
@@ -15,7 +15,9 @@ export interface AdminApiOptions {
 }
 
 export interface AdminApiServices {
+  peers: PeerService
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
+  connector: Connector
 }
 
 /**
@@ -26,11 +28,10 @@ export class AdminApi {
   private _httpServer?: Server
   private _host?: string
   private _port?: number
-  constructor ({ host, port }: AdminApiOptions, { auth }: AdminApiServices) {
-
+  constructor ({ host, port }: AdminApiOptions, { auth, connector, peers }: AdminApiServices) {
     this._koa = new Rafiki()
-    this._koa.use(authMiddleware(auth))
-    this._koa.use(this._getRoutes(tokenService).middleware())
+    this._koa.use(createAuthMiddleware(auth))
+    this._koa.use(this._getRoutes(connector, peers).middleware())
     this._host = host
     this._port = port
   }
@@ -47,7 +48,7 @@ export class AdminApi {
     logger.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
   }
 
-  private _getRoutes (connector: Connector, tokenService: TokenService) {
+  private _getRoutes (connector: Connector, peers: PeerService) {
     const router = createRouter()
 
     router.use(bodyParser())
@@ -59,24 +60,26 @@ export class AdminApi {
     router.route({
       method: 'get',
       path: '/stats',
-      handler: async (ctx: Context) => ctx.body = app._stats.getStatus()
+      handler: async (ctx: Context) => ctx.assert(false, 500, 'not implemented')
     })
     router.route({
       method: 'get',
       path: '/alerts',
-      handler: async (ctx: Context) => ctx.body = { alerts: app._alerts.getAlerts() }
+      handler: async (ctx: Context) => ctx.assert(false, 500, 'not implemented')
     })
     router.route({
       method: 'get',
       path: '/balance',
-      handler: async (ctx: Context) => ctx.body = app.getBalances()
+      handler: async (ctx: Context) => ctx.assert(false, 500, 'not implemented')
     })
     router.route({
       method: 'get',
       path: '/balance/:id',
       handler: async (ctx: Context) => {
         try {
-          ctx.body = app.getBalance(ctx.request.params['id'])
+          const peer = await peers.getOrThrow(ctx.request.params['id'])
+          const balance = await peer.balance
+          ctx.body = balance.toJSON()
         } catch (error) {
           ctx.response.status = 404
         }
@@ -84,42 +87,43 @@ export class AdminApi {
     })
     router.route({
       method: 'post',
-      path: '/peer',
+      path: '/peers',
       validate: {
         body: {
-          peerInfo: Joi.object().required(),
-          endpointInfo: Joi.object().required()
+          peerInfo: Joi.object().required()
         },
         type: 'json'
       },
       handler: async (ctx: Context) => {
         const peerInfo = ctx.request.body['peerInfo']
-        const endpointInfo = ctx.request.body['endpointInfo']
-        await app.addPeer(peerInfo, endpointInfo, true)
-        await tokenService.create({ sub: peerInfo.id, active: true })
+        await peers.add(peerInfo)
+        // TODO: Do we create the token automatically
+        // await tokenService.create({ sub: peerInfo.id, active: true })
         ctx.response.status = 204
       }
     })
     router.route({
       method: 'get',
-      path: '/peer',
-      handler: async (ctx: Context) => ctx.body = app._connector.getPeerList()
+      path: '/peers',
+      handler: async (ctx: Context) => ctx.body = await peers.list()
     })
-    router.route({
-      method: 'get',
-      path: '/peers/:id/token',
-      handler: async (ctx: Context) => {
-        const token = await tokenService.lookup({ sub: ctx.params.id, active: true })
-        ctx.body = {
-          token
-        }
-      }
-    })
-    router.route({
-      method: 'get',
-      path: '/routes',
-      handler: async (ctx: Context) => ctx.body = app._connector._routingTable.getRoutingTable()['items']
-    })
+    // router.route({
+    //   method: 'get',
+    //   path: '/peers/:id/token',
+    //   handler: async (ctx: Context) => {
+    //     const token = await tokenService.lookup({ sub: ctx.params.id, active: true })
+    //     ctx.body = {
+    //       token
+    //     }
+    //   }
+    // })
+
+    // TODO: Wait for Matt to add this to connector
+    // router.route({
+    //   method: 'get',
+    //   path: '/routes',
+    //   handler: async (ctx: Context) => ctx.body = app._connector._routingTable.getRoutingTable()['items']
+    // })
     return router
   }
 

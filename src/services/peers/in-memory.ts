@@ -1,6 +1,5 @@
 import { Peer, PeerService } from '.'
-import { ServiceBase } from '..'
-import { PeerInfo, Balance, InMemoryBalance, PeerRelation } from '../../types'
+import { PeerInfo, Balance, InMemoryBalance, PeerRelation, BalanceConfig, ClientConfig } from '../../types'
 import { Client } from '../client'
 import { AxiosClient } from '../client/axios'
 import { Peer as PeerModel } from '../../models/Peer'
@@ -8,41 +7,43 @@ import { Rule } from '../../models/Rule'
 import { Protocol } from '../../models/Protocol'
 import Knex from 'knex'
 import { Subject } from 'rxjs'
+import { PeerNotFoundError } from '../../errors/peer-not-found-error'
+import { MIN_INT_64, MAX_INT_64 } from '../../constants'
 
 export class InMemoryPeer implements Peer {
-  _client: Client
-  _balance: Balance
+  _client: Promise<Client>
+  _balance: Promise<Balance>
   constructor (private _peer: PeerInfo) {
-    if (_peer.client) {
+    // TODO: Need to make this immutable
+    if (_peer.client.url) {
       const axiosConfig = { responseType: 'arraybuffer', headers: {} }
       if (_peer.client.authToken) axiosConfig.headers = { 'Authorization': `Bearer ${_peer.client.authToken}` }
-      this._client = new AxiosClient(_peer.client.url, axiosConfig)
+      this._client = Promise.resolve(new AxiosClient(_peer.client.url, axiosConfig))
     }
-    if (_peer.balance) {
-      this._balance = new InMemoryBalance(_peer.balance.initialBalance)
-    }
+    this._balance = Promise.resolve(new InMemoryBalance(_peer.balance.initialBalance))
   }
 
   get info (): PeerInfo {
     return this._peer
   }
-  get client (): Client {
-    return this._client
-  }
-  get balance (): Balance {
+  get balance (): Promise<Balance> {
     return this._balance
+  }
+  get client (): Promise<Client> {
+    if (this._client) return this._client
+    throw new Error('no client for peer ' + this._peer.id)
   }
 
 }
 
-export class InMemoryPeers extends ServiceBase<Peer> implements PeerService {
+export class InMemoryPeers implements PeerService {
 
   private _addedPeers: Subject<PeerInfo>
   private _updatedPeers: Subject<PeerInfo>
   private _removedPeers: Subject<PeerInfo>
+  private _peers = new Map<string, InMemoryPeer>()
 
   constructor () {
-    super()
     this._addedPeers = new Subject<PeerInfo>()
     this._updatedPeers = new Subject<PeerInfo>()
     this._removedPeers = new Subject<PeerInfo>()
@@ -60,41 +61,77 @@ export class InMemoryPeers extends ServiceBase<Peer> implements PeerService {
     return this._removedPeers.asObservable()
   }
 
+  public async getOrThrow (id: string): Promise<Peer> {
+    const peer = this._peers.get(id)
+    if (!peer) throw new PeerNotFoundError(id)
+    return peer
+  }
+
   async add (peer: PeerInfo) {
-    await this.set(peer.id, new InMemoryPeer(peer))
-    await this._addedPeers.next(peer)
+    this._peers.set(peer.id, new InMemoryPeer(peer))
+    this._addedPeers.next(peer)
   }
 
   // Tricky as we need to manage state of in memory peer potentially
   // TODO work out what needs to be managed
   async update (peer: PeerInfo) {
-    await this._updatedPeers.next(peer)
+    const oldPeer = this._peers.get(peer.id)
+    if (!oldPeer) {
+      throw new PeerNotFoundError(peer.id)
+    }
+    const newPeer = new InMemoryPeer(peer)
+    this._peers.set(peer.id, newPeer)
+    this._updatedPeers.next(peer)
+    return newPeer
   }
 
-  async remove (peer: PeerInfo) {
-    await this.delete(peer.id)
-    await this._removedPeers.next(peer)
+  async remove (peerId: string) {
+    const oldPeer = this._peers.get(peerId)
+    if (!oldPeer) {
+      throw new PeerNotFoundError(peerId)
+    }
+    this._peers.delete(peerId)
+    this._removedPeers.next(oldPeer.info)
+  }
+
+  async list () {
+    return [...this._peers.values()].map(peer => peer.info)
   }
 
   public async load (knex: Knex) {
     const result = await PeerModel.query(knex).eager('[rules,protocols,endpoint]')
-    result.forEach(peer => {
+    return Promise.all(result.map(async peer => {
+
       const rules = {}
       peer['rules'].map((rule: Rule) => {
         rules[rule.name] = rule.config || {}
       })
+
       const protocols = {}
       peer['protocols'].map((protocol: Protocol) => {
         protocols[protocol.name] = protocol.config || {}
       })
-      this.add({
+
+      // TODO: Load balance and client info
+      const balance: BalanceConfig = {
+        initialBalance: 0n,
+        maximum: MAX_INT_64,
+        minimum: MIN_INT_64
+      }
+
+      const client: ClientConfig = {
+      }
+
+      return this.add({
         id: peer.id,
         assetCode: peer.assetCode,
         assetScale: peer.assetScale,
         relation: peer.relation as PeerRelation,
+        balance,
+        client,
         rules,
         protocols
       })
-    })
+    }))
   }
 }

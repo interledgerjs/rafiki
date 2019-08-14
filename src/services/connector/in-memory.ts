@@ -11,6 +11,7 @@ import { PeerService } from '../peers'
 import { Connector, getRouteWeight } from '.'
 import { SELF_PEER_ID } from '../../constants'
 import { Route } from '../../models/Route'
+import { sendToPeer } from '../client'
 
 const logger = log.child({ component: 'in-memory-connector' })
 
@@ -100,7 +101,7 @@ export class InMemoryConnector implements Connector {
       const receiver = new CcpReceiver({
         peerId,
         sendData: async (data: Buffer) => {
-          return this._peers.getOrThrow(peerId).client.send(data)
+          return sendToPeer(peerId, data, this._peers)
         },
         addRoute: (route: IncomingRoute) => { this._routeManager.addRoute(route) },
         removeRoute:  (peerId: string, prefix: string) => { this._routeManager.removeRoute(peerId, prefix) },
@@ -115,7 +116,7 @@ export class InMemoryConnector implements Connector {
       const sender = new CcpSender({
         peerId,
         sendData: async (data: Buffer) => {
-          return this._peers.getOrThrow(peerId).client.send(data)
+          return sendToPeer(peerId, data, this._peers)
         },
         forwardingRoutingTable: this._routingTable.getForwardingRoutingTable(),
         getOwnAddress: () => this._getOwnAddress(),
@@ -132,7 +133,7 @@ export class InMemoryConnector implements Connector {
 
     if (relation === 'parent') {
       const { clientAddress } = await ildcpFetch(async (data: Buffer): Promise<Buffer> => {
-        return this._peers.getOrThrow(peerId).client.send(data)
+        return sendToPeer(peerId, data, this._peers)
       })
       if (clientAddress === 'unknown') {
         const e = new Error('Failed to get ILDCP address from parent.')

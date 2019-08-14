@@ -14,8 +14,7 @@ export interface SettlementAdminApiOptions {
 }
 
 export interface SettlementAdminApiServices {
-  updateAccountBalance: (id: string, amountDiff: bigint, scale: number) => void
-  getAccountBalance: (id: string) => JSONBalanceSummary
+  updateAccountBalance: (id: string, amountDiff: bigint, scale: number) => Promise<void>
   sendMessage: (to: string, message: Buffer) => Promise<Buffer>
 }
 
@@ -25,15 +24,13 @@ export class SettlementAdminApi {
   private _server: Server
   private _host: string
   private _port: number
-  private _updateAccountBalanceService: (id: string, amountDiff: bigint, scale: number) => void
-  private _getAccountBalanceService: (id: string) => JSONBalanceSummary
+  private _updateAccountBalanceService: (id: string, amountDiff: bigint, scale: number) => Promise<void>
   private _sendMessage: (to: string, message: Buffer) => Promise<Buffer>
 
-  constructor ({ host, port }: SettlementAdminApiOptions, { updateAccountBalance, getAccountBalance, sendMessage }: SettlementAdminApiServices) {
+  constructor ({ host, port }: SettlementAdminApiOptions, { updateAccountBalance, sendMessage }: SettlementAdminApiServices) {
     this._host = host || '127.0.0.1'
     this._port = port || 4000
     this._updateAccountBalanceService = updateAccountBalance
-    this._getAccountBalanceService = getAccountBalance
     this._sendMessage = sendMessage
   }
 

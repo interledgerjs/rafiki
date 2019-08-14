@@ -23,7 +23,7 @@ export class LiquidityCheckRule extends Rule {
           if (ilp.res.message !== 'exceeded maximum balance.') return
 
           logger.error('Liquidity Check Error', {
-            peerId: peers.outgoing.info.id,
+            peerId: (await peers.outgoing).info.id,
             triggerBy: ilp.res.triggeredBy,
             message: ilp.res.message
           })

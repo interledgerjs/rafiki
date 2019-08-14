@@ -1,7 +1,7 @@
 import { serve as ildcpServe } from 'ilp-protocol-ildcp'
 import { Rule } from '../types/rule'
 import { log } from '../winston'
-import { SELF_PEER_ID } from '../constants';
+import { SELF_PEER_ID } from '../constants'
 const logger = log.child({ component: 'ildcp-protocol' })
 
 /**
@@ -10,9 +10,12 @@ const logger = log.child({ component: 'ildcp-protocol' })
 export class IldcpProtocol extends Rule {
   constructor () {
     super({
-      incoming: async ({ services, state: { ilp, peers : { incoming : { info } } } }, next) => {
+      incoming: async ({ services, state: { ilp, peers : { incoming } } }, next) => {
         if (ilp.req.destination === 'peer.config') {
+
+          const { info } = await incoming
           const { assetCode, assetScale, protocols: { ildcp }, id, relation } = info
+
           if (relation !== 'child') {
             logger.warn('received ILDCP request for peer that is not a child', { peerId: id, relation })
             throw new Error('Can\'t generate address for a peer that isn\t a child.')

@@ -6,8 +6,8 @@ import { Peer } from '../services/peers'
 
 export interface PeerState {
   peers: {
-    readonly incoming: Peer
-    readonly outgoing: Peer
+    readonly incoming: Promise<Peer>
+    readonly outgoing: Promise<Peer>
   }
 }
 
@@ -38,8 +38,8 @@ export function peerMiddleWare (config: PeerMiddlewareOptions = defaultMiddlewar
 
   return async function peer (ctx: RafikiContext, next: () => Promise<any>) {
 
-    let incomingPeer: Peer | undefined = undefined
-    let outgoingPeer: Peer | undefined = undefined
+    let incomingPeer: Promise<Peer> | undefined = undefined
+    let outgoingPeer: Promise<Peer> | undefined = undefined
     ctx.state.peers = {
       get incoming () {
         if (incomingPeer) return incomingPeer

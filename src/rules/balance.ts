@@ -23,7 +23,6 @@ export class BalanceRule extends Rule {
     super({
       incoming: async ({ state: { peers, ilp } }, next) => {
         const { amount } = ilp.req
-        const { info, balance } = peers.incoming
 
         // TODO - Move to dedicated middleware
         // Handle peer.settle
@@ -50,13 +49,18 @@ export class BalanceRule extends Rule {
           return
         }
 
-        // TODO: Load sane defaults from connector config
-        const minimum = (info.balance && info.balance.minimum) ? info.balance.minimum : 0n
-        const maximum = (info.balance && info.balance.maximum) ? info.balance.maximum : 0n
+        const { info, balance } = await peers.incoming
+        const bal = await balance
+        const adjustUp = async (amount: string) => {
+          return bal.adjust(BigInt(amount), info.balance.minimum, info.balance.maximum)
+        }
+        const adjustDown = async (amount: string) => {
+          return bal.adjust(-BigInt(amount), info.balance.minimum, info.balance.maximum)
+        }
 
         // Increase balance on prepare
-        balance.adjust(BigInt(amount), minimum, maximum)
-        logger.debug('balance increased due to incoming ilp prepare', { peerId: info.id, amount, balance: balance.getValue().toString() })
+        await adjustUp(amount)
+        logger.debug('balance increased due to incoming ilp prepare', { peerId: info.id, amount, balance: bal.getValue().toString() })
 
         // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
         // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
@@ -65,8 +69,8 @@ export class BalanceRule extends Rule {
           await next()
         } catch (err) {
           // Refund on error
-          balance.adjust(BigInt(-amount), minimum, maximum)
-          logger.debug('incoming packet refunded due to error', { peerId: info.id, amount, balance: balance.getValue().toString() })
+          await adjustDown(amount)
+          logger.debug('incoming packet refunded due to error', { peerId: info.id, amount, balance: bal.getValue().toString() })
           // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
           // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
           // this.stats.incomingDataPacketValue.increment(this.peer, { result: 'failed' }, + amount)
@@ -74,12 +78,12 @@ export class BalanceRule extends Rule {
         }
 
         if (ilp.res && isFulfill(ilp.res)) {
-          this.maybeSettle(peers.incoming).catch(logger.error)
+          this.maybeSettle(await peers.incoming).catch(logger.error)
           // this.stats.incomingDataPacketValue.increment(this.peer, { result: 'fulfilled' }, + amount)
         } else {
           // Refund on reject
-          balance.adjust(BigInt(-amount), minimum, maximum)
-          logger.debug('incoming packet refunded due to ilp reject', { peerId: info.id, amount, balance: balance.getValue().toString() })
+          await adjustDown(amount)
+          logger.debug('incoming packet refunded due to ilp reject', { peerId: info.id, amount, balance: bal.getValue().toString() })
 
           // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
           // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
@@ -88,7 +92,6 @@ export class BalanceRule extends Rule {
       },
       outgoing: async ({ state: { peers, ilp } }, next) => {
         const { amount, destination } = ilp.req
-        const { info, balance } = peers.outgoing
 
         if (destination.startsWith('peer.settle')) {
           await next()
@@ -100,31 +103,32 @@ export class BalanceRule extends Rule {
           await next()
           return
         }
-
-        // TODO: Load sane defaults from connector config
-        const minimum = (info.balance && info.balance.minimum) ? info.balance.minimum : 0n
-        const maximum = (info.balance && info.balance.maximum) ? info.balance.maximum : 0n
+        const { info, balance } = await peers.outgoing
+        const bal = await balance
+        const adjustDown = async (amount: string) => {
+          return bal.adjust(-BigInt(amount), info.balance.minimum, info.balance.maximum)
+        }
 
         // We do nothing here (i.e. unlike for incoming packets) and wait until the packet is fulfilled
         // This means we always take the most conservative view of our balance with the upstream peer
         try {
           await next()
         } catch (err) {
-          logger.debug('outgoing packet not applied due to error', { peerId: info.id, amount, balance: balance.getValue().toString() })
+          logger.debug('outgoing packet not applied due to error', { peerId: info.id, amount, balance: bal.getValue().toString() })
           // this.stats.outgoingDataPacketValue.increment(peer, { result: 'failed' }, + amount)
           throw err
         }
 
         if (ilp.res && isFulfill(ilp.res)) {
-          // Decrease balance on prepare
-          balance.adjust(BigInt(-amount), minimum, maximum)
-          this.maybeSettle(peers.outgoing).catch()
-          logger.debug('balance decreased due to outgoing ilp fulfill', { peerId: info.id, amount, balance: balance.getValue().toString() })
+          // Decrease balance on fulfill
+          await adjustDown(amount)
+          this.maybeSettle(await peers.outgoing).catch()
+          logger.debug('balance decreased due to outgoing ilp fulfill', { peerId: info.id, amount, balance: bal.getValue().toString() })
           // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
           // this.stats.balance.setValue(peer, {}, balance.getValue().toNumber())
           // this.stats.outgoingDataPacketValue.increment(peer, { result: 'fulfilled' }, + amount)
         } else {
-          logger.debug('outgoing packet not applied due to ilp reject', { peerId: info.id, amount, balance: balance.getValue().toString() })
+          logger.debug('outgoing packet not applied due to ilp reject', { peerId: info.id, amount, balance: bal.getValue().toString() })
           // this.stats.outgoingDataPacketValue.increment(peer, { result: 'rejected' }, + amount)
         }
       }

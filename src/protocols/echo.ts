@@ -4,6 +4,7 @@ import { Reader, Writer } from 'oer-utils'
 import { InvalidPacketError } from 'ilp-packet/dist/src/errors'
 import { log } from '../winston'
 import { SELF_PEER_ID } from '../constants'
+import { sendToPeer } from '../services'
 const logger = log.child({ component: 'echo-protocol' })
 
 const MINIMUM_ECHO_PACKET_DATA_LENGTH = 16 + 1
@@ -19,8 +20,9 @@ export interface EchoProtocolServices {
 export class EchoProtocol extends Rule {
   constructor ({ minMessageWindow }: EchoProtocolServices) {
     super({
-      outgoing: async ({ state: { ilp, peers: { outgoing : { info, client } } } }) => {
+      outgoing: async ({ state: { ilp, peers: { outgoing } } }) => {
 
+        const { info } = await outgoing
         const { req: { data, amount, expiresAt, executionCondition } } = ilp
 
         // TODO : Will this work? Is the self peer in the peers service or just the connector
@@ -41,7 +43,7 @@ export class EchoProtocol extends Rule {
 
             logger.verbose('responding to echo packet', { sourceAddress })
 
-            ilp.rawRes = await client.send(serializeIlpPrepare({
+            ilp.rawRes = await sendToPeer(await outgoing, serializeIlpPrepare({
               amount: amount,
               destination: sourceAddress,
               executionCondition: executionCondition,

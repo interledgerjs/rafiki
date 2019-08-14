@@ -9,9 +9,9 @@ const logger = log.child({ component: 'in-memory-balance' })
  */
 
 export interface BalanceConfig {
-  initialBalance?: bigint
-  minimum?: bigint
-  maximum?: bigint
+  initialBalance: bigint
+  minimum: bigint
+  maximum: bigint
 }
 
 export interface JSONBalanceSummary {
@@ -21,41 +21,50 @@ export interface JSONBalanceSummary {
 }
 
 export interface Balance {
-  adjust: (amount: bigint, minimum: bigint, maximum: bigint) => void
+  adjust: (amount: bigint, minimum: bigint, maximum: bigint) => Promise<void>
   getValue: () => bigint
-  toJSON: (minimum: bigint, maximum: bigint) => JSONBalanceSummary
+  toJSON: () => JSONBalanceSummary
 }
 
 export class InMemoryBalance implements Balance {
-  private balance: bigint
+  private _balance: bigint
+  private _lastMinimum: bigint
+  private _lastMaximum: bigint
+
   constructor (initialBalance = 0n) {
-    this.balance = initialBalance
+    this._balance = initialBalance
   }
 
-  adjust (amount: bigint, minimum: bigint, maximum: bigint) {
-    const newBalance = this.balance + amount
+  async adjust (amount: bigint, minimum: bigint, maximum: bigint) {
+
+    // Store these for status checks
+    this._lastMinimum = minimum
+    this._lastMaximum = maximum
+
+    const newBalance = this._balance + amount
+
     if (newBalance > maximum) {
       logger.error(`exceeded maximum balance. proposedBalance=${newBalance.toString()} maximum balance=${maximum.toString()}`)
       throw new InsufficientLiquidityError('exceeded maximum balance.')
     }
 
     if (newBalance < minimum) {
-      logger.error(`insufficient funds. oldBalance=${this.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${minimum.toString()}`)
-      throw new Error(`insufficient funds. oldBalance=${this.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${minimum.toString()}`)
+      logger.error(`insufficient funds. oldBalance=${this._balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${minimum.toString()}`)
+      throw new Error(`insufficient funds. oldBalance=${this._balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${minimum.toString()}`)
     }
 
-    this.balance = newBalance
+    this._balance = newBalance
   }
 
   getValue (): bigint {
-    return this.balance
+    return this._balance
   }
 
-  toJSON (minimum: bigint, maximum: bigint): JSONBalanceSummary {
+  toJSON (): JSONBalanceSummary {
     return {
-      balance: this.balance.toString(),
-      minimum: minimum.toString(),
-      maximum: maximum.toString()
+      balance: this._balance.toString(),
+      minimum: this._lastMinimum.toString(),
+      maximum: this._lastMaximum.toString()
     }
   }
 }

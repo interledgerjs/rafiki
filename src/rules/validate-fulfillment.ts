@@ -9,7 +9,7 @@ export class ValidateFulfillmentRule extends Rule {
 
   constructor () {
     super({
-      outgoing: async ({ state: { ilp, peers } }, next) => {
+      outgoing: async ({ state: { ilp } }, next) => {
         const { executionCondition } = ilp.req
         await next()
         if (ilp.res && isFulfill(ilp.res)) {
