@@ -3,8 +3,10 @@ import Koa, { Context } from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server } from 'http'
-import { App as RafikiApp } from '../app'
 import { TokenService } from './tokens'
+import { Connector } from './connector';
+import { Rafiki, authMiddleware, RafikiMiddleware } from '../rafiki';
+import { TokenAuthConfig } from '../koa/token-auth-middleware';
 const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
@@ -13,23 +15,22 @@ export interface AdminApiOptions {
 }
 
 export interface AdminApiServices {
-  app: RafikiApp,
-  tokenService: TokenService,
-  middleware?: Koa.Middleware
+  auth: RafikiMiddleware | Partial<TokenAuthConfig>
 }
 
 /**
  * TODO - Current design assumes that the same token service is used for /peer end point functions AND auth of the API
  */
 export class AdminApi {
-  private _koa: Koa
+  private _koa: Rafiki
   private _httpServer?: Server
   private _host?: string
   private _port?: number
-  constructor ({ host, port }: AdminApiOptions, { app, middleware, tokenService }: AdminApiServices) {
-    this._koa = new Koa()
-      .use(middleware ? middleware : async (ctx, next) => { await next() })
-      .use(this._getRoutes(app, tokenService).middleware())
+  constructor ({ host, port }: AdminApiOptions, { auth }: AdminApiServices) {
+
+    this._koa = new Rafiki()
+    this._koa.use(authMiddleware(auth))
+    this._koa.use(this._getRoutes(tokenService).middleware())
     this._host = host
     this._port = port
   }
@@ -46,7 +47,7 @@ export class AdminApi {
     logger.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
   }
 
-  private _getRoutes (app: RafikiApp, tokenService: TokenService) {
+  private _getRoutes (connector: Connector, tokenService: TokenService) {
     const router = createRouter()
 
     router.use(bodyParser())

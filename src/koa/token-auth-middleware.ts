@@ -7,6 +7,20 @@ export interface TokenAuthState extends AuthState {
   tokenInfo: TokenInfo
 }
 
+export interface TokenAuthConfig {
+  introspect: IntrospectFunction
+  authenticate: (tokenInfo: TokenInfo) => boolean
+}
+
+const defaultAuthenticate = (tokenInfo: TokenInfo): boolean => {
+  return Boolean(tokenInfo.active && tokenInfo.sub)
+}
+
+const defaultIntrospect: IntrospectFunction = (token: string) => {
+  // TODO: Parse out JWT and convert to tokenInfo
+  throw new Error('not implemented')
+}
+
 /**
  * Create authentication middleware based on a Bearer token and an introspection service.
  *
@@ -15,9 +29,11 @@ export interface TokenAuthState extends AuthState {
  * @param introspect A function that will introspect a token and return the TokenInfo
  * @param authenticate A function that will authenticate the user based on the introspection result. Default is to check `tokenInfo.active == true`
  */
-export function tokenAuthMiddleware (introspect: IntrospectFunction, authenticate?: (tokenInfo: TokenInfo) => boolean) {
+export function tokenAuthMiddleware (config?: Partial<TokenAuthConfig>) {
 
-  const _auth = (authenticate) ? authenticate : (tokenInfo: TokenInfo) => tokenInfo.active
+  const _auth = (config && config.authenticate) ? config.authenticate : defaultAuthenticate
+  const _introspect = (config && config.introspect) ? config.introspect : defaultIntrospect
+
   return async function auth (ctx: Koa.Context, next: () => Promise<any>) {
 
     // Parse out Bearer token
@@ -25,12 +41,8 @@ export function tokenAuthMiddleware (introspect: IntrospectFunction, authenticat
     ctx.assert(ctx.state.token, 401, 'Bearer token required in Authorization header')
 
     // Introspect token
-    ctx.state.tokenInfo = await introspect(ctx.state.token)
-    ctx.assert(_auth(ctx.state.tokenInfo), 401, 'Access Denied - Invalid Token')
-
-    // PeerId is the subject of the token
-    ctx.assert(ctx.state.tokenInfo.sub, 401, 'Access Denied - No Subject in Token')
-    ctx.state.user = ctx.state.tokenInfo.sub
+    ctx.state.user = await _introspect(ctx.state.token)
+    ctx.assert(_auth(ctx.state.user), 401, 'Access Denied - Invalid Token')
 
     await next()
 

@@ -6,17 +6,15 @@ import { IlpState, ilpPacketMiddleware, IlpPacketMiddlewareOptions } from './koa
 import { PeerState, peerMiddleWare, PeerMiddlewareOptions } from './koa/peer-middleware'
 import { PeerService } from './services/peers'
 import { AuthState } from './koa/auth-state'
-import { Config, TokenService } from './services'
-import { CcpProtocol, IldcpProtocol, EchoProtocol } from './protocols';
-import { ThroughputRule, ValidateFulfillmentRule, BalanceRule, ErrorHandlerRule, ExpireRule, HeartbeatRule, MaxPacketAmountRule, RateLimitRule, ReduceExpiryRule } from './rules';
-import { ilpClientMiddleware } from './koa/ilp-client-middleware';
-import { tokenAuthMiddleware } from './koa/token-auth-middleware';
+import { Config } from './services'
+import { CcpProtocol, IldcpProtocol, EchoProtocol } from './protocols'
+import { ThroughputRule, ValidateFulfillmentRule, BalanceRule, ErrorHandlerRule, ExpireRule, HeartbeatRule, MaxPacketAmountRule, RateLimitRule, ReduceExpiryRule } from './rules'
+import { ilpClientMiddleware } from './koa/ilp-client-middleware'
+import { tokenAuthMiddleware, TokenAuthConfig } from './koa/token-auth-middleware'
 export interface RafikiServices {
   connector: Connector
   peers: PeerService
 }
-
-export interface RafikiAppConfig extends Partial<RafikiServices> {}
 
 export type RafikiIlpConfig = IlpPacketMiddlewareOptions & PeerMiddlewareOptions
 
@@ -31,7 +29,7 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
   private _connector?: Connector
   private _peers?: PeerService
 
-  constructor (config?: RafikiAppConfig) {
+  constructor (config?: Partial<RafikiServices>) {
     super()
 
     this._connector = (config && config.connector) ? config.connector : undefined
@@ -81,16 +79,18 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
   }
 }
 
-export function createApp (config: Config, { connector, peers, tokens }: RafikiServices & { tokens: TokenService}) {
+interface RafikiCreateAppServices extends RafikiServices {
+  auth: RafikiMiddleware | Partial<TokenAuthConfig>
+}
 
-  connector.setGlobalPrefix(config.env === 'production' ? 'g' : 'test')
+export function createApp (config: Config, { auth, peers, connector }: Partial<RafikiCreateAppServices>) {
 
   const app = new Rafiki({
     peers,
     connector
   })
 
-  app.use(tokenAuthMiddleware(tokens.introspect))
+  app.use(authMiddleware(auth))
 
   app.useIlp()
 
@@ -168,4 +168,12 @@ export function createApp (config: Config, { connector, peers, tokens }: RafikiS
 
   app.use(router.middleware())
   return app
+}
+
+export function authMiddleware (auth?: RafikiMiddleware | Partial<TokenAuthConfig>): RafikiMiddleware {
+  if (typeof auth === 'function') {
+    return auth
+  } else {
+    return tokenAuthMiddleware(auth)
+  }
 }

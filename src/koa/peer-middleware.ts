@@ -16,12 +16,12 @@ export interface PeerMiddlewareOptions {
   getOutgoingPeerId?: (ctx: RafikiContext) => string
 }
 
-export const defaultGetIncomingPeerId = (ctx: RafikiContext): string => {
-  ctx.assert(ctx.state.user, 401)
-  return ctx.state.user! // Waiting on Sir Anders (https://github.com/microsoft/TypeScript/pull/32695)
+const defaultGetIncomingPeerId = (ctx: RafikiContext): string => {
+  ctx.assert(ctx.state.user && ctx.state.user.sub, 401)
+  return ctx.state.user!.sub! // Waiting on Sir Anders (https://github.com/microsoft/TypeScript/pull/32695)
 }
 
-export const defaultGetOutgoingPeerId = (ctx: RafikiContext): string => {
+const defaultGetOutgoingPeerId = (ctx: RafikiContext): string => {
   ctx.assert(ctx.state.ilp.req.destination, 500)
   return ctx.services.connector.getPeerForAddress(ctx.state.ilp.req.destination)
 }

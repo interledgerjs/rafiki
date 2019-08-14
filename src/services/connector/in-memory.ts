@@ -20,7 +20,10 @@ export class InMemoryConnector implements Connector {
   _ccpSenders: CcpSenderService = new CcpSenderService()
   _ccpReceivers: CcpReceiverService = new CcpReceiverService()
 
-  constructor (private _peers: PeerService) {
+  constructor (private _peers: PeerService, globaPrefix: string) {
+
+    this._routingTable.setGlobalPrefix(globaPrefix)
+
     // TODO how do we handle the self peer?
     // this._routeManager.addPeer(SELF_PEER_ID, 'local')
     // Added
@@ -41,6 +44,7 @@ export class InMemoryConnector implements Connector {
     this._peers.deleted.subscribe(async (peer: PeerInfo) => {
       await this._removePeer(peer.id)
     })
+
   }
 
   public async load (knex: Knex) {

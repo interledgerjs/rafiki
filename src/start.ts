@@ -8,12 +8,12 @@ import { tokenAuthMiddleware } from './koa/token-auth-middleware'
 import { Config } from './index'
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
 import { STATIC_CONDITION } from './constants'
-import { InMemoryPeers } from './services/peers/in-memory';
-import { InMemoryConnector } from './services/connector/in-memory';
-import { createApp } from './rafiki';
-import { RemoteTokenService } from './services/tokens/remote';
-import { KnexTokenService } from './services/tokens/knex';
-import { Server } from 'net';
+import { InMemoryPeers } from './services/peers/in-memory'
+import { InMemoryConnector } from './services/connector/in-memory'
+import { createApp } from './rafiki'
+import { RemoteTokenService } from './services/tokens/remote'
+import { KnexTokenService } from './services/tokens/knex'
+import { Server } from 'net'
 
 // Logging
 // tslint:disable-next-line
@@ -46,11 +46,11 @@ const knex = Knex(config.databaseConnectionString)
 // Remote vs Local token auth
 const tokens = config.authProviderUrl !== '' ? new RemoteTokenService(config.authProviderUrl) : new KnexTokenService(knex)
 const peers = new InMemoryPeers()
-const connector = new InMemoryConnector(peers)
+const connector = new InMemoryConnector(peers, config.env === 'production' ? 'g' : 'test')
 
 // Create Rafiki
 const app = createApp(config, {
-  tokens,
+  auth: { introspect: tokens.introspect },
   peers,
   connector
 })
@@ -60,7 +60,6 @@ const adminApi = new AdminApi({
   host: config.adminApiHost,
   port: config.adminApiPort
 }, {
-  app,
   tokens,
   middleware:  (config.adminApiAuth) ? tokenAuthMiddleware(tokens.introspect, token => { return token.sub === 'self' }) : undefined
 })

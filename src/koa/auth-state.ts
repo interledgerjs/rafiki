@@ -1,3 +1,5 @@
+import { TokenInfo } from '../services'
+
 export interface AuthState {
-  user?: string
+  user?: TokenInfo
 }
