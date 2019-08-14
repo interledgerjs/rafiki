@@ -8,5 +8,7 @@ export interface Peer {
   readonly balance: Balance
 }
 
+// TODO: This needs to emit events when a peer is added, removed or changed
 export interface PeerService extends Service<Peer> {
+
 }

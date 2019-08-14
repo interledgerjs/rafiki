@@ -18,7 +18,7 @@ export class InMemoryPeer implements Peer {
       this._client = new AxiosClient(_peer.client.url, axiosConfig)
     }
     if (_peer.balance) {
-      this._balance = new InMemoryBalance(_peer.balance)
+      this._balance = new InMemoryBalance(_peer.balance.initialBalance)
     }
   }
 
