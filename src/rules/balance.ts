@@ -23,7 +23,7 @@ export class BalanceRule extends Rule {
 
   constructor () {
     super({
-      incoming: async ({ services, state: { peers, ilp } }, next) => {
+      incoming: async ({ state: { peers, ilp } }, next) => {
         const { amount } = ilp.req
         const { info, balance } = peers.incoming
 
@@ -52,8 +52,13 @@ export class BalanceRule extends Rule {
           return
         }
 
+        // TODO: Load sane defaults from connector config
+        const minimum = (info.balance && info.balance.minimum) ? info.balance.minimum : 0n
+        const maximum = (info.balance && info.balance.maximum) ? info.balance.maximum : 0n
+
+
         // Increase balance on prepare
-        balance.adjust(BigInt(amount))
+        balance.adjust(BigInt(amount), minimum, maximum)
         logger.debug('balance increased due to incoming ilp prepare', { peerId: info.id, amount, balance: balance.getValue().toString() })
 
         // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
@@ -63,7 +68,7 @@ export class BalanceRule extends Rule {
           await next()
         } catch (err) {
           // Refund on error
-          balance.adjust(BigInt(-amount))
+          balance.adjust(BigInt(-amount), minimum, maximum)
           logger.debug('incoming packet refunded due to error', { peerId: info.id, amount, balance: balance.getValue().toString() })
           // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
           // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
@@ -76,7 +81,7 @@ export class BalanceRule extends Rule {
           // this.stats.incomingDataPacketValue.increment(this.peer, { result: 'fulfilled' }, + amount)
         } else {
           // Refund on reject
-          balance.adjust(BigInt(-amount))
+          balance.adjust(BigInt(-amount), minimum, maximum)
           logger.debug('incoming packet refunded due to ilp reject', { peerId: info.id, amount, balance: balance.getValue().toString() })
 
           // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
@@ -99,6 +104,10 @@ export class BalanceRule extends Rule {
           return
         }
 
+        // TODO: Load sane defaults from connector config
+        const minimum = (info.balance && info.balance.minimum) ? info.balance.minimum : 0n
+        const maximum = (info.balance && info.balance.maximum) ? info.balance.maximum : 0n
+
         // We do nothing here (i.e. unlike for incoming packets) and wait until the packet is fulfilled
         // This means we always take the most conservative view of our balance with the upstream peer
         try {
@@ -111,7 +120,7 @@ export class BalanceRule extends Rule {
 
         if (ilp.res && isFulfill(ilp.res)) {
           // Decrease balance on prepare
-          balance.adjust(BigInt(-amount))
+          balance.adjust(BigInt(-amount), minimum, maximum)
           this.maybeSettle(peers.outgoing).catch()
           logger.debug('balance decreased due to outgoing ilp fulfill', { peerId: info.id, amount, balance: balance.getValue().toString() })
           // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance

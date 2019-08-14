@@ -1,6 +1,7 @@
 import { Rule } from '../types/rule'
 import { errorToIlpReject, isFulfill, isReject } from 'ilp-packet'
 import { log } from '../winston'
+import { SELF_PEER_ID } from '../constants'
 const logger = log.child({ component: 'error-handler-rule' })
 
 export interface ErrorHandlerRuleServices {
@@ -30,10 +31,10 @@ export class ErrorHandlerRule extends Rule {
             err = new Error('Non-object thrown: ' + e)
           }
           logger.error('Error thrown in incoming pipeline', { err })
-          ilp.res = errorToIlpReject(services.connector.getOwnAddress(), err)
+          const self = services.connector.getAddresses(SELF_PEER_ID)
+          ilp.res = errorToIlpReject(self.length > 0 ? self[0] : 'peer', err)
         }
       }
     })
   }
-
 }

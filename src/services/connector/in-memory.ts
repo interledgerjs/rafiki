@@ -8,7 +8,7 @@ import { CcpRouteControlRequest, CcpRouteUpdateRequest, CcpRouteControlResponse,
 import { CcpSender, CcpSenderService } from '../../protocols/ccp/ccp-sender'
 import { CcpReceiver, CcpReceiverService } from '../../protocols/ccp/ccp-receiver'
 import { PeerService } from '../peers'
-import { Connector } from '.'
+import { Connector, getRouteWeight } from '.'
 import { SELF_PEER_ID } from '../../constants'
 import { Route } from '../../models/Route'
 
@@ -45,7 +45,7 @@ export class InMemoryConnector implements Connector {
   public async load (knex: Knex) {
     const routes = await Route.query(knex)
     routes.forEach(entry => {
-      this.addRoute(entry.peerId, entry.targetPrefix)
+      this._addRoute(entry.peerId, entry.targetPrefix)
     })
   }
 
@@ -57,7 +57,23 @@ export class InMemoryConnector implements Connector {
     return this._ccpReceivers.getOrThrow(peerId).handleRouteUpdate(request)
   }
 
-  public async addPeer (peerId: string, relation: Relation, weight: number, isSender = false, isReceiver = false) {
+  public getPeerForAddress (destination: string): string {
+    return this._routingTable.nextHop(destination)
+  }
+
+  /**
+   * @returns string[] Array of addresses ordered by highest weighting first.
+   */
+  public getAddresses (peerId: string): string[] {
+    const peer = this._routeManager.getPeer(peerId)
+    return peer
+      ? peer['routes']['prefixes'].sort((a: string, b: string) => {
+        return peer['routes']['items'][b]['weight'] - peer['routes']['items'][a]['weight']
+      })
+      : []
+  }
+
+  private async _addPeer (peerId: string, relation: Relation, weight: number, isSender = false, isReceiver = false) {
     logger.info('adding peer', { peerId, relation })
     this._routeManager.addPeer(peerId, relation)
 
@@ -84,7 +100,7 @@ export class InMemoryConnector implements Connector {
           return this._peers.getOrThrow(peerId).client.send(data)
         },
         forwardingRoutingTable: this._routingTable.getForwardingRoutingTable(),
-        getOwnAddress: () => this.getOwnAddress(),
+        getOwnAddress: () => this._getOwnAddress(),
         getPeerRelation: (peerId: string): Relation => {
           const peer = this._routeManager.getPeer(peerId)
           if (!peer) throw new PeerNotFoundError(peerId)
@@ -106,12 +122,12 @@ export class InMemoryConnector implements Connector {
         throw e
       }
       logger.info('received ILDCP address from parent', { address: clientAddress })
-      this.addOwnAddress(clientAddress, weight || RelationWeights.parent)
+      this._addOwnAddress(clientAddress, weight || RelationWeights.parent)
     }
 
     // only add route for children. The rest are populated from route update.
     if (relation === 'child') {
-      const address = this.getOwnAddress() + '.' + peerId
+      const address = this._getOwnAddress() + '.' + peerId
       this._routeManager.addRoute({
         peer: peerId,
         prefix: address,
@@ -120,7 +136,7 @@ export class InMemoryConnector implements Connector {
     }
   }
 
-  public async removePeer (id: string): Promise<void> {
+  private async _removePeer (id: string): Promise<void> {
     logger.info('removing peer', { peerId: id })
     this._routeManager.removePeer(id)
     this._ccpReceivers.delete(id)
@@ -131,11 +147,7 @@ export class InMemoryConnector implements Connector {
     }
   }
 
-  public getPeerForAddress (destination: string): string {
-    return this._routingTable.nextHop(destination)
-  }
-
-  public addOwnAddress (address: string, weight: number = 500) {
+  private _addOwnAddress (address: string, weight: number = 500) {
     logger.info('setting own address', { address })
     this._routingTable.setOwnAddress(address) // Tricky: This needs to be here for now to append to path of forwarding routing table
     this._routeManager.addRoute({
@@ -146,39 +158,16 @@ export class InMemoryConnector implements Connector {
     })
   }
 
-  public getOwnAddress (): string {
-    const addresses = this.getOwnAddresses()
+  private _getOwnAddress (): string {
+    const addresses = this.getAddresses(SELF_PEER_ID)
     return addresses.length > 0 ? addresses[0] : 'unknown'
   }
 
-  /**
-   * @returns string[] Array of addresses ordered by highest weighting first.
-   */
-  public getAddresses (peerId: string): string[] {
-    const peer = this._routeManager.getPeer(peerId)
-    return peer
-      ? peer['routes']['prefixes'].sort((a: string, b: string) => {
-        return peer['routes']['items'][b]['weight'] - peer['routes']['items'][a]['weight']
-      })
-      : []
-  }
-
-  /**
-   * @returns string[] Array of addresses ordered by highest weighting first.
-   */
-  public getOwnAddresses (): string[] {
-    return this.getAddresses(SELF_PEER_ID)
-  }
-
-  public removeOwnAddress (address: string): void {
+  private _removeOwnAddress (address: string): void {
     this._routeManager.removeRoute(SELF_PEER_ID, address)
   }
 
-  public getPeerList () {
-    return this._routeManager.getPeerList()
-  }
-
-  public addRoute (peerId: string, prefix: string) {
+  private _addRoute (peerId: string, prefix: string) {
     logger.info('adding route', { prefix, peerId })
     const peer = this._routeManager.getPeer(peerId)
     if (!peer) {
@@ -193,29 +182,7 @@ export class InMemoryConnector implements Connector {
     })
   }
 
-  public removeRoute (peerId: string, prefix: string) {
+  private _removeRoute (peerId: string, prefix: string) {
     this._routeManager.removeRoute(peerId, prefix)
   }
-}
-
-function getRouteWeight (peerId: string): number {
-  let weight: number = 0
-  const peer = this._routeManager.getPeer(peerId)
-  if (peer) {
-    switch (peer.getRelation()) {
-      case('parent'):
-        weight += RelationWeights.parent
-        break
-      case('peer'):
-        weight += RelationWeights.peer
-        break
-      case('child'):
-        weight += RelationWeights.child
-        break
-      case('local'):
-        weight += RelationWeights.local
-        break
-    }
-  }
-  return weight
 }

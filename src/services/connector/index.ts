@@ -4,28 +4,36 @@ import {
   CcpRouteControlResponse,
   CcpRouteUpdateResponse
 } from 'ilp-protocol-ccp'
-import { PeerRelation } from '../../types'
+import { RelationWeights } from '../../types'
 
 export interface Connector {
   handleRouteControl: (peerId: string, request: CcpRouteControlRequest) => Promise<CcpRouteControlResponse>
 
   handleRouteUpdate: (peerId: string, request: CcpRouteUpdateRequest) => Promise<CcpRouteUpdateResponse>
 
-  addPeer: (peerId: string, relation: PeerRelation, weight: number, isSender: boolean, isReceiver: boolean) => Promise<void>
-
-  removePeer: (peerId: string) => Promise<void>
-
   getPeerForAddress (destination: string): string
 
-  addOwnAddress: (address: string, weight: number) => void
+  getAddresses (peerId: string): string[]
+}
 
-  getOwnAddress: () => string
-
-  getAddresses: (peerId: string) => string[]
-
-  removeOwnAddress: (address: string) => void
-
-  addRoute: (peerId: string, prefix: string) => void
-
-  removeRoute: (peerId: string, prefix: string) => void
+export function getRouteWeight (peerId: string): number {
+  let weight: number = 0
+  const peer = this._routeManager.getPeer(peerId)
+  if (peer) {
+    switch (peer.getRelation()) {
+      case('parent'):
+        weight += RelationWeights.parent
+        break
+      case('peer'):
+        weight += RelationWeights.peer
+        break
+      case('child'):
+        weight += RelationWeights.child
+        break
+      case('local'):
+        weight += RelationWeights.local
+        break
+    }
+  }
+  return weight
 }
