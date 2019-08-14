@@ -17,15 +17,14 @@ export class RateLimitRule extends Rule {
   _buckets = new Map<string, TokenBucket>()
   constructor () {
     super({
-      incoming: async ({ services, state: { ilp, peers } }, next) => {
-        let bucket = this._buckets.get(peers.incoming.id)
+      incoming: async ({ services, state: { ilp, peers: { incoming : { info } } } }, next) => {
+        let bucket = this._buckets.get(info.id)
         if (!bucket) {
-          bucket = createRateLimitBucketForPeer(peers.incoming)
-          this._buckets.set(peers.incoming.id, bucket)
+          bucket = createRateLimitBucketForPeer(info)
+          this._buckets.set(info.id, bucket)
         }
         if (!bucket.take()) {
-          logger.warn(`rate limited a packet`, { bucket, ilp, peer: peers.incoming })
-          services.stats.rateLimitedPackets.increment(peers.incoming, {})
+          logger.warn(`rate limited a packet`, { bucket, ilp, peer: info })
           throw new RateLimitedError('too many requests, throttling.')
         }
         await next()

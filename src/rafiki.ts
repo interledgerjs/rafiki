@@ -1,21 +1,27 @@
 import Koa, { ParameterizedContext, Middleware } from 'koa'
+import compose from 'koa-compose'
+import createRouter, { Joi } from 'koa-joi-router'
+import Knex from 'knex'
 import { Connector } from './services/connector'
-import { IlpState, ilpPacketMiddleware } from './koa/ilp-packet-middleware'
-import { PeerState, peerMiddleWare, defaultGetIncomingPeerId, defaultGetOutgoingPeerId } from './koa/peer-middleware'
-import getRawBody from 'raw-body'
+import { IlpState, ilpPacketMiddleware, IlpPacketMiddlewareOptions } from './koa/ilp-packet-middleware'
+import { PeerState, peerMiddleWare, defaultGetIncomingPeerId, defaultGetOutgoingPeerId, PeerMiddlewareOptions } from './koa/peer-middleware'
 import { PeerService } from './services/peers'
 import { AuthState } from './koa/auth-state'
-interface RafikiServices {
+import { Config, TokenService } from './services'
+import { InMemoryPeers } from './services/peers/in-memory';
+import { InMemoryConnector } from './services/connector/in-memory';
+import { CcpProtocol, IldcpProtocol, EchoProtocol } from './protocols';
+import { StatsRule, ThroughputRule, ValidateFulfillmentRule, BalanceRule, ErrorHandlerRule, ExpireRule, HeartbeatRule, MaxPacketAmountRule, RateLimitRule, ReduceExpiryRule } from './rules';
+import { ilpClientMiddleware } from './koa/ilp-client-middleware';
+import { tokenAuthMiddleware } from './koa/token-auth-middleware';
+export interface RafikiServices {
   connector: Connector
   peers: PeerService
 }
 
-interface RafikiAppConfig extends Partial<RafikiServices> {}
+export interface RafikiAppConfig extends Partial<RafikiServices> {}
 
-interface RafikiIlpConfig {
-  getIncomingPeerId?: (ctx: RafikiContext) => string
-  getOutgoingPeerId?: (ctx: RafikiContext) => string
-}
+export type RafikiIlpConfig = IlpPacketMiddlewareOptions & PeerMiddlewareOptions
 
 export type RafikiState = IlpState & PeerState & AuthState
 export type RafikiContextMixin = { services: RafikiServices }
@@ -28,10 +34,12 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
   private _connector?: Connector
   private _peers?: PeerService
 
-  constructor ({ connector, peers }: Partial<RafikiServices>) {
+  constructor (config?: RafikiAppConfig) {
     super()
-    this._connector = connector
-    this._peers = peers
+
+    this._connector = (config && config.connector) ? config.connector : undefined
+    this._peers = (config && config.peers) ? config.peers : undefined
+
     const peersOrThrow = () => {
       if (this._peers) return this._peers
       throw new Error('No peers service provided to the app')
@@ -40,6 +48,8 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
       if (this._connector) return this._connector
       throw new Error('No connector service provided to the app')
     }
+
+    // Set global middleware that exposes services
     this.use((ctx: ParameterizedContext<RafikiState, RafikiContextMixin>, next: () => Promise<any>) => {
       ctx.services = {
         get peers () {
@@ -52,24 +62,116 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
     })
   }
 
-  public connector (connector: Connector) {
+  public get connector () {
+    return this._connector
+  }
+
+  public set connector (connector: Connector | undefined) {
     this._connector = connector
   }
 
-  public peers (peers: PeerService) {
+  public get peers () {
+    return this._peers
+  }
+
+  public set peers (peers: PeerService | undefined) {
     this._peers = peers
   }
 
-  public useIlp ({ getIncomingPeerId, getOutgoingPeerId }: RafikiIlpConfig) {
-
-    this.use(ilpPacketMiddleware({ getRawBody }))
-
-    // TODO is there a better way to do this? Problem is as both are optional you cant just pass them in as an object
-    const peerMiddlewareConfig = {
-      getIncomingPeerId: getIncomingPeerId ? getIncomingPeerId : defaultGetIncomingPeerId,
-      getOutgoingPeerId: getOutgoingPeerId ? getOutgoingPeerId : defaultGetOutgoingPeerId
-    }
-
-    this.use(peerMiddleWare(peerMiddlewareConfig))
+  public useIlp (config?: RafikiIlpConfig) {
+    this.use(ilpPacketMiddleware(config))
+    this.use(peerMiddleWare(config))
   }
+}
+
+export function createApp (config: Config, { connector, peers, tokens }: RafikiServices & { tokens: TokenService}) {
+
+  connector.setGlobalPrefix(config.env === 'production' ? 'g' : 'test')
+
+  const app = new Rafiki({
+    peers,
+    connector
+  })
+
+  app.use(tokenAuthMiddleware(tokens.introspect))
+
+  app.useIlp()
+
+  // TODO: Use config to setup rules
+  const rules = {
+    'balance': new BalanceRule(),
+    'error-handler':  new ErrorHandlerRule(),
+    'expire': new ExpireRule(),
+    'heartbeat': new HeartbeatRule({
+      heartbeatInterval: 5 * 60 * 1000,
+      onFailedHeartbeat: (peerId: string) => {
+        // TODO: Handle failed heartbeat
+      },
+      onSuccessfulHeartbeat: (peerId: string) => {
+        // TODO: Handle successful heartbeat
+      }
+    }),
+    'max-packet-amount': new MaxPacketAmountRule(),
+    'rate-limit': new RateLimitRule(),
+    'reduce-expiry': new ReduceExpiryRule({
+      maxHoldWindow: this._config.maxHoldWindow,
+      minIncomingExpirationWindow: 0.5 * this._config.minExpirationWindow,
+      minOutgoingExpirationWindow: 0.5 * this._config.minExpirationWindow
+    }),
+    'stats': new StatsRule(),
+    'throughput': new ThroughputRule(),
+    'validate-fulfillment': new ValidateFulfillmentRule()
+  }
+
+  const ccp = new CcpProtocol()
+  const ildcp = new IldcpProtocol()
+  const echo = new EchoProtocol({ minMessageWindow: 1500 })
+
+  const incoming = compose([
+    // Incoming Rules
+    rules['stats'].incoming,
+    rules['heartbeat'].incoming,
+    rules['error-handler'].incoming,
+    rules['max-packet-amount'].incoming,
+    rules['rate-limit'].incoming,
+    rules['throughput'].incoming,
+    rules['reduce-expiry'].incoming,
+    rules['balance'].incoming,
+
+    // Connector
+    ildcp.incoming,
+    ccp.incoming
+  ])
+
+  const outgoing = compose([
+    // Connector
+    echo.outgoing,
+    ccp.outgoing,
+    ildcp.outgoing,
+
+    // Outgoing Rules
+    rules['stats'].outgoing,
+    rules['balance'].outgoing,
+    rules['throughput'].incoming,
+    rules['reduce-expiry'].outgoing,
+    rules['alert'].outgoing,
+    rules['expire'].outgoing,
+    rules['validate-fulfillment'].outgoing,
+
+    // Send outgoing packets
+    ilpClientMiddleware()
+  ])
+
+  const router = createRouter()
+  router.route({
+    method: 'post',
+    path: '/ilp',
+    handler: compose([
+      incoming,
+      outgoing
+    ])
+  })
+
+  app.use(router.middleware())
+  return app
 }

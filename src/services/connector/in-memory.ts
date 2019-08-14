@@ -1,4 +1,5 @@
 import { IncomingRoute, RouteManager, Router as RoutingTable } from 'ilp-routing'
+import Knex from 'knex'
 import { fetch as ildcpFetch } from 'ilp-protocol-ildcp'
 import { Relation, RelationWeights, PeerInfo } from '../../types'
 import { log } from '../../winston'
@@ -8,8 +9,8 @@ import { CcpSender, CcpSenderService } from '../../protocols/ccp/ccp-sender'
 import { CcpReceiver, CcpReceiverService } from '../../protocols/ccp/ccp-receiver'
 import { PeerService } from '../peers'
 import { Connector } from '.'
-
-export const SELF_PEER_ID = 'self'
+import { SELF_PEER_ID } from '../../constants'
+import { Route } from '../../models/Route';
 
 const logger = log.child({ component: 'in-memory-connector' })
 
@@ -28,6 +29,13 @@ export class InMemoryConnector implements Connector {
     //     logger.error(e)
     //   })
     // })
+  }
+
+  public async load (knex: Knex) {
+    const routes = await Route.query(knex)
+    routes.forEach(entry => {
+      this.addRoute(entry.peerId, entry.targetPrefix)
+    })
   }
 
   public async handleRouteControl (peerId: string, request: CcpRouteControlRequest): Promise<CcpRouteControlResponse> {

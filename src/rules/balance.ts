@@ -4,7 +4,7 @@ import { isFulfill } from 'ilp-packet'
 import { Stats } from '../services/stats'
 import { log } from '../winston'
 import { Balance } from '../types'
-import { AppServices } from '../services'
+import { Peer } from '../services/peers'
 const logger = log.child({ component: 'in-memory-balance-rule' })
 
 export interface BalanceRuleServices {
@@ -25,8 +25,7 @@ export class BalanceRule extends Rule {
     super({
       incoming: async ({ services, state: { peers, ilp } }, next) => {
         const { amount } = ilp.req
-        const peer = peers.incoming
-        const balance = services.balances.getOrThrow(peer.id)
+        const { info, balance } = peers.incoming
 
         // TODO - Move to dedicated middleware
         // Handle peer.settle
@@ -55,7 +54,7 @@ export class BalanceRule extends Rule {
 
         // Increase balance on prepare
         balance.adjust(BigInt(amount))
-        logger.debug('balance increased due to incoming ilp prepare', { peerId: peer.id, amount, balance: balance.getValue().toString() })
+        logger.debug('balance increased due to incoming ilp prepare', { peerId: info.id, amount, balance: balance.getValue().toString() })
 
         // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
         // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
@@ -65,7 +64,7 @@ export class BalanceRule extends Rule {
         } catch (err) {
           // Refund on error
           balance.adjust(BigInt(-amount))
-          logger.debug('incoming packet refunded due to error', { peerId: peer.id, amount, balance: balance.getValue().toString() })
+          logger.debug('incoming packet refunded due to error', { peerId: info.id, amount, balance: balance.getValue().toString() })
           // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
           // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
           // this.stats.incomingDataPacketValue.increment(this.peer, { result: 'failed' }, + amount)
@@ -78,17 +77,16 @@ export class BalanceRule extends Rule {
         } else {
           // Refund on reject
           balance.adjust(BigInt(-amount))
-          logger.debug('incoming packet refunded due to ilp reject', { peerId: peer.id, amount, balance: balance.getValue().toString() })
+          logger.debug('incoming packet refunded due to ilp reject', { peerId: info.id, amount, balance: balance.getValue().toString() })
 
           // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
           // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
           // this.stats.incomingDataPacketValue.increment(peer, { result: 'rejected' }, + amount)
         }
       },
-      outgoing: async ({ services, state: { peers, ilp } }, next) => {
+      outgoing: async ({ state: { peers, ilp } }, next) => {
         const { amount, destination } = ilp.req
-        const peer = peers.outgoing
-        const balance = services.balances.getOrThrow(peer.id)
+        const { info, balance } = peers.outgoing
 
         if (destination.startsWith('peer.settle')) {
           await next()
@@ -106,7 +104,7 @@ export class BalanceRule extends Rule {
         try {
           await next()
         } catch (err) {
-          logger.debug('outgoing packet not applied due to error', { peerId: peer.id, amount, balance: balance.getValue().toString() })
+          logger.debug('outgoing packet not applied due to error', { peerId: info.id, amount, balance: balance.getValue().toString() })
           // this.stats.outgoingDataPacketValue.increment(peer, { result: 'failed' }, + amount)
           throw err
         }
@@ -115,12 +113,12 @@ export class BalanceRule extends Rule {
           // Decrease balance on prepare
           balance.adjust(BigInt(-amount))
           this.maybeSettle(peers.outgoing).catch()
-          logger.debug('balance decreased due to outgoing ilp fulfill', { peerId: peer.id, amount, balance: balance.getValue().toString() })
+          logger.debug('balance decreased due to outgoing ilp fulfill', { peerId: info.id, amount, balance: balance.getValue().toString() })
           // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
           // this.stats.balance.setValue(peer, {}, balance.getValue().toNumber())
           // this.stats.outgoingDataPacketValue.increment(peer, { result: 'fulfilled' }, + amount)
         } else {
-          logger.debug('outgoing packet not applied due to ilp reject', { peerId: peer.id, amount, balance: balance.getValue().toString() })
+          logger.debug('outgoing packet not applied due to ilp reject', { peerId: info.id, amount, balance: balance.getValue().toString() })
           // this.stats.outgoingDataPacketValue.increment(peer, { result: 'rejected' }, + amount)
         }
       }
@@ -153,7 +151,7 @@ export class BalanceRule extends Rule {
   }
 
   // TODO = Need to rethink this, possibly move into the settlement engine?
-  private async maybeSettle ({ peer, balance }): Promise<void> {
+  private async maybeSettle ({ info, balance }: Peer): Promise<void> {
     if (!settlement || !settlementEngine) {
       logger.debug('Not deciding whether to settle for accountId=' + peer.id + '. No settlement engine configured.')
       return

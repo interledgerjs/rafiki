@@ -1,9 +1,9 @@
-import { IlpPrepare, IlpReply } from 'ilp-packet'
+import { IlpPrepare, IlpReply, serializeIlpPrepare } from 'ilp-packet'
 import { Rule } from '../types/rule'
 import { Reader, Writer } from 'oer-utils'
 import { InvalidPacketError } from 'ilp-packet/dist/src/errors'
 import { log } from '../winston'
-import { SELF_PEER_ID } from '../services/connector/in-memory';
+import { SELF_PEER_ID } from '../constants'
 const logger = log.child({ component: 'echo-protocol' })
 
 const MINIMUM_ECHO_PACKET_DATA_LENGTH = 16 + 1
@@ -19,11 +19,12 @@ export interface EchoProtocolServices {
 export class EchoProtocol extends Rule {
   constructor ({ minMessageWindow }: EchoProtocolServices) {
     super({
-      outgoing: async ({ state: { ilp, peers } }) => {
+      outgoing: async ({ state: { ilp, peers: { outgoing : { info, client } } } }) => {
 
         const { req: { data, amount, expiresAt, executionCondition } } = ilp
 
-        if (peers.outgoing.id === SELF_PEER_ID) {
+        // TODO : Will this work? Is the self peer in the peers service or just the connector
+        if (info.id === SELF_PEER_ID) {
 
           if (data.length < MINIMUM_ECHO_PACKET_DATA_LENGTH) throw new InvalidPacketError('packet data too short for echo request. length=' + data.length)
           if (!data.slice(0, 16).equals(ECHO_DATA_PREFIX)) throw new InvalidPacketError('packet data does not start with ECHO prefix.')
@@ -40,16 +41,13 @@ export class EchoProtocol extends Rule {
 
             logger.verbose('responding to echo packet', { sourceAddress })
 
-            // TODO - Get handle on outgoing pipeline for this peer
-            const outgoing: IlpPrepare = {
+            ilp.rawRes = await client.send(serializeIlpPrepare({
               amount: amount,
               destination: sourceAddress,
               executionCondition: executionCondition,
               expiresAt: new Date(Number(expiresAt) - minMessageWindow),
               data: writer.getBuffer()
-            }
-            ilp.res = {} as IlpReply
-
+            }))
           } else {
             logger.error('received unexpected echo response.')
             throw new Error('received unexpected echo response.')

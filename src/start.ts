@@ -3,15 +3,18 @@
 import * as winston from 'winston'
 import Knex from 'knex'
 import { App } from './app'
-import { AdminApi, KnexTokenService, RemoteTokenService, Stats, Alerts } from './services'
+import { AdminApi } from './services'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { tokenAuthMiddleware } from './koa/token-auth-middleware'
 import { Config } from './index'
-import { AxiosHttpClientService } from './services/client/axios';
-import { KnexPeerInfoService } from './services/peer-info/knex';
-import { InMemoryBalanceService } from './services/balance/in-memory';
-import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet';
+import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
 import { STATIC_CONDITION } from './constants'
+import { InMemoryPeer, InMemoryPeers } from './services/peers/in-memory';
+import { InMemoryConnector } from './services/connector/in-memory';
+import { createApp } from './rafiki';
+import { RemoteTokenService } from './services/tokens/remote';
+import { KnexTokenService } from './services/tokens/knex';
+import { Server } from 'net';
 
 // Logging
 // tslint:disable-next-line
@@ -42,15 +45,16 @@ config.loadFromEnv()
 const knex = Knex(config.databaseConnectionString)
 
 // Remote vs Local token auth
-const tokenService = config.authProviderUrl !== '' ? new RemoteTokenService(config.authProviderUrl) : new KnexTokenService(knex)
-const clients = new AxiosHttpClientService()
-const peers = new KnexPeerInfoService(knex)
-const balances = new InMemoryBalanceService()
-const stats = new Stats()
-const alerts = new Alerts()
+const tokens = config.authProviderUrl !== '' ? new RemoteTokenService(config.authProviderUrl) : new KnexTokenService(knex)
+const peers = new InMemoryPeers()
+const connector = new InMemoryConnector(peers)
 
 // Create Rafiki
-const app = new App(config, tokenAuthMiddleware(tokenService.introspect), knex)
+const app = createApp(config, {
+  tokens,
+  peers,
+  connector
+})
 
 // Create Admin API
 const adminApi = new AdminApi({
@@ -58,8 +62,8 @@ const adminApi = new AdminApi({
   port: config.adminApiPort
 }, {
   app,
-  tokenService,
-  middleware:  (config.adminApiAuth) ? tokenAuthMiddleware(tokenService.introspect, token => { return token.sub === 'self' }) : undefined
+  tokens,
+  middleware:  (config.adminApiAuth) ? tokenAuthMiddleware(tokens.introspect, token => { return token.sub === 'self' }) : undefined
 })
 
 // Create Settlement API
@@ -67,9 +71,9 @@ const settlementAdminApi = new SettlementAdminApi({
   host: config.settlementAdminApiHost,
   port: config.settlementAdminApiPort
 }, {
-  getAccountBalance: (id: string) => balances.getOrThrow(id).toJSON() ,
+  getAccountBalance: (id: string) => peers.getOrThrow(id).balance.toJSON() ,
   updateAccountBalance: (id: string, amountDiff: bigint, scale: number) => {
-    const balance = balances.getOrThrow(id)
+    const balance = peers.getOrThrow(id).balance
     const scaleDiff = balance.scale - scale
     // TODO: update to check whether scaledAmountDiff is an integer
     if (scaleDiff < 0) {
@@ -90,7 +94,7 @@ const settlementAdminApi = new SettlementAdminApi({
       data: message
     })
 
-    const ilpReply = deserializeIlpReply(await clients.getOrThrow(id).send(packet))
+    const ilpReply = deserializeIlpReply(await peers.getOrThrow(id).client.send(packet))
 
     if (isReject(ilpReply)) {
       throw new Error('IlpPacket to settlement engine was rejected')
@@ -100,11 +104,22 @@ const settlementAdminApi = new SettlementAdminApi({
   }
 })
 
+let server: Server
 export const gracefulShutdown = async () => {
   winston.debug('shutting down.')
-  await app.close()
   adminApi.shutdown()
   settlementAdminApi.shutdown()
+  if (server) {
+    return new Promise((resolve, reject) => {
+      server.close((err?: Error) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        resolve()
+      })
+    })
+  }
   winston.debug('completed graceful shutdown.')
 }
 export const start = async () => {
@@ -144,7 +159,14 @@ export const start = async () => {
     }
   }
 
-  await app.listen()
+  await peers.load(knex)
+  await connector.load(knex)
+
+  // config loads ilpAddress as 'unknown' by default
+  if (config.ilpAddress && config.ilpAddress !== 'unknown') {
+    connector.addOwnAddress(config.ilpAddress)
+  }
+  server = app.listen(config.httpServerPort)
   adminApi.listen()
   settlementAdminApi.listen()
   winston.info('🐒 has 🚀. Get ready for 🍌🍌🍌🍌🍌')

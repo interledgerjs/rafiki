@@ -16,11 +16,11 @@ export class ThroughputRule extends Rule {
   _outgoingBuckets = new Map<string,TokenBucket>()
   constructor () {
     super({
-      incoming: async ({ state: { ilp, peers } }, next) => {
-        let incomingBucket = this._incomingBuckets.get(peers.incoming.id)
+      incoming: async ({ state: { ilp, peers: { incoming : { info } } } }, next) => {
+        let incomingBucket = this._incomingBuckets.get(info.id)
         if (!incomingBucket) {
-          incomingBucket = createThroughputLimitBucketsForPeer(peers.incoming, 'incoming')
-          if (incomingBucket) this._incomingBuckets.set(peers.incoming.id, incomingBucket)
+          incomingBucket = createThroughputLimitBucketsForPeer(info, 'incoming')
+          if (incomingBucket) this._incomingBuckets.set(info.id, incomingBucket)
         }
         if (incomingBucket) {
           if (!incomingBucket.take(BigInt(ilp.req.amount))) {
@@ -30,11 +30,11 @@ export class ThroughputRule extends Rule {
         }
         await next()
       },
-      outgoing: async ({ state: { ilp, peers } }, next) => {
-        let outgoingBucket = this._outgoingBuckets.get(peers.outgoing.id)
+      outgoing: async ({ state: { ilp, peers: { outgoing : { info } } } }, next) => {
+        let outgoingBucket = this._outgoingBuckets.get(info.id)
         if (!outgoingBucket) {
-          outgoingBucket = createThroughputLimitBucketsForPeer(peers.outgoing, 'outgoing')
-          if (outgoingBucket) this._outgoingBuckets.set(peers.outgoing.id, outgoingBucket)
+          outgoingBucket = createThroughputLimitBucketsForPeer(info, 'outgoing')
+          if (outgoingBucket) this._outgoingBuckets.set(info.id, outgoingBucket)
         }
         if (outgoingBucket) {
           if (!outgoingBucket.take(ilp.outgoingAmount)) {

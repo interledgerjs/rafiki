@@ -16,7 +16,7 @@ export class MaxPacketAmountRule extends Rule {
   constructor () {
     super({
       incoming: async ({ state: { ilp, peers } }, next) => {
-        const { maxPacketAmount } = peers.incoming.rules
+        const { maxPacketAmount } = peers.incoming.info.rules
         if (maxPacketAmount.maxPacketAmount && isPrepare(ilp.req)) {
           const amount = BigInt(ilp.req.amount)
           if (amount > maxPacketAmount.maxPacketAmount) {

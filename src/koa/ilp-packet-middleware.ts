@@ -3,8 +3,9 @@
  */
 import { deserializeIlpPrepare, serializeIlpReply, IlpPrepare, IlpReply, deserializeIlpReply } from 'ilp-packet'
 import { Readable } from 'stream'
-import { RafikiContext } from '../rafiki';
+import { RafikiContext } from '../rafiki'
 import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from '../lib/utils'
+import getRawBody from 'raw-body'
 
 const CONTENT_TYPE = 'application/octet-stream'
 
@@ -22,7 +23,7 @@ export interface IlpState {
 }
 
 export interface IlpPacketMiddlewareOptions {
-  getRawBody: (req: Readable) => Promise<Buffer>
+  getRawBody?: (req: Readable) => Promise<Buffer>
 }
 
 /**
@@ -34,13 +35,15 @@ export interface IlpPacketMiddlewareOptions {
  * @param ctx Koa context
  * @param next Next middleware context
  */
-export function ilpPacketMiddleware ({ getRawBody }: IlpPacketMiddlewareOptions) {
+export function ilpPacketMiddleware (config?: IlpPacketMiddlewareOptions) {
+
+  const _getRawBody = (config && config.getRawBody) ? config.getRawBody : getRawBody
 
   return async function ilpPacket (ctx: RafikiContext, next: () => Promise<any>) {
 
     ctx.assert(ctx.request.type === CONTENT_TYPE, 400, 'Expected Content-Type of ' + CONTENT_TYPE)
 
-    const _rawReq = await getRawBody(ctx.req)
+    const _rawReq = await _getRawBody(ctx.req)
     const _req = deserializeIlpPrepare(_rawReq)
     let _res: IlpReply | undefined = undefined
     let _rawRes: Buffer | undefined = undefined

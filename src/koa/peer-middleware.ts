@@ -12,8 +12,8 @@ export interface PeerState {
 }
 
 export interface PeerMiddlewareOptions {
-  getIncomingPeerId: (ctx: RafikiContext) => string
-  getOutgoingPeerId: (ctx: RafikiContext) => string
+  getIncomingPeerId?: (ctx: RafikiContext) => string
+  getOutgoingPeerId?: (ctx: RafikiContext) => string
 }
 
 export const defaultGetIncomingPeerId = (ctx: RafikiContext): string => {
@@ -31,7 +31,10 @@ const defaultMiddlewareOptions: PeerMiddlewareOptions = {
   getOutgoingPeerId: defaultGetOutgoingPeerId
 }
 
-export function peerMiddleWare ({ getIncomingPeerId, getOutgoingPeerId }: PeerMiddlewareOptions = defaultMiddlewareOptions) {
+export function peerMiddleWare (config: PeerMiddlewareOptions = defaultMiddlewareOptions) {
+
+  const getIncomingPeerId = (config && config.getIncomingPeerId) ? config.getIncomingPeerId : defaultGetIncomingPeerId
+  const getOutgoingPeerId = (config && config.getOutgoingPeerId) ? config.getOutgoingPeerId : defaultGetOutgoingPeerId
 
   return async function peer (ctx: RafikiContext, next: () => Promise<any>) {
 

@@ -60,27 +60,19 @@ export class App {
     this._config = opts
     this._peers = new InMemoryPeers()
     this._connector = new InMemoryConnector(this._peers)
-    // TODO: Pass these in?
-
-    this._app = new Rafiki({})
-    this._app.use(tokenAuthMiddleware(introspect))
-  
-    // Create connector
     this._connector.setGlobalPrefix(this._config.env === 'production' ? 'g' : 'test')
 
-    const peer = peerMiddleWare({
-      // Extract incoming peerId from auth and load state from connector
-      getIncomingPeerId: (ctx: RafikiContext<AuthState>) => {
-        ctx.assert(ctx.state.user, 401)
-        return ctx.state.user
-      },
-      // Get outgoing peerId by querying connector routing table
-      getOutgoingPeerId: (ctx: RafikiContext<{}>) => {
-        ctx.assert(ctx.state.ilp.req.destination, 500)
-        return this._connector.getPeerForAddress(ctx.state.ilp.req.destination)
-      }
+    this._app = new Rafiki({
+
     })
-    const ilpPacket = ilpPacketMiddleware({ getRawBody })
+
+    this._app.use(tokenAuthMiddleware(introspect))
+
+      // Add any imported middleware
+    this._app.use(koaMiddleware)
+
+    this._app.useIlp()
+
     const rules = {
       'balance': new BalanceRule(),
       'error-handler':  new ErrorHandlerRule(),
@@ -106,24 +98,11 @@ export class App {
       'validate-fulfillment': new ValidateFulfillmentRule()
     }
 
-    const ccp = new CcpProtocol(this._services, this._connector)
-    const ildcp = new IldcpProtocol(this._services, {
-      getOwnAddress: () => this._connector.getOwnAddress()
-    })
-    const echo = new EchoProtocol(this._services, {
-      minMessageWindow: 1500 // TODO: Configure
-    })
+    const ccp = new CcpProtocol()
+    const ildcp = new IldcpProtocol()
+    const echo = new EchoProtocol({ minMessageWindow: 1500 })
 
     const incoming = compose([
-      // Add any imported middleware
-      koaMiddleware,
-
-      // Add peer info to context
-      peer,
-
-      // Serialize/Deserialize ILP packets
-      ilpPacket,
-
       // Incoming Rules
       rules['stats'].incoming,
       rules['heartbeat'].incoming,
@@ -155,7 +134,7 @@ export class App {
       rules['validate-fulfillment'].outgoing,
 
       // Send outgoing packets
-      ilpClientMiddleware(this._services)
+      ilpClientMiddleware()
     ])
 
     const router = createRouter()
