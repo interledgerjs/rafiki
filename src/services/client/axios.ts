@@ -7,7 +7,6 @@ export class AxiosClient implements Client {
   readonly keepAliveAgent: Agent
 
   constructor (private _url: string, private _config: AxiosRequestConfig) {
-    // TODO just using keepAlive defaults for now
     this.keepAliveAgent = new Agent({ keepAlive: true })
     this.axiosInstance = Axios.create({
       baseURL: _url,

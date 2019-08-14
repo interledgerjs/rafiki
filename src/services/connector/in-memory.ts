@@ -21,12 +21,14 @@ export class InMemoryConnector implements Connector {
   _ccpReceivers: CcpReceiverService = new CcpReceiverService()
 
   constructor (private _peers: PeerService) {
+    // TODO how do we handle the self peer?
+    // this._routeManager.addPeer(SELF_PEER_ID, 'local')
     // Added
     this._peers.added.subscribe(async (peer: PeerInfo) => {
       const isSender = (peer.CcpConfig && peer.CcpConfig.isSender) ? peer.CcpConfig.isSender : false
       const isReceiver = (peer.CcpConfig && peer.CcpConfig.isReceiver) ? peer.CcpConfig.isReceiver : false
       const routingWeight = peer.relationWeight || 0
-      await this.addPeer(peer.id, peer.relation, routingWeight, isSender, isReceiver)
+      await this._addPeer(peer.id, peer.relation, routingWeight, isSender, isReceiver)
     })
 
     // Updated
@@ -37,9 +39,8 @@ export class InMemoryConnector implements Connector {
 
     // Removed
     this._peers.deleted.subscribe(async (peer: PeerInfo) => {
-      await this.removePeer(peer.id)
+      await this._removePeer(peer.id)
     })
-    // this._routeManager.addPeer(SELF_PEER_ID, 'local')
   }
 
   public async load (knex: Knex) {
@@ -78,7 +79,8 @@ export class InMemoryConnector implements Connector {
     this._routeManager.addPeer(peerId, relation)
 
     if (isReceiver) {
-      logger.verbose('creating CCP receiver for peer', { peerId })
+      // TODO This needs to be cleaned up.
+      logger.info('creating CCP receiver for peer', { peerId })
       const receiver = new CcpReceiver({
         peerId,
         sendData: async (data: Buffer) => {
@@ -89,11 +91,11 @@ export class InMemoryConnector implements Connector {
         getRouteWeight
       })
       this._ccpReceivers.set(peerId, receiver)
-      await receiver.sendRouteControl()
     }
 
     if (isSender) {
-      logger.verbose('creating CCP sender for peer', { peerId })
+      // TODO This needs to be cleaned up.
+      logger.info('creating CCP sender for peer', { peerId })
       const sender = new CcpSender({
         peerId,
         sendData: async (data: Buffer) => {
