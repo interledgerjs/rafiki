@@ -1,8 +1,6 @@
 import { RafikiMiddleware, RafikiContext } from '../rafiki'
 
 export interface RuleFunctions {
-  startup?: (ctx: RafikiContext) => Promise<void>
-  shutdown?: (ctx: RafikiContext) => Promise<void>
   incoming?: RafikiMiddleware
   outgoing?: RafikiMiddleware
 }
@@ -11,16 +9,10 @@ const emptyMiddleware: RafikiMiddleware = async (ctx: RafikiContext, next) => { 
 
 export class Rule {
 
-  private _incoming: RafikiMiddleware = emptyMiddleware
-  private _outgoing: RafikiMiddleware = emptyMiddleware
+  readonly _incoming: RafikiMiddleware = emptyMiddleware
+  readonly _outgoing: RafikiMiddleware = emptyMiddleware
 
-  constructor ({ startup, shutdown, incoming, outgoing }: RuleFunctions) {
-    if (startup) {
-      this._startup = startup
-    }
-    if (shutdown) {
-      this._shutdown = shutdown
-    }
+  constructor ({ incoming, outgoing }: RuleFunctions) {
     if (incoming) {
       this._incoming = incoming
     }
@@ -29,28 +21,12 @@ export class Rule {
     }
   }
 
-  protected _startup: (ctx: RafikiContext) => Promise<void> = async () => {
-    return
-  }
-
-  protected _shutdown: (ctx: RafikiContext) => Promise<void> = async () => {
-    return
-  }
-
   protected _processIncoming: RafikiMiddleware = async (ctx, next) => {
     await next()
   }
 
   protected _processOutgoing: RafikiMiddleware = async (ctx, next) => {
     await next()
-  }
-
-  public async startup (ctx: RafikiContext): Promise<void> {
-    return this._startup(ctx)
-  }
-
-  public async shutdown (ctx: RafikiContext): Promise<void> {
-    return this._shutdown(ctx)
   }
 
   public get incoming () { return this._incoming }

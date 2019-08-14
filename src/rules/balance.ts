@@ -1,9 +1,7 @@
-import { Rule } from '../types/rule'
-import { PeerInfo } from '../types/peer'
+import { Rule, PeerInfo, Balance } from '../types'
 import { isFulfill } from 'ilp-packet'
-import { Stats } from '../services/stats'
+import { Stats } from '../services'
 import { log } from '../winston'
-import { Balance } from '../types'
 import { Peer } from '../services/peers'
 const logger = log.child({ component: 'in-memory-balance-rule' })
 
@@ -55,7 +53,6 @@ export class BalanceRule extends Rule {
         // TODO: Load sane defaults from connector config
         const minimum = (info.balance && info.balance.minimum) ? info.balance.minimum : 0n
         const maximum = (info.balance && info.balance.maximum) ? info.balance.maximum : 0n
-
 
         // Increase balance on prepare
         balance.adjust(BigInt(amount), minimum, maximum)
@@ -141,47 +138,29 @@ export class BalanceRule extends Rule {
     // }
   }
 
-  protected _startup = async () => {
-    // TODO: Dedicated middleware
-    // if (this.settlementEngineInterface) await this.settlementEngineInterface.addAccount(this.peer.id)
-
-    // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
-    // this.stats.balance.setValue(this.peer, {}, this.balance.getValue())
-    return
-  }
-
-  protected _shutdown = async () => {
-    // TODO: Dedicated middleware
-    // if (this.settlementEngineInterface) await this.settlementEngineInterface.removeAccount(this.peer.id)
-  }
-
-  getStatus () {
-    return this.balance.toJSON()
-  }
-
-  // TODO = Need to rethink this, possibly move into the settlement engine?
+  // TODO = Create settlement Service
   private async maybeSettle ({ info, balance }: Peer): Promise<void> {
-    if (!settlement || !settlementEngine) {
-      logger.debug('Not deciding whether to settle for accountId=' + peer.id + '. No settlement engine configured.')
-      return
-    }
-
-    const settleTo: bigint = settlement.settleTo
-    const settleThreshold: bigint = settlement.settleThreshold
-    logger.debug('deciding whether to settle for accountId=' + peer.id, { balance: balance.getValue().toString(), bnSettleThreshold: settleThreshold ? settleThreshold.toString() : 'undefined' })
-    const settle = settleThreshold && settleThreshold > balance.getValue()
-    if (!settle) return
-
-    const settleAmount = settleTo - balance.getValue()
-    logger.debug('settlement triggered for accountId=' + peer.id, { balance: balance.getValue().toString(), settleAmount: settleAmount.toString() })
-
-    try {
-      await settlementEngine.sendSettlement(peer.id, settleAmount, peer.assetScale)
-      balance.adjust(settleAmount)
-      logger.debug('balance for accountId=' + peer.id + ' increased due to outgoing settlement', { settleAmount: settleAmount.toString(), newBalance: balance.getValue().toString() })
-    } catch (error) {
-      logger.error('Could not complete settlement for accountId=' + peer.id, { scale: peer.assetScale, balance: balance.getValue().toString(), settleAmount: settleAmount.toString(), error: error.message })
-    }
+    // if (!settlement || !settlementEngine) {
+    //   logger.debug('Not deciding whether to settle for accountId=' + peer.id + '. No settlement engine configured.')
+    //   return
+    // }
+    //
+    // const settleTo: bigint = settlement.settleTo
+    // const settleThreshold: bigint = settlement.settleThreshold
+    // logger.debug('deciding whether to settle for accountId=' + peer.id, { balance: balance.getValue().toString(), bnSettleThreshold: settleThreshold ? settleThreshold.toString() : 'undefined' })
+    // const settle = settleThreshold && settleThreshold > balance.getValue()
+    // if (!settle) return
+    //
+    // const settleAmount = settleTo - balance.getValue()
+    // logger.debug('settlement triggered for accountId=' + peer.id, { balance: balance.getValue().toString(), settleAmount: settleAmount.toString() })
+    //
+    // try {
+    //   await settlementEngine.sendSettlement(peer.id, settleAmount, peer.assetScale)
+    //   balance.adjust(settleAmount)
+    //   logger.debug('balance for accountId=' + peer.id + ' increased due to outgoing settlement', { settleAmount: settleAmount.toString(), newBalance: balance.getValue().toString() })
+    // } catch (error) {
+    //   logger.error('Could not complete settlement for accountId=' + peer.id, { scale: peer.assetScale, balance: balance.getValue().toString(), settleAmount: settleAmount.toString(), error: error.message })
+    // }
   }
 
 }

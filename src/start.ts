@@ -46,7 +46,10 @@ const knex = Knex(config.databaseConnectionString)
 // Remote vs Local token auth
 const tokens = config.authProviderUrl !== '' ? new RemoteTokenService(config.authProviderUrl) : new KnexTokenService(knex)
 const peers = new InMemoryPeers()
-const connector = new InMemoryConnector(peers, config.env === 'production' ? 'g' : 'test')
+const connector = new InMemoryConnector(peers, {
+  globalPrefix: config.env === 'production' ? 'g' : 'test',
+  ilpAddress: config.ilpAddress
+})
 
 // Create Rafiki
 const app = createApp(config, {
@@ -157,13 +160,10 @@ export const start = async () => {
     }
   }
 
+  // Load services from persistent datastores
   await peers.load(knex)
   await connector.load(knex)
 
-  // config loads ilpAddress as 'unknown' by default
-  if (config.ilpAddress && config.ilpAddress !== 'unknown') {
-    connector.addOwnAddress(config.ilpAddress)
-  }
   server = app.listen(config.httpServerPort)
   adminApi.listen()
   settlementAdminApi.listen()

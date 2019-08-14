@@ -35,31 +35,32 @@ export class HeartbeatRule extends Rule {
           return
         }
         await next()
-      },
-      startup: async (ctx: RafikiContext) => {
-        this._heartbeat = setInterval(async () => {
-          // TODO: Stagger the sending
-          for (let peerId in ctx.services.peers) {
-            try {
-              logger.debug('sending heartbeat', { peerId })
-              await ctx.services.peers.getOrThrow(peerId).client.send(
-                serializeIlpPrepare({
-                  amount: '0',
-                  executionCondition: Buffer.alloc(0),
-                  destination: 'peer.heartbeat',
-                  expiresAt: new Date(Date.now() + 2000),
-                  data: Buffer.alloc(0)
-                }))
-              logger.debug('heartbeat successful')
-              this._onSuccessfulHeartbeat(peerId)
-            } catch (e) {
-              logger.debug('heartbeat failed')
-              this._onFailedHeartbeat(peerId)
-            }
-          }
-        }, this._interval)
-      },
-      shutdown: async () => clearInterval(this._heartbeat)
+      }
+      // TODO: Need to rework
+      // startup: async (ctx: RafikiContext) => {
+      //   this._heartbeat = setInterval(async () => {
+      //     // TODO: Stagger the sending
+      //     for (let peerId in ctx.services.peers) {
+      //       try {
+      //         logger.debug('sending heartbeat', { peerId })
+      //         await ctx.services.peers.getOrThrow(peerId).client.send(
+      //           serializeIlpPrepare({
+      //             amount: '0',
+      //             executionCondition: Buffer.alloc(0),
+      //             destination: 'peer.heartbeat',
+      //             expiresAt: new Date(Date.now() + 2000),
+      //             data: Buffer.alloc(0)
+      //           }))
+      //         logger.debug('heartbeat successful')
+      //         this._onSuccessfulHeartbeat(peerId)
+      //       } catch (e) {
+      //         logger.debug('heartbeat failed')
+      //         this._onFailedHeartbeat(peerId)
+      //       }
+      //     }
+      //   }, this._interval)
+      // },
+      // shutdown: async () => clearInterval(this._heartbeat)
     })
 
     this._interval = options.heartbeatInterval || DEFAULT_HEARTBEAT_INTERVAL

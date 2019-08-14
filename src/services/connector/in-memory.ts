@@ -14,18 +14,26 @@ import { Route } from '../../models/Route'
 
 const logger = log.child({ component: 'in-memory-connector' })
 
+export interface ConnectorConfig {
+  globalPrefix?: string,
+  ilpAddress?: string
+}
+
 export class InMemoryConnector implements Connector {
   _routingTable: RoutingTable = new RoutingTable()
   _routeManager: RouteManager = new RouteManager(this._routingTable)
   _ccpSenders: CcpSenderService = new CcpSenderService()
   _ccpReceivers: CcpReceiverService = new CcpReceiverService()
 
-  constructor (private _peers: PeerService, globaPrefix: string) {
+  constructor (private _peers: PeerService, { globalPrefix, ilpAddress }: ConnectorConfig) {
 
-    this._routingTable.setGlobalPrefix(globaPrefix)
+    // Setup the `self` peer
+    this._routeManager.addPeer(SELF_PEER_ID, 'local')
+    this._routingTable.setGlobalPrefix(globalPrefix || 'test')
+    if (ilpAddress) {
+      this._addOwnAddress(ilpAddress)
+    }
 
-    // TODO how do we handle the self peer?
-    // this._routeManager.addPeer(SELF_PEER_ID, 'local')
     // Added
     this._peers.added.subscribe(async (peer: PeerInfo) => {
       const isSender = (peer.CcpConfig && peer.CcpConfig.isSender) ? peer.CcpConfig.isSender : false
