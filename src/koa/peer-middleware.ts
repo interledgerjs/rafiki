@@ -1,13 +1,13 @@
 /**
  * Attach peer info to the context
  */
-import { PeerInfo } from '../types'
 import { RafikiContext } from '../rafiki'
+import { Peer } from '../services/peers'
 
 export interface PeerState {
   peers: {
-    readonly incoming: PeerInfo
-    readonly outgoing: PeerInfo
+    readonly incoming: Peer
+    readonly outgoing: Peer
   }
 }
 
@@ -16,12 +16,27 @@ export interface PeerMiddlewareOptions {
   getOutgoingPeerId: (ctx: RafikiContext) => string
 }
 
-export function peerMiddleWare ({ getIncomingPeerId, getOutgoingPeerId }: PeerMiddlewareOptions) {
+export const defaultGetIncomingPeerId = (ctx: RafikiContext): string => {
+  ctx.assert(ctx.state.user, 401)
+  return ctx.state.user! // Waiting on Sir Anders (https://github.com/microsoft/TypeScript/pull/32695)
+}
+
+export const defaultGetOutgoingPeerId = (ctx: RafikiContext): string => {
+  ctx.assert(ctx.state.ilp.req.destination, 500)
+  return this._connector.getPeerForAddress(ctx.state.ilp.req.destination)
+}
+
+const defaultMiddlewareOptions: PeerMiddlewareOptions = {
+  getIncomingPeerId: defaultGetIncomingPeerId,
+  getOutgoingPeerId: defaultGetOutgoingPeerId
+}
+
+export function peerMiddleWare ({ getIncomingPeerId, getOutgoingPeerId }: PeerMiddlewareOptions = defaultMiddlewareOptions) {
 
   return async function peer (ctx: RafikiContext, next: () => Promise<any>) {
 
-    let incomingPeer: PeerInfo | undefined = undefined
-    let outgoingPeer: PeerInfo | undefined = undefined
+    let incomingPeer: Peer | undefined = undefined
+    let outgoingPeer: Peer | undefined = undefined
     ctx.state.peers = {
       get incoming () {
         if (incomingPeer) return incomingPeer

@@ -1,3 +1,3 @@
 export interface AuthState {
-  user: string
+  user?: string
 }

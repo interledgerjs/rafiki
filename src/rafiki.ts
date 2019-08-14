@@ -1,27 +1,28 @@
 import Koa, { ParameterizedContext, Middleware } from 'koa'
 import { Connector } from './services/connector'
 import { IlpState, ilpPacketMiddleware } from './koa/ilp-packet-middleware'
-import { PeerState, peerMiddleWare } from './koa/peer-middleware'
+import { PeerState, peerMiddleWare, defaultGetIncomingPeerId, defaultGetOutgoingPeerId } from './koa/peer-middleware'
 import getRawBody from 'raw-body'
 import { PeerService } from './services/peers'
+import { AuthState } from './koa/auth-state'
 interface RafikiServices {
   connector: Connector
   peers: PeerService
 }
 
-interface RafikiAppConfig extends Partial<RafikiServices> {
-}
+interface RafikiAppConfig extends Partial<RafikiServices> {}
 
 interface RafikiIlpConfig {
-  getIncomingPeerId?: (ctx: Koa.Context) => string
-  getOutgoingPeerId?: (ctx: Koa.Context) => string
+  getIncomingPeerId?: (ctx: RafikiContext) => string
+  getOutgoingPeerId?: (ctx: RafikiContext) => string
 }
 
-export type RafikiState = IlpState & PeerState
+export type RafikiState = IlpState & PeerState & AuthState
 export type RafikiContextMixin = { services: RafikiServices }
 export type RafikiContext = Koa.ParameterizedContext<RafikiState, RafikiContextMixin>
 export type ParameterizedRafikiContext<T> = Koa.ParameterizedContext<RafikiState & T, RafikiContextMixin>
 export type RafikiMiddleware = Middleware<RafikiState, RafikiContextMixin>
+
 export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
 
   private _connector?: Connector
@@ -60,7 +61,15 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
   }
 
   public useIlp ({ getIncomingPeerId, getOutgoingPeerId }: RafikiIlpConfig) {
+
     this.use(ilpPacketMiddleware({ getRawBody }))
-    this.use(peerMiddleWare({ getIncomingPeerId, getOutgoingPeerId }))
+
+    // TODO is there a better way to do this? Problem is as both are optional you cant just pass them in as an object
+    const peerMiddlewareConfig = {
+      getIncomingPeerId: getIncomingPeerId ? getIncomingPeerId : defaultGetIncomingPeerId,
+      getOutgoingPeerId: getOutgoingPeerId ? getOutgoingPeerId : defaultGetOutgoingPeerId
+    }
+
+    this.use(peerMiddleWare(peerMiddlewareConfig))
   }
 }

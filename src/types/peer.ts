@@ -1,4 +1,4 @@
-import { BalanceConfig } from "./balance";
+import { BalanceConfig } from './balance'
 
 export type Relation = 'parent' | 'child' | 'peer' | 'local'
 
