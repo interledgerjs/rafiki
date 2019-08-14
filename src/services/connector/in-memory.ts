@@ -86,6 +86,10 @@ export class InMemoryConnector implements Connector {
       : []
   }
 
+  public getRoutingTable () {
+    return this._routingTable.getRoutingTable().toJSON()
+  }
+
   private async _addPeer (peerId: string, relation: Relation, weight: number, isSender = false, isReceiver = false) {
     logger.info('adding peer', { peerId, relation })
     this._routeManager.addPeer(peerId, relation)
