@@ -1,9 +1,10 @@
-import {Context, ParameterizedContext} from 'koa'
+import {Context} from 'koa'
 import { peerMiddleWare } from "../../src/koa/peer-middleware"
 import { AppServicesFactory } from '../factories/app-services'
-import {AuthState} from '../../src/koa/auth-state'
-import {IlpState} from '../../src/koa/ilp-packet-middleware'
+
 import {PeerInfoFactory} from '../factories/peerInfo'
+import {PeerFactory} from '../factories/peer'
+import {Rafiki, RafikiContext} from '../../src/rafiki'
 
 describe('Peer Middleware Test',() => {
   test('Correctly binds functions to get peers to context state', async () => {
@@ -14,33 +15,37 @@ describe('Peer Middleware Test',() => {
           expect(errorCode).toBe(401)
           throw new Error(errorMessage)
         }
-      }
-    } as Context
-    const incomingPeer = PeerInfoFactory.build({
-      id: 'incomingPeer'
-    })
-    const outgoingPeer = PeerInfoFactory.build({
-      id: 'outgoingPeer'
-    })
-
-    const getIncomingPeerId = (ctx: ParameterizedContext<AuthState>) => {
-      return incomingPeer.id
-    }
-    // Get outgoing peerId by querying connector routing table
-    const getOutgoingPeerId = (ctx: ParameterizedContext<IlpState>) => {
-      return outgoingPeer.id
-    }
-
-    const services = AppServicesFactory.build({
-      peers: {
-        getOrThrow: (id: string) => {
-          if(id == incomingPeer.id) return incomingPeer
-          if(id == outgoingPeer.id) return outgoingPeer
-          throw new Error('Can not find peer')
+      },
+      services: {
+        peers: {
+          getOrThrow: (id: string) => {
+            if(id === 'incomingPeer') return incomingPeer
+            if(id === 'outgoingPeer') return outgoingPeer
+            else throw new Error('Peer not found')
+          }
         }
       }
+    } as RafikiContext
+    const incomingPeer = PeerFactory.build({
+      info: PeerInfoFactory.build({
+        id: 'incomingPeer'
+      })
     })
-    const middleware = peerMiddleWare(services, {
+    const outgoingPeer = PeerFactory.build({
+      info: PeerInfoFactory.build({
+        id: 'outgoingPeer'
+      })
+    })
+
+    const getIncomingPeerId = (ctx: RafikiContext) => {
+      return incomingPeer.info.id
+    }
+    // Get outgoing peerId by querying connector routing table
+    const getOutgoingPeerId = (ctx: RafikiContext) => {
+      return outgoingPeer.info.id
+    }
+
+    const middleware = peerMiddleWare({
       getIncomingPeerId,
       getOutgoingPeerId
     })
