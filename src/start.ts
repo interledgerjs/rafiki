@@ -2,14 +2,13 @@
 
 import * as winston from 'winston'
 import Knex from 'knex'
-import { App } from './app'
 import { AdminApi } from './services'
 import { SettlementAdminApi } from './services/settlement-admin-api/settlement-admin-api'
 import { tokenAuthMiddleware } from './koa/token-auth-middleware'
 import { Config } from './index'
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
 import { STATIC_CONDITION } from './constants'
-import { InMemoryPeer, InMemoryPeers } from './services/peers/in-memory';
+import { InMemoryPeers } from './services/peers/in-memory';
 import { InMemoryConnector } from './services/connector/in-memory';
 import { createApp } from './rafiki';
 import { RemoteTokenService } from './services/tokens/remote';

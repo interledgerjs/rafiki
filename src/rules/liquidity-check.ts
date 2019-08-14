@@ -1,13 +1,13 @@
 import { log } from '../winston'
 import { Errors as IlpPacketErrors, isReject } from 'ilp-packet'
-import { Rule } from '../types/rule'
-const logger = log.child({ component: 'alert-rule' })
+import { Rule } from '../types'
+const logger = log.child({ component: 'liquidity-check-rule' })
 const { T04_INSUFFICIENT_LIQUIDITY } = IlpPacketErrors.codes
 
 /**
- * Creates alerts for reject packets caused by insufficient liquidity or an exceeded maximum balance.
+ * Log error for reject packets caused by insufficient liquidity or an exceeded maximum balance.
  */
-export class AlertRule extends Rule {
+export class LiquidityCheckRule extends Rule {
   constructor () {
     super({
       outgoing: async ({ state: { ilp, peers } }, next) => {
@@ -22,7 +22,11 @@ export class AlertRule extends Rule {
           // money but restarted before it was settled.
           if (ilp.res.message !== 'exceeded maximum balance.') return
 
-          ctx.services.alerts.createAlert(peers.outgoing.id, ilp.res.triggeredBy, ilp.res.message)
+          logger.error('Liquidity Check Error', {
+            peerId: peers.outgoing.info.id,
+            triggerBy: ilp.res.triggeredBy,
+            message: ilp.res.message
+          })
         }
       }
     })

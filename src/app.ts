@@ -9,20 +9,18 @@ import {
 } from './types'
 import { InMemoryConnector } from './services/connector/in-memory'
 import {
-    AlertRule,
     BalanceRule,
     ErrorHandlerRule,
     ExpireRule,
     MaxPacketAmountRule,
     RateLimitRule,
     ReduceExpiryRule,
-    StatsRule,
     ThroughputRule,
     ValidateFulfillmentRule,
     HeartbeatRule
 } from './rules'
-import { Config, Stats, WalletConfig, AppServices, Alerts, Connector } from './services'
-import createRouter, { Joi } from 'koa-joi-router'
+import { Config, WalletConfig, Connector } from './services'
+import createRouter from 'koa-joi-router'
 
 import { isReject, serializeIlpPrepare, deserializeIlpReply, IlpPrepare } from 'ilp-packet'
 import { Server } from 'net'
@@ -33,13 +31,13 @@ import Knex from 'knex'
 import { Route } from './models/Route'
 import { ilpPacketMiddleware, IlpState } from './koa/ilp-packet-middleware'
 import { peerMiddleWare } from './koa/peer-middleware'
-import { ilpClientMiddleware, HttpClientConfig } from './koa/ilp-client-middleware'
+import { ilpClientMiddleware } from './koa/ilp-client-middleware'
 import { AuthState } from './koa/auth-state'
 import { IldcpProtocol, EchoProtocol, CcpProtocol } from './protocols'
-import { Rafiki, RafikiContext } from './rafiki';
-import { PeerService } from './services/peers';
-import { InMemoryPeers } from './services/peers/in-memory';
-import { tokenAuthMiddleware } from './koa/token-auth-middleware';
+import { Rafiki, RafikiContext } from './rafiki'
+import { PeerService } from './services/peers'
+import { InMemoryPeers } from './services/peers/in-memory'
+import { tokenAuthMiddleware } from './koa/token-auth-middleware'
 
 const logger = log.child({ component: 'App' })
 

@@ -7,6 +7,7 @@ import { Peer as PeerModel } from '../../models/Peer'
 import { Rule } from '../../models/Rule'
 import { Protocol } from '../../models/Protocol'
 import Knex from 'knex'
+import { Subject } from 'rxjs'
 
 export class InMemoryPeer implements Peer {
   _client: Client
@@ -36,6 +37,45 @@ export class InMemoryPeer implements Peer {
 
 export class InMemoryPeers extends ServiceBase<Peer> implements PeerService {
 
+  private _addedPeers: Subject<PeerInfo>
+  private _updatedPeers: Subject<PeerInfo>
+  private _removedPeers: Subject<PeerInfo>
+
+  constructor () {
+    super()
+    this._addedPeers = new Subject<PeerInfo>()
+    this._updatedPeers = new Subject<PeerInfo>()
+    this._removedPeers = new Subject<PeerInfo>()
+  }
+
+  get added () {
+    return this._addedPeers.asObservable()
+  }
+
+  get updated () {
+    return this._updatedPeers.asObservable()
+  }
+
+  get deleted () {
+    return this._removedPeers.asObservable()
+  }
+
+  async add (peer: PeerInfo) {
+    await this.set(peer.id, new InMemoryPeer(peer))
+    await this._addedPeers.next(peer)
+  }
+
+  // Tricky as we need to manage state of in memory peer potentially
+  // TODO work out what needs to be managed
+  async update (peer: PeerInfo) {
+    await this._updatedPeers.next(peer)
+  }
+
+  async remove (peer: PeerInfo) {
+    await this.delete(peer.id)
+    await this._removedPeers.next(peer)
+  }
+
   public async load (knex: Knex) {
     const result = await PeerModel.query(knex).eager('[rules,protocols,endpoint]')
     result.forEach(peer => {
@@ -47,14 +87,14 @@ export class InMemoryPeers extends ServiceBase<Peer> implements PeerService {
       peer['protocols'].map((protocol: Protocol) => {
         protocols[protocol.name] = protocol.config || {}
       })
-      this.set(peer.id, new InMemoryPeer({
+      this.add({
         id: peer.id,
         assetCode: peer.assetCode,
         assetScale: peer.assetScale,
         relation: peer.relation as PeerRelation,
         rules,
         protocols
-      }))
+      })
     })
   }
 }

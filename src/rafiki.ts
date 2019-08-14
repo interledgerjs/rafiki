@@ -1,17 +1,14 @@
 import Koa, { ParameterizedContext, Middleware } from 'koa'
 import compose from 'koa-compose'
-import createRouter, { Joi } from 'koa-joi-router'
-import Knex from 'knex'
+import createRouter from 'koa-joi-router'
 import { Connector } from './services/connector'
 import { IlpState, ilpPacketMiddleware, IlpPacketMiddlewareOptions } from './koa/ilp-packet-middleware'
-import { PeerState, peerMiddleWare, defaultGetIncomingPeerId, defaultGetOutgoingPeerId, PeerMiddlewareOptions } from './koa/peer-middleware'
+import { PeerState, peerMiddleWare, PeerMiddlewareOptions } from './koa/peer-middleware'
 import { PeerService } from './services/peers'
 import { AuthState } from './koa/auth-state'
 import { Config, TokenService } from './services'
-import { InMemoryPeers } from './services/peers/in-memory';
-import { InMemoryConnector } from './services/connector/in-memory';
 import { CcpProtocol, IldcpProtocol, EchoProtocol } from './protocols';
-import { StatsRule, ThroughputRule, ValidateFulfillmentRule, BalanceRule, ErrorHandlerRule, ExpireRule, HeartbeatRule, MaxPacketAmountRule, RateLimitRule, ReduceExpiryRule } from './rules';
+import { ThroughputRule, ValidateFulfillmentRule, BalanceRule, ErrorHandlerRule, ExpireRule, HeartbeatRule, MaxPacketAmountRule, RateLimitRule, ReduceExpiryRule } from './rules';
 import { ilpClientMiddleware } from './koa/ilp-client-middleware';
 import { tokenAuthMiddleware } from './koa/token-auth-middleware';
 export interface RafikiServices {
@@ -118,7 +115,6 @@ export function createApp (config: Config, { connector, peers, tokens }: RafikiS
       minIncomingExpirationWindow: 0.5 * this._config.minExpirationWindow,
       minOutgoingExpirationWindow: 0.5 * this._config.minExpirationWindow
     }),
-    'stats': new StatsRule(),
     'throughput': new ThroughputRule(),
     'validate-fulfillment': new ValidateFulfillmentRule()
   }
@@ -146,13 +142,11 @@ export function createApp (config: Config, { connector, peers, tokens }: RafikiS
   const outgoing = compose([
     // Connector
     echo.outgoing,
-    ccp.outgoing,
-    ildcp.outgoing,
 
     // Outgoing Rules
     rules['stats'].outgoing,
     rules['balance'].outgoing,
-    rules['throughput'].incoming,
+    rules['throughput'].outgoing,
     rules['reduce-expiry'].outgoing,
     rules['alert'].outgoing,
     rules['expire'].outgoing,

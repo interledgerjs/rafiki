@@ -4,7 +4,8 @@ import {
   CcpRouteControlResponse,
   CcpRouteUpdateResponse
 } from 'ilp-protocol-ccp'
-import { PeerRelation } from '../../types/peer'
+import { PeerRelation } from '../../types'
+
 export interface Connector {
   handleRouteControl: (peerId: string, request: CcpRouteControlRequest) => Promise<CcpRouteControlResponse>
 

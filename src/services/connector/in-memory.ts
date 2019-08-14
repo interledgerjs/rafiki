@@ -10,7 +10,7 @@ import { CcpReceiver, CcpReceiverService } from '../../protocols/ccp/ccp-receive
 import { PeerService } from '../peers'
 import { Connector } from '.'
 import { SELF_PEER_ID } from '../../constants'
-import { Route } from '../../models/Route';
+import { Route } from '../../models/Route'
 
 const logger = log.child({ component: 'in-memory-connector' })
 
@@ -21,14 +21,25 @@ export class InMemoryConnector implements Connector {
   _ccpReceivers: CcpReceiverService = new CcpReceiverService()
 
   constructor (private _peers: PeerService) {
-    this._routeManager.addPeer(SELF_PEER_ID, 'local')
-    // TODO: Make Peer service an emitter?
-    // _peers.on('peer', (peer: PeerInfo) => {
-    //   const { id, relation, protocols: { ccp }} = peer
-    //   this.addPeer(id, relation, ccp.weighting, ccp.isSender, ccp.isReceiver).catch(e => {
-    //     logger.error(e)
-    //   })
-    // })
+    // Added
+    this._peers.added.subscribe(async (peer: PeerInfo) => {
+      const isSender = (peer.CcpConfig && peer.CcpConfig.isSender) ? peer.CcpConfig.isSender : false
+      const isReceiver = (peer.CcpConfig && peer.CcpConfig.isReceiver) ? peer.CcpConfig.isReceiver : false
+      const routingWeight = peer.relationWeight || 0
+      await this.addPeer(peer.id, peer.relation, routingWeight, isSender, isReceiver)
+    })
+
+    // Updated
+    this._peers.updated.subscribe(async (peer: PeerInfo) => {
+      logger.info('Peer has updated')
+      return
+    })
+
+    // Removed
+    this._peers.deleted.subscribe(async (peer: PeerInfo) => {
+      await this.removePeer(peer.id)
+    })
+    // this._routeManager.addPeer(SELF_PEER_ID, 'local')
   }
 
   public async load (knex: Knex) {

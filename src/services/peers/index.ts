@@ -1,6 +1,7 @@
 import { PeerInfo, Balance } from '../../types'
 import { Client } from '../client'
 import { Service } from '..'
+import { Observable } from 'rxjs'
 
 export interface Peer {
   readonly info: PeerInfo
@@ -9,4 +10,7 @@ export interface Peer {
 }
 
 export interface PeerService extends Service<Peer> {
+  added: Observable<PeerInfo>
+  updated: Observable<PeerInfo>
+  deleted: Observable<PeerInfo>
 }

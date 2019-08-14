@@ -3,7 +3,7 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import {IlpFulfill, IlpPrepare, IlpReject} from 'ilp-packet'
-import {AlertRule, Alerts} from '../../src/rules/alert'
+import {AlertRule, Alerts} from '../../src/rules/liquidity-check'
 import {PeerInfo} from '../../src/types/peer'
 import {setPipelineReader} from '../../src/types/rule'
 
