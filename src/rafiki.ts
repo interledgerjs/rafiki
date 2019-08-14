@@ -111,9 +111,9 @@ export function createApp (config: Config, { auth, peers, connector }: Partial<R
     'max-packet-amount': new MaxPacketAmountRule(),
     'rate-limit': new RateLimitRule(),
     'reduce-expiry': new ReduceExpiryRule({
-      maxHoldWindow: this._config.maxHoldWindow,
-      minIncomingExpirationWindow: 0.5 * this._config.minExpirationWindow,
-      minOutgoingExpirationWindow: 0.5 * this._config.minExpirationWindow
+      maxHoldWindow: config.maxHoldWindow,
+      minIncomingExpirationWindow: 0.5 * config.minExpirationWindow,
+      minOutgoingExpirationWindow: 0.5 * config.minExpirationWindow
     }),
     'throughput': new ThroughputRule(),
     'validate-fulfillment': new ValidateFulfillmentRule()
@@ -125,7 +125,6 @@ export function createApp (config: Config, { auth, peers, connector }: Partial<R
 
   const incoming = compose([
     // Incoming Rules
-    rules['stats'].incoming,
     rules['heartbeat'].incoming,
     rules['error-handler'].incoming,
     rules['max-packet-amount'].incoming,
@@ -144,11 +143,9 @@ export function createApp (config: Config, { auth, peers, connector }: Partial<R
     echo.outgoing,
 
     // Outgoing Rules
-    rules['stats'].outgoing,
     rules['balance'].outgoing,
     rules['throughput'].outgoing,
     rules['reduce-expiry'].outgoing,
-    rules['alert'].outgoing,
     rules['expire'].outgoing,
     rules['validate-fulfillment'].outgoing,
 
