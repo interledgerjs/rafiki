@@ -2,16 +2,31 @@ import Koa, { ParameterizedContext, Middleware } from 'koa'
 import compose from 'koa-compose'
 import createRouter from 'koa-joi-router'
 import { Router } from './services/router'
-import { IlpState, ilpPacketMiddleware, IlpPacketMiddlewareOptions } from './koa/ilp-packet-middleware'
-import { PeerState, peerMiddleWare, PeerMiddlewareOptions } from './koa/peer-middleware'
+import { IlpState, createIlpPacketMiddleware, IlpPacketMiddlewareOptions } from './middleware/ilp-packet'
+import { PeerState, createPeerMiddleware, PeerMiddlewareOptions } from './middleware/peer'
 import { PeerService } from './services/peers'
-import { AuthState } from './koa/auth-state'
-import { Config } from './services'
-import { CcpProtocol, IldcpProtocol, EchoProtocol } from './protocols'
-import { ThroughputRule, ValidateFulfillmentRule, BalanceRule, ErrorHandlerRule, ExpireRule, HeartbeatRule, MaxPacketAmountRule, RateLimitRule, ReduceExpiryRule } from './rules'
-import { ilpClientMiddleware } from './koa/ilp-client-middleware'
-import { tokenAuthMiddleware, TokenAuthConfig } from './koa/token-auth-middleware'
+import { AuthState } from './middleware/auth'
+import { Config } from '.'
+import { createClientController } from './controllers/client'
+import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
 import { AccountsService } from './services/accounts'
+import {
+  createIncomingHeartbeatMiddleware,
+  createIncomingErrorHandlerMiddleware,
+  createIncomingMaxPacketAmountMiddleware,
+  createIncomingRateLimitMiddleware,
+  createIncomingThroughputMiddleware,
+  createIncomingReduceExpiryMiddleware,
+  createIncomingBalanceMiddleware,
+  createIncomingIldcpProtocolMiddleware,
+  createIncomingCcpProtocolMiddleware,
+  createOutgoingEchoProtocolMiddleware,
+  createOutgoingThroughputMiddleware,
+  createOutgoingExpireMiddleware,
+  createOutgoingReduceExpiryMiddleware,
+  createOutgoingBalanceMiddleware,
+  createOutgoingValidateFulfillmentMiddleware
+} from './middleware'
 
 export interface RafikiServices {
   router: Router
@@ -94,8 +109,8 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
   }
 
   public useIlp (config?: RafikiIlpConfig) {
-    this.use(ilpPacketMiddleware(config))
-    this.use(peerMiddleWare(config))
+    this.use(createIlpPacketMiddleware(config))
+    this.use(createPeerMiddleware(config))
   }
 }
 
@@ -103,7 +118,7 @@ interface RafikiCreateAppServices extends RafikiServices {
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
 }
 
-export function createApp (config: Config, { auth, peers, accounts, router }: Partial<RafikiCreateAppServices>, parameterMiddleware?: RafikiMiddleware) {
+export function createApp (config: Config, { auth, peers, accounts, router }: Partial<RafikiCreateAppServices>, middleware?: RafikiMiddleware) {
 
   const app = new Rafiki({
     peers,
@@ -114,13 +129,13 @@ export function createApp (config: Config, { auth, peers, accounts, router }: Pa
   app.use(createAuthMiddleware(auth))
   app.useIlp()
 
-  const middleware = parameterMiddleware || createDefaultMiddleware(config)
+  const mw = middleware || createDefaultMiddleware(config)
 
   const koaRouter = createRouter()
   koaRouter.route({
     method: 'post',
     path: config.httpServerPath,
-    handler: middleware
+    handler: mw
   })
 
   app.use(koaRouter.middleware())
@@ -131,17 +146,14 @@ export function createAuthMiddleware (auth?: RafikiMiddleware | Partial<TokenAut
   if (typeof auth === 'function') {
     return auth
   } else {
-    return tokenAuthMiddleware(auth)
+    return createTokenAuthMiddleware(auth)
   }
 }
 
 export function createDefaultMiddleware (config: Config) {
-  // TODO: Use config to setup rules
-  const rules = {
-    'balance': new BalanceRule(),
-    'error-handler':  new ErrorHandlerRule(),
-    'expire': new ExpireRule(),
-    'heartbeat': new HeartbeatRule({
+  const incoming = compose([
+    // Incoming Rules
+    createIncomingHeartbeatMiddleware({
       heartbeatInterval: 5 * 60 * 1000,
       onFailedHeartbeat: (peerId: string) => {
         // TODO: Handle failed heartbeat
@@ -150,49 +162,29 @@ export function createDefaultMiddleware (config: Config) {
         // TODO: Handle successful heartbeat
       }
     }),
-    'max-packet-amount': new MaxPacketAmountRule(),
-    'rate-limit': new RateLimitRule(),
-    'reduce-expiry': new ReduceExpiryRule({
-      maxHoldWindow: config.maxHoldWindow,
-      minIncomingExpirationWindow: 0.5 * config.minExpirationWindow,
-      minOutgoingExpirationWindow: 0.5 * config.minExpirationWindow
-    }),
-    'throughput': new ThroughputRule(),
-    'validate-fulfillment': new ValidateFulfillmentRule()
-  }
-
-  const ccp = new CcpProtocol()
-  const ildcp = new IldcpProtocol()
-  const echo = new EchoProtocol({ minMessageWindow: 1500 })
-
-  const incoming = compose([
-    // Incoming Rules
-    rules['heartbeat'].incoming,
-    rules['error-handler'].incoming,
-    rules['max-packet-amount'].incoming,
-    rules['rate-limit'].incoming,
-    rules['throughput'].incoming,
-    rules['reduce-expiry'].incoming,
-    rules['balance'].incoming,
-
-    // Router
-    ildcp.incoming,
-    ccp.incoming
+    createIncomingErrorHandlerMiddleware(),
+    createIncomingMaxPacketAmountMiddleware(),
+    createIncomingRateLimitMiddleware(),
+    createIncomingThroughputMiddleware(),
+    createIncomingReduceExpiryMiddleware(),
+    createIncomingBalanceMiddleware(),
+    createIncomingIldcpProtocolMiddleware(),
+    createIncomingCcpProtocolMiddleware()
   ])
 
   const outgoing = compose([
     // Router
-    echo.outgoing,
+    createOutgoingEchoProtocolMiddleware(1500),
 
     // Outgoing Rules
-    rules['balance'].outgoing,
-    rules['throughput'].outgoing,
-    rules['reduce-expiry'].outgoing,
-    rules['expire'].outgoing,
-    rules['validate-fulfillment'].outgoing,
+    createOutgoingBalanceMiddleware(),
+    createOutgoingThroughputMiddleware(),
+    createOutgoingReduceExpiryMiddleware(),
+    createOutgoingExpireMiddleware(),
+    createOutgoingValidateFulfillmentMiddleware(),
 
     // Send outgoing packets
-    ilpClientMiddleware()
+    createClientController()
   ])
 
   return compose([

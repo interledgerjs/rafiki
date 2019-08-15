@@ -3,7 +3,7 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import {IlpFulfill, IlpPrepare, IlpReject, isFulfill, isReject} from 'ilp-packet'
-import {ErrorHandlerRule} from '../../src/rules/error-handler'
+import {ErrorHandlerRule} from '../../src/middleware/error-handler'
 import {RateLimitedError} from 'ilp-packet/dist/src/errors'
 import {setPipelineReader} from '../../src/types/rule'
 

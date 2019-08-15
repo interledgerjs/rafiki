@@ -9,7 +9,7 @@ import {isEndpoint, PeerInfo} from '../src/types'
 import {ErrorHandlerRule} from '../src/rules'
 import {IldcpResponse, serializeIldcpResponse} from 'ilp-protocol-ildcp'
 import {PeerNotFoundError} from '../src/errors/peer-not-found-error'
-import {tokenAuthMiddleware} from '../src/koa/token-auth-middleware'
+import {createTokenAuthMiddleware} from '../src/middleware/token-auth'
 import {Peer} from '../src/models/Peer'
 import {Rule} from '../src/models/Rule'
 import {Protocol} from '../src/models/Protocol'
@@ -118,7 +118,7 @@ describe('Test App', function () {
   })
 
   beforeEach(async () => {
-    app = new App(config, tokenAuthMiddleware(tokenService.introspect), db.knex())
+    app = new App(config, createTokenAuthMiddleware(tokenService.introspect), db.knex())
     addPeerSpyForAppConstructor = sinon.spy(app, 'addPeer')
     await app.listen()
     const koaApp = new Koa()
@@ -270,7 +270,7 @@ describe('Test App', function () {
       config.loadFromOpts({ httpServerPort: 8082 })
       const newDB = new DB()
       await newDB.setup()
-      const newApp = new App(config, tokenAuthMiddleware(tokenService.introspect), newDB.knex())
+      const newApp = new App(config, createTokenAuthMiddleware(tokenService.introspect), newDB.knex())
       await newApp.listen()
       const koaAppParent = new Koa()
       const router = createRouter()
@@ -306,7 +306,7 @@ describe('Test App', function () {
       config.loadFromOpts({ httpServerPort: 8082 })
       const newDB = new DB()
       await newDB.setup()
-      const newApp = new App(config, tokenAuthMiddleware(tokenService.introspect), newDB.knex())
+      const newApp = new App(config, createTokenAuthMiddleware(tokenService.introspect), newDB.knex())
       await newApp.listen()
       const koaAppParent = new Koa()
       const router = createRouter()

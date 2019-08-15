@@ -3,7 +3,7 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import {Errors, IlpFulfill, IlpPrepare, isFulfill} from 'ilp-packet'
-import {MaxPacketAmountRule} from '../../src/rules/max-packet-amount'
+import {MaxPacketAmountRule} from '../../src/middleware/max-packet-amount'
 import {setPipelineReader} from '../../src/types/rule'
 
 Chai.use(chaiAsPromised)

@@ -1,3 +1,6 @@
+export * from './crypto'
 export * from './http'
+export * from './ilp'
+export * from './koa'
+export * from './schema'
 export * from './token-bucket'
-export * from './utils'

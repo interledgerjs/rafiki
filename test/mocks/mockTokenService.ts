@@ -1,5 +1,5 @@
 import { TokenService, TokenInfo } from '../../src/services/tokens'
-import { uuid } from '../../src/lib/utils'
+import { uuid } from '../../src/lib/crypto'
 
 export class MockTokenService implements TokenService {
 

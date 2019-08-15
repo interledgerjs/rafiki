@@ -1,5 +1,5 @@
 import { Context } from 'koa'
-import {ilpClientMiddleware} from '../../src/koa/ilp-client-middleware'
+import {createClientController} from '../../src/controllers/client'
 import {AppServicesFactory} from '../factories/app-services'
 import {PeerInfoFactory} from '../factories/peerInfo'
 import assert from 'http-assert'
@@ -16,7 +16,7 @@ describe('ILP Client Middleware', () => {
     } as Context
     const services = AppServicesFactory.build()
 
-    const middleware = ilpClientMiddleware(services)
+    const middleware = createClientController(services)
 
     await expect(middleware(ctx)).rejects.toThrow()
   })
@@ -32,7 +32,7 @@ describe('ILP Client Middleware', () => {
     } as Context
     const services = AppServicesFactory.build()
 
-    const middleware = ilpClientMiddleware(services)
+    const middleware = createClientController(services)
 
     await expect(middleware(ctx)).rejects.toThrow()
   })
@@ -63,7 +63,7 @@ describe('ILP Client Middleware', () => {
       }
     })
 
-    const middleware = ilpClientMiddleware(services)
+    const middleware = createClientController(services)
 
     await middleware(ctx)
     expect(ctx.state.ilp.rawRes).toStrictEqual(Buffer.from('res'))

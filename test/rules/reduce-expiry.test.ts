@@ -4,7 +4,7 @@ import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import {Errors, IlpPrepare} from 'ilp-packet'
 import {setPipelineReader} from '../../src/types/rule'
-import {ReduceExpiryRule} from '../../src/rules/reduce-expiry'
+import {ReduceExpiryRule} from '../../src/middleware/reduce-expiry'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)

@@ -3,7 +3,7 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import {Errors, IlpFulfill, IlpPrepare, isFulfill} from 'ilp-packet'
-import {ExpireRule} from '../../src/rules/expire'
+import {ExpireRule} from '../../src/middleware/expire'
 import {setPipelineReader} from '../../src/types/rule'
 
 Chai.use(chaiAsPromised)

@@ -1,5 +1,5 @@
 import { Context } from 'koa'
-import { tokenAuthMiddleware } from "../../src/koa/token-auth-middleware"
+import { createTokenAuthMiddleware } from "../../src/middleware/token-auth"
 
 
 describe('Koa: token-auth-middleware', function () {
@@ -17,7 +17,7 @@ describe('Koa: token-auth-middleware', function () {
         }
       }
     } as Context
-    const authMiddleware = tokenAuthMiddleware(async token => { return { active: true } })
+    const authMiddleware = createTokenAuthMiddleware(async token => { return { active: true } })
 
     await expect(authMiddleware(ctx, async () => { return })).rejects.toThrow('Bearer token required in Authorization header')
   })
@@ -37,7 +37,7 @@ describe('Koa: token-auth-middleware', function () {
         }
       }
     } as Context
-    const authMiddleware = tokenAuthMiddleware(async token => { return { active: true } })
+    const authMiddleware = createTokenAuthMiddleware(async token => { return { active: true } })
 
     await expect(authMiddleware(ctx, async () => { return })).rejects.toThrow('Bearer token required in Authorization header')
   })
@@ -57,7 +57,7 @@ describe('Koa: token-auth-middleware', function () {
         }
       }
     } as Context
-    const authMiddleware = tokenAuthMiddleware(async token => { return { active: false } })
+    const authMiddleware = createTokenAuthMiddleware(async token => { return { active: false } })
 
     await expect(authMiddleware(ctx, async () => { return })).rejects.toThrow('Access Denied - Invalid Token')
   })
@@ -77,7 +77,7 @@ describe('Koa: token-auth-middleware', function () {
         }
       }
     } as Context
-    const authMiddleware = tokenAuthMiddleware(async token => { return { active: true } })
+    const authMiddleware = createTokenAuthMiddleware(async token => { return { active: true } })
 
     await expect(authMiddleware(ctx, async () => { return })).rejects.toThrow('Access Denied - No Subject in Token')
   })

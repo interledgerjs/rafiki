@@ -10,9 +10,16 @@ export interface PeerInfo {
   relation: PeerRelation,
   relationWeight?: number,
   authToken?: string
-  isCcpSender: boolean,
-  isCcpReceiver: boolean
-  defaultAccountId: string
+  isCcpSender?: boolean,
+  isCcpReceiver?: boolean
+  defaultAccountId?: string
+  maxPacketAmount?: bigint
+  rateLimitRefillPeriod?: number
+  rateLimitRefillCount?: bigint
+  rateLimitCapacity?: bigint
+  minIncomingExpirationWindow?: number
+  minOutgoingExpirationWindow?: number
+  maxHoldWindow?: number
 }
 
 export enum RelationWeights {

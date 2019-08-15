@@ -1,5 +1,5 @@
 import {Context} from 'koa'
-import { peerMiddleWare } from "../../src/koa/peer-middleware"
+import { createPeerMiddleware } from "../../src/middleware/peer"
 import { AppServicesFactory } from '../factories/app-services'
 
 import {PeerInfoFactory} from '../factories/peerInfo'
@@ -45,7 +45,7 @@ describe('Peer Middleware Test',() => {
       return outgoingPeer.info.id
     }
 
-    const middleware = peerMiddleWare({
+    const middleware = createPeerMiddleware({
       getIncomingPeerId,
       getOutgoingPeerId
     })

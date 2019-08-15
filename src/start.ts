@@ -2,18 +2,19 @@
 
 import * as winston from 'winston'
 import Knex from 'knex'
-import { AdminApi, TokenInfo, sendToPeer } from './services'
-import { SettlementAdminApi } from './servers/settlement-admin-api/settlement-admin-api'
-import { tokenAuthMiddleware } from './koa/token-auth-middleware'
-import { Config } from './index'
+import { Server } from 'net'
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
+
+import { Config } from '.'
+import { TokenInfo, sendToPeer } from './services'
+import { SettlementAdminApi } from './servers/settlement-api'
 import { STATIC_CONDITION } from './constants'
 import { InMemoryPeers } from './services/peers/in-memory'
 import { InMemoryRouter } from './services/router/in-memory'
 import { createApp, RafikiContext } from './rafiki'
 import { RemoteTokenService } from './services/tokens/remote'
 import { KnexTokenService } from './services/tokens/knex'
-import { Server } from 'net'
+import { AdminApi } from './servers'
 
 // Logging
 // tslint:disable-next-line

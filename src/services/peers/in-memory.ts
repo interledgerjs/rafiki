@@ -4,7 +4,7 @@ import { AxiosClient } from '../client/axios'
 import { Peer as PeerModel } from '../../models/Peer'
 import Knex from 'knex'
 import { Subject } from 'rxjs'
-import { PeerNotFoundError } from '../../errors/peer-not-found-error'
+import { PeerNotFoundError } from '../../errors'
 import { log } from '../../winston'
 
 class InMemoryPeer implements Peer {

@@ -1,12 +1,12 @@
 import { Context } from 'koa'
-import { ilpPacketMiddleware, IlpState } from "../../src/koa/ilp-packet-middleware"
+import { createIlpPacketMiddleware, IlpState } from "../../src/middleware/ilp-packet"
 import { IlpPrepareFactory, IlpFulfillFactory } from '../factories/ilpPacket'
 import { AppServicesFactory } from '../factories/app-services'
 import { DB } from '../helpers/db'
 import { Readable } from 'stream'
 import { serializeIlpPrepare, serializeIlpFulfill, deserializeIlpPrepare } from 'ilp-packet'
-import { createContext } from '../../src/koa/create-context';
-import { PeerState } from '../../src/koa/peer-middleware';
+import { createContext } from '../../src/lib/koa';
+import { PeerState } from '../../src/middleware/peer';
 
 describe('Koa: ILP Packet Middleware', () => {
 
@@ -26,7 +26,7 @@ describe('Koa: ILP Packet Middleware', () => {
     const ctx = createContext<IlpState & PeerState>({ req: { headers: { 'content-type': 'application/octet-stream' } } })
     const getRawBody = async (req: Readable) => serializeIlpPrepare(prepare)
     const next = jest.fn()
-    const middleware = ilpPacketMiddleware(services, { getRawBody })
+    const middleware = createIlpPacketMiddleware(services, { getRawBody })
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
@@ -39,7 +39,7 @@ describe('Koa: ILP Packet Middleware', () => {
     const ctx = createContext<IlpState & PeerState>({ req: { headers: { 'content-type': 'application/octet-stream' } } })
     const getRawBody = async (req: Readable) => serializeIlpPrepare(prepare)
     const next = jest.fn()
-    const middleware = ilpPacketMiddleware(services, { getRawBody })
+    const middleware = createIlpPacketMiddleware(services, { getRawBody })
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
@@ -52,7 +52,7 @@ describe('Koa: ILP Packet Middleware', () => {
     const ctx = createContext<IlpState & PeerState>({ req: { headers: { 'content-type': 'application/octet-stream' } } })
     const getRawBody = async (req: Readable) => serializeIlpPrepare(prepare)
     const next = jest.fn()
-    const middleware = ilpPacketMiddleware(services, { getRawBody })
+    const middleware = createIlpPacketMiddleware(services, { getRawBody })
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
@@ -67,7 +67,7 @@ describe('Koa: ILP Packet Middleware', () => {
     const next = jest.fn().mockImplementation(() => {
       ctx.state.ilp.rawRes = rawFulfill
     })
-    const middleware = ilpPacketMiddleware(services, { getRawBody })
+    const middleware = createIlpPacketMiddleware(services, { getRawBody })
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
@@ -81,7 +81,7 @@ describe('Koa: ILP Packet Middleware', () => {
     const next = jest.fn().mockImplementation(() => {
       ctx.state.ilp.outgoingAmount = 5n
     })
-    const middleware = ilpPacketMiddleware(services, { getRawBody })
+    const middleware = createIlpPacketMiddleware(services, { getRawBody })
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
@@ -97,7 +97,7 @@ describe('Koa: ILP Packet Middleware', () => {
     const next = jest.fn().mockImplementation(() => {
       ctx.state.ilp.outgoingExpiry = new Date(START_DATE + 10 * 1000)
     })
-    const middleware = ilpPacketMiddleware(services, { getRawBody })
+    const middleware = createIlpPacketMiddleware(services, { getRawBody })
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 

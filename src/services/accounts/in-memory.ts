@@ -1,11 +1,10 @@
 import { AccountInfo } from '../../types'
 import { Subject } from 'rxjs'
-import { PeerNotFoundError } from '../../errors/peer-not-found-error'
+import { PeerNotFoundError, AccountNotFoundError } from '../../errors'
 import { log } from '../../winston'
 import { Errors } from 'ilp-packet'
 import { AccountsService, AccountSnapshot } from '.'
 import { PeerService } from '../peers'
-import { AccountNotFoundError } from '../../errors/account-not-found-error'
 const { InsufficientLiquidityError } = Errors
 
 interface InMemoryAccount extends AccountInfo {

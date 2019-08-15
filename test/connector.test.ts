@@ -6,7 +6,7 @@ import {InMemoryConnector} from '../src'
 import {PeerInfo} from '../src/types'
 import {MockIlpEndpoint} from './mocks/mockIlpEndpoint'
 import {Errors, IlpFulfill, IlpPrepare} from 'ilp-packet'
-import {CcpProtocol} from '../src/protocols/ccp'
+import {CcpProtocol} from '../src/middleware/ccp-protocol'
 import {IldcpProtocol} from '../src/protocols'
 
 Chai.use(chaiAsPromised)
