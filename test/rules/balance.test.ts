@@ -9,7 +9,7 @@ import {BalanceRule} from '../../src/rules/balance'
 import {Stats} from '../../src/services/stats'
 import {setPipelineReader} from '../../src/types/rule'
 import {MAX_UINT_64, STATIC_CONDITION} from '../../src/constants'
-import {InMemoryBalance} from '../../src'
+import {InMemoryAccount} from '../../src'
 
 Chai.use(chaiAsPromised)
 const assert = Object.assign(Chai.assert, sinon.assert)
@@ -19,7 +19,7 @@ const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 describe('Balance Rule', function () {
     let balanceRule: BalanceRule
     let stats: Stats
-    let balance: InMemoryBalance
+    let balance: InMemoryAccount
     let mockServer: Mockttp
 
     const peerInfo: PeerInfo = {
@@ -44,7 +44,7 @@ describe('Balance Rule', function () {
 
     beforeEach( async function () {
       stats = new Stats()
-      balance = new InMemoryBalance({minimum: peerInfo.rules[0]['minimum'], maximum: peerInfo.rules[0]['maximum']})
+      balance = new InMemoryAccount({minimum: peerInfo.rules[0]['minimum'], maximum: peerInfo.rules[0]['maximum']})
       balanceRule = new BalanceRule({ peerInfo, stats, balance }, { url: 'http://localhost:4000', settleTo: BigInt(0), settleThreshold: BigInt(0) })
       mockServer = await getLocal()
       mockServer.start(4000)

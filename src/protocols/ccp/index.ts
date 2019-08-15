@@ -13,7 +13,7 @@ export class CcpProtocol extends Rule {
           case 'peer.route.control': {
             logger.silly('received peer.route.control', { request: ilp.req })
             try {
-              await services.connector.handleRouteControl(info.id, deserializeCcpRouteControlRequest(ilp.rawReq))
+              await services.router.handleRouteControl(info.id, deserializeCcpRouteControlRequest(ilp.rawReq))
               ilp.rawRes = serializeCcpResponse()
             } catch (error) {
               throw new TemporaryApplicationError('Unable to handle CCP Route Control', Buffer.from(''))
@@ -23,7 +23,7 @@ export class CcpProtocol extends Rule {
           case 'peer.route.update': {
             logger.silly('received peer.route.update', { request: ilp.req })
             try {
-              await services.connector.handleRouteUpdate(info.id, deserializeCcpRouteUpdateRequest(ilp.rawReq))
+              await services.router.handleRouteUpdate(info.id, deserializeCcpRouteUpdateRequest(ilp.rawReq))
               ilp.rawRes = serializeCcpResponse()
             } catch (error) {
               throw new TemporaryApplicationError('Unable to handle CCP Route Update', Buffer.from(''))

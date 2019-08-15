@@ -23,7 +23,7 @@ const defaultGetIncomingPeerId = (ctx: RafikiContext): string => {
 
 const defaultGetOutgoingPeerId = (ctx: RafikiContext): string => {
   ctx.assert(ctx.state.ilp.req.destination, 500)
-  return ctx.services.connector.getPeerForAddress(ctx.state.ilp.req.destination)
+  return ctx.services.router.getPeerForAddress(ctx.state.ilp.req.destination)
 }
 
 const defaultMiddlewareOptions: PeerMiddlewareOptions = {
@@ -43,12 +43,12 @@ export function peerMiddleWare (config: PeerMiddlewareOptions = defaultMiddlewar
     ctx.state.peers = {
       get incoming () {
         if (incomingPeer) return incomingPeer
-        incomingPeer = ctx.services.peers.getOrThrow(getIncomingPeerId(ctx))
+        incomingPeer = ctx.services.peers.get(getIncomingPeerId(ctx))
         return incomingPeer
       },
       get outgoing () {
         if (outgoingPeer) return outgoingPeer
-        outgoingPeer = ctx.services.peers.getOrThrow(getOutgoingPeerId(ctx))
+        outgoingPeer = ctx.services.peers.get(getOutgoingPeerId(ctx))
         return outgoingPeer
       }
     }

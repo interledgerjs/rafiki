@@ -8,25 +8,25 @@ import { CcpRouteControlRequest, CcpRouteUpdateRequest, CcpRouteControlResponse,
 import { CcpSender, CcpSenderService } from '../../protocols/ccp/ccp-sender'
 import { CcpReceiver, CcpReceiverService } from '../../protocols/ccp/ccp-receiver'
 import { PeerService } from '../peers'
-import { Connector, getRouteWeight } from '.'
+import { Router, getRouteWeight } from '.'
 import { SELF_PEER_ID } from '../../constants'
 import { Route } from '../../models/Route'
 import { sendToPeer } from '../client'
 
-const logger = log.child({ component: 'in-memory-connector' })
+const logger = log.child({ component: 'in-memory-router' })
 
-export interface ConnectorConfig {
+export interface ImMemoryRouterConfig {
   globalPrefix?: string,
   ilpAddress?: string
 }
 
-export class InMemoryConnector implements Connector {
+export class InMemoryRouter implements Router {
   _routingTable: RoutingTable = new RoutingTable()
   _routeManager: RouteManager = new RouteManager(this._routingTable)
   _ccpSenders: CcpSenderService = new CcpSenderService()
   _ccpReceivers: CcpReceiverService = new CcpReceiverService()
 
-  constructor (private _peers: PeerService, { globalPrefix, ilpAddress }: ConnectorConfig) {
+  constructor (private _peers: PeerService, { globalPrefix, ilpAddress }: ImMemoryRouterConfig) {
 
     // Setup the `self` peer
     this._routeManager.addPeer(SELF_PEER_ID, 'local')

@@ -3,7 +3,6 @@ import bodyParser from 'koa-bodyparser'
 import { log } from '../../winston'
 import { Server, createServer } from 'http'
 import { ApiRouter } from './routes'
-import { JSONBalanceSummary } from '../../types'
 import getRawBody = require('raw-body')
 const logger = log.child({ component: 'settlement-admin-api' })
 const MAX_ILP_PACKET_LENGTH = 32767

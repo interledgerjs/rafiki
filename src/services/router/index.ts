@@ -6,7 +6,7 @@ import {
 } from 'ilp-protocol-ccp'
 import { RelationWeights } from '../../types'
 
-export interface Connector {
+export interface Router {
   handleRouteControl: (peerId: string, request: CcpRouteControlRequest) => Promise<CcpRouteControlResponse>
 
   handleRouteUpdate: (peerId: string, request: CcpRouteUpdateRequest) => Promise<CcpRouteUpdateResponse>

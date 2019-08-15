@@ -22,8 +22,8 @@ export class IldcpProtocol extends Rule {
           }
 
           // TODO: Ensure we get at least length > 0
-          const serverAddress = services.connector.getAddresses(SELF_PEER_ID)[0]
-          const clientAddress = services.connector.getAddresses(id)[0]
+          const serverAddress = services.router.getAddresses(SELF_PEER_ID)[0]
+          const clientAddress = services.router.getAddresses(id)[0]
 
           logger.info('responding to ILDCP request from child', { peerId: id, address: clientAddress })
 

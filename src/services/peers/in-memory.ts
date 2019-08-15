@@ -1,42 +1,44 @@
 import { Peer, PeerService } from '.'
-import { PeerInfo, Balance, InMemoryBalance, PeerRelation, BalanceConfig, ClientConfig } from '../../types'
-import { Client } from '../client'
+import { PeerInfo, PeerRelation } from '../../types'
 import { AxiosClient } from '../client/axios'
 import { Peer as PeerModel } from '../../models/Peer'
-import { Rule } from '../../models/Rule'
-import { Protocol } from '../../models/Protocol'
 import Knex from 'knex'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError } from '../../errors/peer-not-found-error'
-import { MIN_INT_64, MAX_INT_64 } from '../../constants'
+import { log } from '../../winston'
 
 export class InMemoryPeer implements Peer {
-  _client: Promise<Client>
-  _balance: Promise<Balance>
-  constructor (private _peer: PeerInfo) {
-    // TODO: Need to make this immutable
-    if (_peer.client.url) {
-      const axiosConfig = { responseType: 'arraybuffer', headers: {} }
-      if (_peer.client.authToken) axiosConfig.headers = { 'Authorization': `Bearer ${_peer.client.authToken}` }
-      this._client = Promise.resolve(new AxiosClient(_peer.client.url, axiosConfig))
-    }
-    this._balance = Promise.resolve(new InMemoryBalance(_peer.balance.initialBalance))
+  readonly [key: string]: any
+  id: string
+  url?: string
+  relation: PeerRelation
+  relationWeight?: number
+  authToken?: string
+  isCcpSender: boolean
+  isCcpReceiver: boolean
+  defaultAccountId: string
+
+  static logger = log.child({ component: 'in-memory-peer' })
+  constructor (info: PeerInfo) {
+    Object.assign(this, info)
   }
 
-  get info (): PeerInfo {
-    return this._peer
-  }
-  get balance (): Promise<Balance> {
-    return this._balance
-  }
-  get client (): Promise<Client> {
-    if (this._client) return this._client
-    throw new Error('no client for peer ' + this._peer.id)
+  public send (data: Buffer) {
+    if (!this.url) throw new Error('No URL configured for peer')
+
+    // TODO: Connection pooling and keep-alive
+    const axiosConfig = { responseType: 'arraybuffer', headers: {} }
+    if (this.authToken) axiosConfig.headers = { 'Authorization': `Bearer ${this.authToken}` }
+    const client = new AxiosClient(this.url, axiosConfig)
+
+    return client.send(data)
   }
 
 }
 
 export class InMemoryPeers implements PeerService {
+
+  static logger = log.child({ component: 'in-memory-peers-service' })
 
   private _addedPeers: Subject<PeerInfo>
   private _updatedPeers: Subject<PeerInfo>
@@ -61,7 +63,7 @@ export class InMemoryPeers implements PeerService {
     return this._removedPeers.asObservable()
   }
 
-  public async getOrThrow (id: string): Promise<Peer> {
+  public async get (id: string): Promise<Peer> {
     const peer = this._peers.get(id)
     if (!peer) throw new PeerNotFoundError(id)
     return peer
@@ -72,17 +74,15 @@ export class InMemoryPeers implements PeerService {
     this._addedPeers.next(peer)
   }
 
-  // Tricky as we need to manage state of in memory peer potentially
-  // TODO work out what needs to be managed
-  async update (peer: PeerInfo) {
-    const oldPeer = this._peers.get(peer.id)
-    if (!oldPeer) {
-      throw new PeerNotFoundError(peer.id)
+  async update (peerInfo: PeerInfo) {
+    let peer = this._peers.get(peerInfo.id)
+    if (!peer) {
+      throw new PeerNotFoundError(peerInfo.id)
     }
-    const newPeer = new InMemoryPeer(peer)
-    this._peers.set(peer.id, newPeer)
+    peer = new InMemoryPeer(peerInfo)
+    this._peers.set(peerInfo.id, peer)
     this._updatedPeers.next(peer)
-    return newPeer
+    return peer
   }
 
   async remove (peerId: string) {
@@ -102,35 +102,13 @@ export class InMemoryPeers implements PeerService {
     const result = await PeerModel.query(knex).eager('[rules,protocols,endpoint]')
     return Promise.all(result.map(async peer => {
 
-      const rules = {}
-      peer['rules'].map((rule: Rule) => {
-        rules[rule.name] = rule.config || {}
-      })
-
-      const protocols = {}
-      peer['protocols'].map((protocol: Protocol) => {
-        protocols[protocol.name] = protocol.config || {}
-      })
-
-      // TODO: Load balance and client info
-      const balance: BalanceConfig = {
-        initialBalance: 0n,
-        maximum: MAX_INT_64,
-        minimum: MIN_INT_64
-      }
-
-      const client: ClientConfig = {
-      }
-
+      // TODO: Fix Knex loader
       return this.add({
         id: peer.id,
-        assetCode: peer.assetCode,
-        assetScale: peer.assetScale,
+        isCcpReceiver: false,
+        isCcpSender: false,
         relation: peer.relation as PeerRelation,
-        balance,
-        client,
-        rules,
-        protocols
+        defaultAccountId: peer.id // BIG ASSUMPTION HERE
       })
     }))
   }

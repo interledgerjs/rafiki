@@ -18,7 +18,7 @@ describe('Peer Middleware Test',() => {
       },
       services: {
         peers: {
-          getOrThrow: (id: string) => {
+          get: (id: string) => {
             if(id === 'incomingPeer') return incomingPeer
             if(id === 'outgoingPeer') return outgoingPeer
             else throw new Error('Peer not found')

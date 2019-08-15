@@ -1,6 +1,6 @@
 import { Factory } from 'rosie'
 import { Peer } from '../../src/services/peers'
-import { InMemoryBalance } from '../../src/types'
+import { InMemoryAccount } from '../../src/types'
 import { PeerInfoFactory } from './peerInfo'
 
 export const PeerFactory = Factory.define<Peer>('Peer').attrs({
@@ -8,5 +8,5 @@ export const PeerFactory = Factory.define<Peer>('Peer').attrs({
   client: {
     send: () => Promise.resolve(Buffer.from(''))
   },
-  balance: new InMemoryBalance({})
+  balance: new InMemoryAccount({})
 })

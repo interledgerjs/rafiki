@@ -1,40 +1,18 @@
-import { BalanceConfig } from './balance'
 
 export type Relation = 'parent' | 'child' | 'peer' | 'local'
 
 export type PeerRelation = 'parent' | 'peer' | 'child'
 
 export interface PeerInfo {
+  [key: string]: any
+  id: string,
+  url?: string,
   relation: PeerRelation,
   relationWeight?: number,
-  id: string,
-  assetCode: string,
-  assetScale: number,
-  client: ClientConfig,
-  balance: BalanceConfig,
-  CcpConfig?: CcpConfig,
-  rules: { [name: string]: RuleConfig },
-  protocols: { [name: string]: ProtocolConfig }
-}
-
-export interface ClientConfig {
-  url?: string,
   authToken?: string
-}
-
-export interface CcpConfig {
-  isSender: boolean,
-  isReceiver: boolean
-}
-
-export interface RuleConfig {
-  name: string,
-  [k: string]: any
-}
-
-export interface ProtocolConfig {
-  name: string,
-  [k: string]: any
+  isCcpSender: boolean,
+  isCcpReceiver: boolean
+  defaultAccountId: string
 }
 
 export enum RelationWeights {

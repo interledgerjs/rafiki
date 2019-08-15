@@ -9,7 +9,7 @@ import { Config } from './index'
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
 import { STATIC_CONDITION } from './constants'
 import { InMemoryPeers } from './services/peers/in-memory'
-import { InMemoryConnector } from './services/connector/in-memory'
+import { InMemoryRouter } from './services/router/in-memory'
 import { createApp, RafikiContext } from './rafiki'
 import { RemoteTokenService } from './services/tokens/remote'
 import { KnexTokenService } from './services/tokens/knex'
@@ -46,7 +46,7 @@ const knex = Knex(config.databaseConnectionString)
 // Remote vs Local token auth
 const tokens = config.authProviderUrl !== '' ? new RemoteTokenService(config.authProviderUrl) : new KnexTokenService(knex)
 const peers = new InMemoryPeers()
-const connector = new InMemoryConnector(peers, {
+const router = new InMemoryRouter(peers, {
   globalPrefix: config.env === 'production' ? 'g' : 'test',
   ilpAddress: config.ilpAddress
 })
@@ -55,7 +55,7 @@ const connector = new InMemoryConnector(peers, {
 const app = createApp(config, {
   auth: { introspect: tokens.introspect },
   peers,
-  connector
+  router
 })
 
 // Create Admin API
@@ -71,7 +71,7 @@ const adminApi = new AdminApi({
   host: config.adminApiHost,
   port: config.adminApiPort
 }, {
-  connector,
+  router,
   peers,
   auth
 })
@@ -82,7 +82,7 @@ const settlementAdminApi = new SettlementAdminApi({
   port: config.settlementAdminApiPort
 }, {
   updateAccountBalance: async (id: string, amountDiff: bigint, scale: number) => {
-    const peer = await peers.getOrThrow(id)
+    const peer = await peers.get(id)
     const balance = await peer.balance
     const scaleDiff = peer.info.assetScale - scale
 
@@ -174,7 +174,7 @@ export const start = async () => {
 
   // Load services from persistent datastores
   await peers.load(knex)
-  await connector.load(knex)
+  await router.load(knex)
 
   server = app.listen(config.httpServerPort)
   adminApi.listen()

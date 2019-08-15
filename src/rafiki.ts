@@ -1,7 +1,7 @@
 import Koa, { ParameterizedContext, Middleware } from 'koa'
 import compose from 'koa-compose'
 import createRouter from 'koa-joi-router'
-import { Connector } from './services/connector'
+import { Router } from './services/router'
 import { IlpState, ilpPacketMiddleware, IlpPacketMiddlewareOptions } from './koa/ilp-packet-middleware'
 import { PeerState, peerMiddleWare, PeerMiddlewareOptions } from './koa/peer-middleware'
 import { PeerService } from './services/peers'
@@ -10,14 +10,16 @@ import { Config } from './services'
 import { CcpProtocol, IldcpProtocol, EchoProtocol } from './protocols'
 import { ThroughputRule, ValidateFulfillmentRule, BalanceRule, ErrorHandlerRule, ExpireRule, HeartbeatRule, MaxPacketAmountRule, RateLimitRule, ReduceExpiryRule } from './rules'
 import { ilpClientMiddleware } from './koa/ilp-client-middleware'
-import { tokenAuthMiddleware, TokenAuthConfig } from './koa'
+import { tokenAuthMiddleware, TokenAuthConfig } from './koa/token-auth-middleware'
+import { AccountsService } from './services/accounts'
+
 export interface RafikiServices {
-  connector: Connector
+  router: Router
   peers: PeerService
+  accounts: AccountsService
 }
 
 export type RafikiIlpConfig = IlpPacketMiddlewareOptions & PeerMiddlewareOptions
-
 export type RafikiState = IlpState & PeerState & AuthState
 export type RafikiContextMixin = { services: RafikiServices }
 export type RafikiContext = Koa.ParameterizedContext<RafikiState, RafikiContextMixin>
@@ -26,22 +28,28 @@ export type RafikiMiddleware = Middleware<RafikiState, RafikiContextMixin>
 
 export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
 
-  private _connector?: Connector
+  private _router?: Router
   private _peers?: PeerService
+  private _accounts?: AccountsService
 
   constructor (config?: Partial<RafikiServices>) {
     super()
 
-    this._connector = (config && config.connector) ? config.connector : undefined
+    this._router = (config && config.router) ? config.router : undefined
     this._peers = (config && config.peers) ? config.peers : undefined
+    this._accounts = (config && config.accounts) ? config.accounts : undefined
 
     const peersOrThrow = () => {
       if (this._peers) return this._peers
       throw new Error('No peers service provided to the app')
     }
-    const connectorOrThrow = () => {
-      if (this._connector) return this._connector
-      throw new Error('No connector service provided to the app')
+    const accountsOrThrow = () => {
+      if (this._accounts) return this._accounts
+      throw new Error('No accounts service provided to the app')
+    }
+    const routerOrThrow = () => {
+      if (this._router) return this._router
+      throw new Error('No router service provided to the app')
     }
 
     // Set global middleware that exposes services
@@ -50,20 +58,23 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
         get peers () {
           return peersOrThrow()
         },
-        get connector () {
-          return connectorOrThrow()
+        get router () {
+          return routerOrThrow()
+        },
+        get accounts () {
+          return accountsOrThrow()
         }
       }
       await next()
     })
   }
 
-  public get connector () {
-    return this._connector
+  public get router () {
+    return this._router
   }
 
-  public set connector (connector: Connector | undefined) {
-    this._connector = connector
+  public set router (router: Router | undefined) {
+    this._router = router
   }
 
   public get peers () {
@@ -72,6 +83,14 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
 
   public set peers (peers: PeerService | undefined) {
     this._peers = peers
+  }
+
+  public get accounts () {
+    return this._accounts
+  }
+
+  public set accounts (accounts: AccountsService | undefined) {
+    this._accounts = accounts
   }
 
   public useIlp (config?: RafikiIlpConfig) {
@@ -84,11 +103,12 @@ interface RafikiCreateAppServices extends RafikiServices {
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
 }
 
-export function createApp (config: Config, { auth, peers, connector }: Partial<RafikiCreateAppServices>, parameterMiddleware?: RafikiMiddleware) {
+export function createApp (config: Config, { auth, peers, accounts, router }: Partial<RafikiCreateAppServices>, parameterMiddleware?: RafikiMiddleware) {
 
   const app = new Rafiki({
     peers,
-    connector
+    router,
+    accounts
   })
 
   app.use(createAuthMiddleware(auth))
@@ -96,15 +116,14 @@ export function createApp (config: Config, { auth, peers, connector }: Partial<R
 
   const middleware = parameterMiddleware || createDefaultMiddleware(config)
 
-  // TODO: Does it make sense we listen on ilp?
-  const router = createRouter()
-  router.route({
+  const koaRouter = createRouter()
+  koaRouter.route({
     method: 'post',
-    path: '/ilp',
+    path: config.httpServerPath,
     handler: middleware
   })
 
-  app.use(router.middleware())
+  app.use(koaRouter.middleware())
   return app
 }
 
@@ -156,13 +175,13 @@ export function createDefaultMiddleware (config: Config) {
     rules['reduce-expiry'].incoming,
     rules['balance'].incoming,
 
-    // Connector
+    // Router
     ildcp.incoming,
     ccp.incoming
   ])
 
   const outgoing = compose([
-    // Connector
+    // Router
     echo.outgoing,
 
     // Outgoing Rules

@@ -27,7 +27,7 @@ export class ErrorHandlerRule extends Rule {
             err = new Error('Non-object thrown: ' + e)
           }
           logger.error('Error thrown in incoming pipeline', { err })
-          const self = services.connector.getAddresses(SELF_PEER_ID)
+          const self = services.router.getAddresses(SELF_PEER_ID)
           ilp.res = errorToIlpReject(self.length > 0 ? self[0] : 'peer', err)
         }
       }
