@@ -39,3 +39,5 @@ export function getRouteWeight (peerId: string): number {
   }
   return weight
 }
+
+export * from './in-memory'

@@ -9,6 +9,7 @@ import getRawBody from 'raw-body'
 
 const CONTENT_TYPE = 'application/octet-stream'
 
+// TODO req and res are weird. Maybe it should be prepare and reply?
 export interface IlpState {
   ilp: {
     req: IlpPrepare
@@ -32,8 +33,7 @@ export interface IlpPacketMiddlewareOptions {
  *  3. Looks for reply packet in `ctx.state.responsePacket`
  *  4. Serializes reply and stores in `ctx.body`
  *
- * @param ctx Koa context
- * @param next Next middleware context
+ * @param config
  */
 export function ilpPacketMiddleware (config?: IlpPacketMiddlewareOptions) {
 

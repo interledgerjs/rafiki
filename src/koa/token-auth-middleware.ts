@@ -26,8 +26,7 @@ const defaultIntrospect: IntrospectFunction = (token: string) => {
  *
  * The context will implement `TokenAuthState` after being processed by this middleware
  *
- * @param introspect A function that will introspect a token and return the TokenInfo
- * @param authenticate A function that will authenticate the user based on the introspection result. Default is to check `tokenInfo.active == true`
+ * @param config
  */
 export function tokenAuthMiddleware (config?: Partial<TokenAuthConfig>) {
 
@@ -49,7 +48,7 @@ export function tokenAuthMiddleware (config?: Partial<TokenAuthConfig>) {
   }
 }
 
-function getBearerToken (ctx: Koa.Context): string | undefined {
+export function getBearerToken (ctx: Koa.Context): string | undefined {
   const auth = ctx.request.header['authorization']
   if (auth) {
     const parts = auth.split(' ')

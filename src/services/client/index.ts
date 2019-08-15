@@ -12,3 +12,5 @@ export async function sendToPeer (peerOrPeerId: Peer | string, data: Buffer, pee
   const peer = (typeof peerOrPeerId === 'string') ? await peers!.getOrThrow(peerOrPeerId) : peerOrPeerId
   return (await peer.client).send(data)
 }
+
+export * from 'axios'

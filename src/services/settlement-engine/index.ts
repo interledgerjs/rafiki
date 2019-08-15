@@ -7,3 +7,5 @@ export interface SettlementEngine {
   receiveRequest: (accountId: string, packet: IlpPrepare) => Promise<IlpReply>
   sendSettlement: (accountId: string, amount: bigint, scale: number) => Promise<void>
 }
+
+export * from './remote'

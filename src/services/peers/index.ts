@@ -24,3 +24,5 @@ export interface PeerService {
   // TODO: Should this be an iterator
   list: () => Promise<PeerInfo[]>
 }
+
+export * from './in-memory'

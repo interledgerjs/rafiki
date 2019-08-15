@@ -10,7 +10,7 @@ import { Config } from './services'
 import { CcpProtocol, IldcpProtocol, EchoProtocol } from './protocols'
 import { ThroughputRule, ValidateFulfillmentRule, BalanceRule, ErrorHandlerRule, ExpireRule, HeartbeatRule, MaxPacketAmountRule, RateLimitRule, ReduceExpiryRule } from './rules'
 import { ilpClientMiddleware } from './koa/ilp-client-middleware'
-import { tokenAuthMiddleware, TokenAuthConfig } from './koa/token-auth-middleware'
+import { tokenAuthMiddleware, TokenAuthConfig } from './koa'
 export interface RafikiServices {
   connector: Connector
   peers: PeerService
@@ -45,7 +45,7 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
     }
 
     // Set global middleware that exposes services
-    this.use((ctx: ParameterizedContext<RafikiState, RafikiContextMixin>, next: () => Promise<any>) => {
+    this.use(async (ctx: ParameterizedContext<RafikiState, RafikiContextMixin>, next: () => Promise<any>) => {
       ctx.services = {
         get peers () {
           return peersOrThrow()
@@ -54,6 +54,7 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
           return connectorOrThrow()
         }
       }
+      await next()
     })
   }
 
@@ -83,7 +84,7 @@ interface RafikiCreateAppServices extends RafikiServices {
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
 }
 
-export function createApp (config: Config, { auth, peers, connector }: Partial<RafikiCreateAppServices>) {
+export function createApp (config: Config, { auth, peers, connector }: Partial<RafikiCreateAppServices>, parameterMiddleware?: RafikiMiddleware) {
 
   const app = new Rafiki({
     peers,
@@ -91,9 +92,31 @@ export function createApp (config: Config, { auth, peers, connector }: Partial<R
   })
 
   app.use(createAuthMiddleware(auth))
-
   app.useIlp()
 
+  const middleware = parameterMiddleware || createDefaultMiddleware(config)
+
+  // TODO: Does it make sense we listen on ilp?
+  const router = createRouter()
+  router.route({
+    method: 'post',
+    path: '/ilp',
+    handler: middleware
+  })
+
+  app.use(router.middleware())
+  return app
+}
+
+export function createAuthMiddleware (auth?: RafikiMiddleware | Partial<TokenAuthConfig>): RafikiMiddleware {
+  if (typeof auth === 'function') {
+    return auth
+  } else {
+    return tokenAuthMiddleware(auth)
+  }
+}
+
+export function createDefaultMiddleware (config: Config) {
   // TODO: Use config to setup rules
   const rules = {
     'balance': new BalanceRule(),
@@ -153,24 +176,8 @@ export function createApp (config: Config, { auth, peers, connector }: Partial<R
     ilpClientMiddleware()
   ])
 
-  const router = createRouter()
-  router.route({
-    method: 'post',
-    path: '/ilp',
-    handler: compose([
-      incoming,
-      outgoing
-    ])
-  })
-
-  app.use(router.middleware())
-  return app
-}
-
-export function createAuthMiddleware (auth?: RafikiMiddleware | Partial<TokenAuthConfig>): RafikiMiddleware {
-  if (typeof auth === 'function') {
-    return auth
-  } else {
-    return tokenAuthMiddleware(auth)
-  }
+  return compose([
+    incoming,
+    outgoing
+  ])
 }
