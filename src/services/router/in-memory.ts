@@ -50,8 +50,8 @@ export class InMemoryRouter implements Router {
     })
 
     // Removed
-    this._peers.deleted.subscribe(async (peer: PeerInfo) => {
-      await this._removePeer(peer.id)
+    this._peers.deleted.subscribe(async (peerId: string) => {
+      await this._removePeer(peerId)
     })
 
   }

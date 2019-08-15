@@ -6,9 +6,9 @@ export interface Peer extends Readonly<PeerInfo> {
 }
 
 export interface PeerService {
-  readonly added: Observable<PeerInfo>
-  readonly updated: Observable<PeerInfo>
-  readonly deleted: Observable<PeerInfo>
+  readonly added: Observable<Peer>
+  readonly updated: Observable<Peer>
+  readonly deleted: Observable<string>
 
   /**
    * Load a peer. Throws if the peer cannot be loaded.
@@ -18,12 +18,12 @@ export interface PeerService {
   /**
    * Add a peer based on the provided config
    */
-  add: (peer: PeerInfo) => Promise<void>
+  add: (peer: Readonly<PeerInfo>) => Promise<Peer>
 
   /**
    * Update a peer
    */
-  update: (peer: PeerInfo) => Promise<Peer>
+  update: (peer: Readonly<PeerInfo>) => Promise<Peer>
 
   /**
    * Remove a peer
@@ -31,7 +31,7 @@ export interface PeerService {
   remove: (peerId: string) => Promise<void>
 
   // TODO: Should this be an iterator
-  list: () => Promise<PeerInfo[]>
+  list: () => Promise<Peer[]>
 }
 
 export * from './in-memory'

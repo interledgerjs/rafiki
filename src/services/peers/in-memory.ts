@@ -7,7 +7,7 @@ import { Subject } from 'rxjs'
 import { PeerNotFoundError } from '../../errors/peer-not-found-error'
 import { log } from '../../winston'
 
-export class InMemoryPeer implements Peer {
+class InMemoryPeer implements Peer {
   readonly [key: string]: any
   id: string
   url?: string
@@ -40,15 +40,15 @@ export class InMemoryPeers implements PeerService {
 
   static logger = log.child({ component: 'in-memory-peers-service' })
 
-  private _addedPeers: Subject<PeerInfo>
-  private _updatedPeers: Subject<PeerInfo>
-  private _removedPeers: Subject<PeerInfo>
+  private _addedPeers: Subject<Peer>
+  private _updatedPeers: Subject<Peer>
+  private _removedPeers: Subject<string>
   private _peers = new Map<string, InMemoryPeer>()
 
   constructor () {
-    this._addedPeers = new Subject<PeerInfo>()
-    this._updatedPeers = new Subject<PeerInfo>()
-    this._removedPeers = new Subject<PeerInfo>()
+    this._addedPeers = new Subject<Peer>()
+    this._updatedPeers = new Subject<Peer>()
+    this._removedPeers = new Subject<string>()
   }
 
   get added () {
@@ -69,12 +69,14 @@ export class InMemoryPeers implements PeerService {
     return peer
   }
 
-  async add (peer: PeerInfo) {
-    this._peers.set(peer.id, new InMemoryPeer(peer))
+  async add (peerInfo: Readonly<PeerInfo>) {
+    const peer = new InMemoryPeer(peerInfo)
+    this._peers.set(peer.id, peer)
     this._addedPeers.next(peer)
+    return peer
   }
 
-  async update (peerInfo: PeerInfo) {
+  async update (peerInfo: Readonly<PeerInfo>) {
     let peer = this._peers.get(peerInfo.id)
     if (!peer) {
       throw new PeerNotFoundError(peerInfo.id)
@@ -91,7 +93,7 @@ export class InMemoryPeers implements PeerService {
       throw new PeerNotFoundError(peerId)
     }
     this._peers.delete(peerId)
-    this._removedPeers.next(oldPeer.info)
+    this._removedPeers.next(peerId)
   }
 
   async list () {
