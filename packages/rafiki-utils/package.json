@@ -1,0 +1,30 @@
+{
+  "name": "@interledger/rafiki-utils",
+  "version": "0.1.0",
+  "description": "Utils used by Rafiki",
+  "author": "Matt de Haast <matt.dehaast@coil.com>",
+  "homepage": "https://github.com/interledgerjs/rafiki#readme",
+  "license": "ISC",
+  "main": "build/index.js",
+  "directories": {
+    "lib": "src",
+    "test": "__tests__"
+  },
+  "files": [
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/interledgerjs/rafiki.git"
+  },
+  "scripts": {
+    "build": "tsc -p ./src/tsconfig.build.json",
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/interledgerjs/rafiki/issues"
+  },
+  "dependencies": {
+    "winston": "^3.2.1"
+  }
+}
