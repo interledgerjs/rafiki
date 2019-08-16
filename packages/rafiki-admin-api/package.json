@@ -1,0 +1,35 @@
+{
+  "name": "@interledger/rafiki-admin-api",
+  "version": "0.1.0",
+  "description": "Admin Api for Rafiki Components",
+  "author": "Matt de Haast <matt.dehaast@coil.com>",
+  "homepage": "https://github.com/interledgerjs/rafiki#readme",
+  "license": "ISC",
+  "main": "build/index.js",
+  "directories": {
+    "lib": "src",
+    "test": "__tests__"
+  },
+  "files": [
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/interledgerjs/rafiki.git"
+  },
+  "scripts": {
+    "build": "tsc -p src/tsconfig.build.json",
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/interledgerjs/rafiki/issues"
+  },
+  "dependencies": {
+    "@interledger/rafiki-core": "^0.1.0",
+    "@types/koa": "^2.0.49",
+    "@types/koa-bodyparser": "^4.3.0",
+    "@types/koa-joi-router": "^5.2.2",
+    "koa": "^2.7.0",
+    "koa-joi-router": "^6.0.0"
+  }
+}
