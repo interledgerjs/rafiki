@@ -1,5 +1,5 @@
 import Knex from 'knex'
-import { Config } from './services'
+import { Config } from '.'
 
 let knex: Knex
 
