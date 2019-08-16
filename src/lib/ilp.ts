@@ -1,9 +1,9 @@
 import { Reader } from 'oer-utils'
-export function modifySerializedIlpPrepareAmount (prepare: Buffer, amount: bigint): Buffer {
+export function modifySerializedIlpPrepareAmount (prepare: Buffer, amount: string): Buffer {
   const reader = new Reader(prepare)
   reader.skip(1) // skip packet type
   reader.readLengthPrefix()
-  const hex = amount.toString(16).padStart(8 * 2, '0').slice(0, 8 * 2)
+  const hex = BigInt(amount).toString(16).padStart(8 * 2, '0').slice(0, 8 * 2)
   prepare.write(hex, reader.cursor, 8, 'hex')
   return prepare
 }

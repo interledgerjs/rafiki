@@ -14,19 +14,22 @@ export interface HeartbeatRuleServices {
 /**
  * Sends a peer.heartbeat message using a prescribed endpoint at a specified interval. Calls the onFailedHeartbeat function if the sending throws an error
  * otherwise onSuccessfullHeartbeat is called.
+ *
+ * TODO: Should be a controller
  */
 export function createIncomingHeartbeatMiddleware (config: HeartbeatRuleServices) {
-  return async ({ state: { ilp } }: RafikiContext, next: () => Promise<any>) => {
-    const { destination, data } = ilp.req
+  return async ({ ilp }: RafikiContext, next: () => Promise<any>) => {
+    const { destination, data } = ilp.prepare
     if (destination === 'peer.heartbeat') {
       logger.debug('received incoming heartbeat')
-      ilp.res = {
+      ilp.respond({
         fulfillment: data.slice(0, 32),
         data
-      }
+      })
       return
+    } else {
+      await next()
     }
-    await next()
   }
 }
 

@@ -12,19 +12,20 @@ const logger = log.child({ middleware: 'reduce-expiry' })
  * // TODO: Maybe this should be combined with the expiry checker and the expiry timeout?
  */
 export function createIncomingReduceExpiryMiddleware () {
-  return async ({ state: { peers, ilp } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ ilp, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
     const { minOutgoingExpirationWindow, maxHoldWindow } = await peers.incoming
     // TODO: Validate this logic. Do we want to change the expiry on the incoming packet?
-    ilp.req.expiresAt = getDestinationExpiry(ilp.req, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000)
+    // This is now (correctly?) a read-only object
+    ilp.prepare.expiresAt = getDestinationExpiry(ilp.prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000)
     await next()
   }
 }
 
 export function createOutgoingReduceExpiryMiddleware () {
-  return async ({ state: { peers, ilp } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ ilp, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
     const { minOutgoingExpirationWindow, maxHoldWindow } = await peers.outgoing
     // TODO: These values should not be undefined. The defaults should be set in the service
-    ilp.outgoingExpiry = getDestinationExpiry(ilp.req, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000)
+    ilp.outgoingPrepare.expiresAt = getDestinationExpiry(ilp.prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000)
     await next()
   }
 }

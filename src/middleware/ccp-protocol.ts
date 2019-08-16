@@ -10,24 +10,24 @@ const logger = log.child({ middleware: 'ccp-protocol' })
  * TODO: Should be a controller
  */
 export function createIncomingCcpProtocolMiddleware () {
-  return async ({ services, state: { ilp, peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
-    const { info } = await incoming
-    switch (ilp.req.destination) {
+  return async ({ ilp, services, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
+    const peer = await incoming
+    switch (ilp.prepare.destination) {
       case 'peer.route.control': {
-        logger.silly('received peer.route.control', { request: ilp.req })
+        logger.silly('received peer.route.control', { request: ilp.prepare })
         try {
-          await services.router.handleRouteControl(info.id, deserializeCcpRouteControlRequest(ilp.rawReq))
-          ilp.rawRes = serializeCcpResponse()
+          await services.router.handleRouteControl(peer.id, deserializeCcpRouteControlRequest(ilp.prepare.raw))
+          ilp.respond(serializeCcpResponse())
         } catch (error) {
           throw new TemporaryApplicationError('Unable to handle CCP Route Control', Buffer.from(''))
         }
         break
       }
       case 'peer.route.update': {
-        logger.silly('received peer.route.update', { request: ilp.req })
+        logger.silly('received peer.route.update', { request: ilp.prepare })
         try {
-          await services.router.handleRouteUpdate(info.id, deserializeCcpRouteUpdateRequest(ilp.rawReq))
-          ilp.rawRes = serializeCcpResponse()
+          await services.router.handleRouteUpdate(peer.id, deserializeCcpRouteUpdateRequest(ilp.prepare.raw))
+          ilp.respond(serializeCcpResponse())
         } catch (error) {
           throw new TemporaryApplicationError('Unable to handle CCP Route Update', Buffer.from(''))
         }

@@ -16,15 +16,15 @@ export function createIncomingThroughputMiddleware () {
 
   const _buckets = new Map<string,TokenBucket>()
 
-  return async ({ state: { ilp, peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
-    const { info } = await incoming
-    let incomingBucket = _buckets.get(info.id)
+  return async ({ ilp, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
+    const peer = await incoming
+    let incomingBucket = _buckets.get(peer.id)
     if (!incomingBucket) {
-      incomingBucket = createThroughputLimitBucketsForPeer(info, 'incoming')
-      if (incomingBucket) _buckets.set(info.id, incomingBucket)
+      incomingBucket = createThroughputLimitBucketsForPeer(peer, 'incoming')
+      if (incomingBucket) _buckets.set(peer.id, incomingBucket)
     }
     if (incomingBucket) {
-      if (!incomingBucket.take(BigInt(ilp.req.amount))) {
+      if (!incomingBucket.take(BigInt(ilp.prepare.amount))) {
         logger.warn('throttling incoming packet due to bandwidth exceeding limit', { ilp })
         throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
       }
@@ -37,15 +37,15 @@ export function createOutgoingThroughputMiddleware () {
 
   const _buckets = new Map<string,TokenBucket>()
 
-  return async ({ state: { ilp, peers: { outgoing } } }: RafikiContext, next: () => Promise<any>) => {
-    const { info } = await outgoing
-    let outgoingBucket = _buckets.get(info.id)
+  return async ({ ilp, state: { peers: { outgoing } } }: RafikiContext, next: () => Promise<any>) => {
+    const peer = await outgoing
+    let outgoingBucket = _buckets.get(peer.id)
     if (!outgoingBucket) {
-      outgoingBucket = createThroughputLimitBucketsForPeer(info, 'outgoing')
-      if (outgoingBucket) _buckets.set(info.id, outgoingBucket)
+      outgoingBucket = createThroughputLimitBucketsForPeer(peer, 'outgoing')
+      if (outgoingBucket) _buckets.set(peer.id, outgoingBucket)
     }
     if (outgoingBucket) {
-      if (!outgoingBucket.take(ilp.outgoingAmount)) {
+      if (!outgoingBucket.take(BigInt(ilp.outgoingPrepare.amount))) {
         logger.warn('throttling outgoing packet due to bandwidth exceeding limit', { ilp })
         throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
       }

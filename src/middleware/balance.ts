@@ -11,8 +11,8 @@ export interface SettlementInfo {
 }
 
 export function createIncomingBalanceMiddleware () {
-  return async ({ services: { accounts }, state: { peers, ilp } }: RafikiContext, next: () => Promise<any>) => {
-    const { amount } = ilp.req
+  return async ({ ilp, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+    const { amount } = ilp.prepare
 
     // TODO - Move to dedicated middleware
     // Handle peer.settle
@@ -57,7 +57,7 @@ export function createIncomingBalanceMiddleware () {
       throw err
     }
 
-    if (ilp.res && isFulfill(ilp.res)) {
+    if (ilp.fulfill) {
       this.maybeSettle(await peers.incoming).catch(logger.error)
       // this.stats.incomingDataPacketValue.increment(this.peer, { result: 'fulfilled' }, + amount)
     } else {
@@ -73,8 +73,8 @@ export function createIncomingBalanceMiddleware () {
 }
 
 export function createOutgoingBalanceMiddleware () {
-  return async ({ services: { accounts }, state: { peers, ilp } }: RafikiContext, next: () => Promise<any>) => {
-    const { amount, destination } = ilp.req
+  return async ({ ilp, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+    const { amount, destination } = ilp.outgoingPrepare
 
     if (destination.startsWith('peer.settle')) {
       await next()
@@ -99,7 +99,7 @@ export function createOutgoingBalanceMiddleware () {
       throw err
     }
 
-    if (ilp.res && isFulfill(ilp.res)) {
+    if (ilp.fulfill) {
       // Decrease balance on fulfill
       const account = await accounts.adjustBalance(BigInt(amount), peer.id)
       this.maybeSettle(await peers.outgoing).catch()

@@ -6,11 +6,11 @@ const logger = log.child({ middleware: 'validate-fulfillment' })
 const { WrongConditionError } = Errors
 
 export function createOutgoingValidateFulfillmentMiddleware () {
-  return async ({ state: { ilp } }: RafikiContext, next: () => Promise<any>) => {
-    const { executionCondition } = ilp.req
+  return async ({ ilp, state }: RafikiContext, next: () => Promise<any>) => {
+    const { executionCondition } = ilp.prepare
     await next()
-    if (ilp.res && isFulfill(ilp.res)) {
-      const { fulfillment } = ilp.res
+    if (ilp.fulfill) {
+      const { fulfillment } = ilp.fulfill
       const calculatedCondition = createHash('sha256').update(fulfillment).digest()
       if (!calculatedCondition.equals(executionCondition)) {
         logger.warn('invalid fulfillment', { ilp })

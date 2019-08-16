@@ -16,10 +16,10 @@ const ECHO_DATA_PREFIX = Buffer.from('ECHOECHOECHOECHO', 'ascii')
  * TODO: This should be a controller
  */
 export function createOutgoingEchoProtocolMiddleware (minMessageWindow: number) {
-  return async ({ state: { ilp, peers: { outgoing } } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ ilp, state: { peers: { outgoing } } }: RafikiContext, next: () => Promise<any>) => {
 
     const { info } = await outgoing
-    const { req: { data, amount, expiresAt, executionCondition } } = ilp
+    const { data, amount, expiresAt, executionCondition } = ilp.outgoingPrepare
 
     // TODO : Will this work? Is the self peer in the peers service or just the connector
     if (info.id === SELF_PEER_ID) {
@@ -39,13 +39,13 @@ export function createOutgoingEchoProtocolMiddleware (minMessageWindow: number) 
 
         logger.verbose('responding to echo packet', { sourceAddress })
 
-        ilp.rawRes = await sendToPeer(await outgoing, serializeIlpPrepare({
+        ilp.respond(await sendToPeer(await outgoing, serializeIlpPrepare({
           amount: amount,
           destination: sourceAddress,
           executionCondition: executionCondition,
           expiresAt: new Date(Number(expiresAt) - minMessageWindow),
           data: writer.getBuffer()
-        }))
+        })))
       } else {
         logger.error('received unexpected echo response.')
         throw new Error('received unexpected echo response.')

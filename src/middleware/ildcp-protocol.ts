@@ -10,8 +10,8 @@ const logger = log.child({ middleware: 'ildcp-protocol' })
  * TODO: Should be a controller
  */
 export function createIncomingIldcpProtocolMiddleware () {
-  return async ({ services, state: { ilp, peers : { incoming } } }: RafikiContext, next: () => Promise<any>) => {
-    if (ilp.req.destination === 'peer.config') {
+  return async ({ services, ilp, state: { peers : { incoming } } }: RafikiContext, next: () => Promise<any>) => {
+    if (ilp.prepare.destination === 'peer.config') {
 
       const { info } = await incoming
       const { assetCode, assetScale, protocols: { ildcp }, id, relation } = info
@@ -28,15 +28,15 @@ export function createIncomingIldcpProtocolMiddleware () {
       logger.info('responding to ILDCP request from child', { peerId: id, address: clientAddress })
 
       // TODO: Remove unnecessary serialization from ILDCP module
-      ilp.rawRes = await ildcpServe({
-        requestPacket: ilp.rawReq,
+      ilp.respond(await ildcpServe({
+        requestPacket: ilp.prepare.raw,
         handler: () => Promise.resolve({
           clientAddress,
           assetScale,
           assetCode
         }),
         serverAddress
-      })
+      }))
     }
   }
 }

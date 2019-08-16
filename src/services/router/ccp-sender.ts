@@ -9,7 +9,7 @@ import {
 import { ForwardingRoutingTable, BroadcastRoute, Relation, RouteUpdate } from 'ilp-routing'
 import { randomBytes } from 'crypto'
 import { log } from '../../winston'
-import { PeerNotFoundError } from '../../errors/peer-not-found-error'
+import { PeerNotFoundError } from '../../errors'
 const logger = log.child({ component: 'ccp-sender' })
 
 export class CcpSenderService extends Map<string, CcpSender> {

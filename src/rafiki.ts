@@ -2,7 +2,7 @@ import Koa, { ParameterizedContext, Middleware } from 'koa'
 import compose from 'koa-compose'
 import createRouter from 'koa-joi-router'
 import { Router } from './services/router'
-import { IlpState, createIlpPacketMiddleware, IlpPacketMiddlewareOptions } from './middleware/ilp-packet'
+import { createIlpPacketMiddleware, IlpPacketMiddlewareOptions, IlpContext } from './middleware/ilp-packet'
 import { PeerState, createPeerMiddleware, PeerMiddlewareOptions } from './middleware/peer'
 import { PeerService } from './services/peers'
 import { AuthState } from './middleware/auth'
@@ -35,8 +35,8 @@ export interface RafikiServices {
 }
 
 export type RafikiIlpConfig = IlpPacketMiddlewareOptions & PeerMiddlewareOptions
-export type RafikiState = IlpState & PeerState & AuthState
-export type RafikiContextMixin = { services: RafikiServices }
+export type RafikiState = PeerState & AuthState
+export type RafikiContextMixin = { services: RafikiServices, ilp: IlpContext }
 export type RafikiContext = Koa.ParameterizedContext<RafikiState, RafikiContextMixin>
 export type ParameterizedRafikiContext<T> = Koa.ParameterizedContext<RafikiState & T, RafikiContextMixin>
 export type RafikiMiddleware = Middleware<RafikiState, RafikiContextMixin>

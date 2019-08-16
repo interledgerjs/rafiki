@@ -11,11 +11,11 @@ const logger = log.child({ middleware: 'error-handler' })
  * reject that is sent back to sender.
  */
 export function createIncomingErrorHandlerMiddleware () {
-  return async ({ services, state: { ilp } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ ilp, services }: RafikiContext, next: () => Promise<any>) => {
     try {
       await next()
-      if (ilp.res && !(isFulfill(ilp.res) || isReject(ilp.res))) {
-        logger.error('handler did not return a valid value.', { response: JSON.stringify(ilp.res) })
+      if (!ilp.reply) {
+        logger.error('handler did not return a valid value.')
         throw new Error('handler did not return a value.')
       }
     } catch (e) {
@@ -25,7 +25,7 @@ export function createIncomingErrorHandlerMiddleware () {
       }
       logger.error('Error thrown in incoming pipeline', { err })
       const self = services.router.getAddresses(SELF_PEER_ID)
-      ilp.res = errorToIlpReject(self.length > 0 ? self[0] : 'peer', err)
+      ilp.respond(errorToIlpReject(self.length > 0 ? self[0] : 'peer', err))
     }
   }
 }

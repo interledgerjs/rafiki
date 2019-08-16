@@ -14,15 +14,15 @@ const DEFAULT_REFILL_COUNT = 10000n
  * Throttles throughput based on the number of requests per minute.
  */
 export function createIncomingRateLimitMiddleware () {
-  return async ({ state: { ilp, peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
-    const { info } = await incoming
-    let bucket = this._buckets.get(info.id)
+  return async ({ ilp : { prepare }, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
+    const peer = await incoming
+    let bucket = this._buckets.get(peer.id)
     if (!bucket) {
-      bucket = createRateLimitBucketForPeer(info)
-      this._buckets.set(info.id, bucket)
+      bucket = createRateLimitBucketForPeer(peer)
+      this._buckets.set(peer.id, bucket)
     }
     if (!bucket.take()) {
-      logger.warn(`rate limited a packet`, { bucket, ilp, peer: info })
+      logger.warn(`rate limited a packet`, { bucket, prepare, peer })
       throw new RateLimitedError('too many requests, throttling.')
     }
     await next()
