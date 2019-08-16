@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "composite": true,
     "target": "esnext",
     "module": "commonjs",
     "esModuleInterop":true,
@@ -12,10 +13,14 @@
     "inlineSources": true,
     "strictNullChecks": true,
     "suppressImplicitAnyIndexErrors": true,
-    "outDir": "./build",
-    "rootDir": "."
+    "baseUrl": "."
   },
+  "exclude": [
+    "**/node_modules/**/*",
+    "packages/*/build/**/*",
+    "packages/*/test/**/*"
+  ],
   "include": [
-    "src/**/*"
+    "packages/**/*.ts"
   ]
 }
