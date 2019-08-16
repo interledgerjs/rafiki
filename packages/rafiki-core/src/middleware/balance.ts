@@ -115,7 +115,7 @@ export function createOutgoingBalanceMiddleware () {
 }
 
 // TODO: Figure out settlement
-async function maybeSettle ({ info, balance }: Peer): Promise<void> {
+async function maybeSettle (peer: Peer): Promise<void> {
   // if (!settlement || !settlementEngine) {
   //   logger.debug('Not deciding whether to settle for accountId=' + peer.id + '. No settlement engine configured.')
   //   return

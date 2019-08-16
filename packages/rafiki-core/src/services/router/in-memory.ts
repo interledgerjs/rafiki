@@ -37,10 +37,8 @@ export class InMemoryRouter implements Router {
 
     // Added
     this._peers.added.subscribe(async (peer: PeerInfo) => {
-      const isSender = (peer.CcpConfig && peer.CcpConfig.isSender) ? peer.CcpConfig.isSender : false
-      const isReceiver = (peer.CcpConfig && peer.CcpConfig.isReceiver) ? peer.CcpConfig.isReceiver : false
       const routingWeight = peer.relationWeight || 0
-      await this._addPeer(peer.id, peer.relation, routingWeight, isSender, isReceiver)
+      await this._addPeer(peer.id, peer.relation, routingWeight, peer.isCcpSender, peer.isCcpReceiver)
     })
 
     // Updated

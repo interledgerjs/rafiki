@@ -13,8 +13,8 @@ export function createIldcpProtocolController () {
     if (ilp.prepare.destination === 'peer.config') {
 
       const peer = await incoming
-      const { assetCode, assetScale, id, relation } = peer
-
+      const { id, relation } = peer
+      const { assetCode, assetScale } = await services.accounts.get(id)
       if (relation !== 'child') {
         logger.warn('received ILDCP request for peer that is not a child', { peerId: id, relation })
         throw new Error('Can\'t generate address for a peer that isn\t a child.')

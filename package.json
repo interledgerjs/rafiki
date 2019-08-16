@@ -9,6 +9,7 @@
     "lerna": "^3.16.4"
   },
   "dependencies": {
-    "ilp-packet": "^3.0.8"
+    "ilp-packet": "^3.0.8",
+    "typescript": "^3.5.3"
   }
 }

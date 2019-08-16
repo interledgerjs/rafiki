@@ -1,22 +1,23 @@
 import createRouter, { Router, Joi } from 'koa-joi-router'
 import { create as createSettlement } from './controllers/accountSettlementController'
-import { create as sendMessage } from './controllers/accountMessageController'
+import { create as createMessage } from './controllers/accountMessageController'
+import { RafikiContext } from '@interledger/rafiki-core'
 
-export function ApiRouter (): Router {
+export function createSettlementApiRoutes (): Router {
   const router = createRouter()
 
   router.route({
     method: 'get',
     path: '/health',
-    handler: (ctx) => ctx.body = 'Hello World!'
+    handler: (ctx: RafikiContext) => ctx.body = 'Hello World!'
   })
 
   router.route({
     method: 'post',
-    path: '/accounts/:accountId/settlement',
+    path: '/accounts/:id/settlement',
     validate: {
       params: {
-        accountId: Joi.string().required()
+        id: Joi.string().required()
       },
       body: {
         amount: Joi.string().required(),
@@ -29,13 +30,13 @@ export function ApiRouter (): Router {
 
   router.route({
     method: 'post',
-    path: '/accounts/:accountId/messages',
+    path: '/accounts/:id/messages',
     validate: {
       params: {
-        accountId: Joi.string().required()
+        id: Joi.string().required()
       }
     },
-    handler: sendMessage
+    handler: createMessage
   })
 
   return router

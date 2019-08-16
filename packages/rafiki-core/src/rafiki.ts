@@ -7,17 +7,11 @@ import { PeerState, createPeerMiddleware, PeerMiddlewareOptions } from './middle
 import { PeerService } from './services/peers'
 import { AuthState } from './middleware/auth'
 import { Config } from '.'
-import { createClientController } from './controllers/client'
 import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
 import { AccountsService } from './services/accounts'
 import {
-  createIncomingErrorHandlerMiddleware,
-  createIncomingBalanceMiddleware,
   createIldcpProtocolController,
-  createCcpProtocolController,
-  createEchoProtocolController,
-  createOutgoingExpireMiddleware,
-  createOutgoingBalanceMiddleware,
+  createEchoProtocolController
 } from './middleware'
 
 export const DEFAULT_ILP_PATH = '/ilp'
@@ -63,21 +57,19 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
       throw new Error('No router service provided to the app')
     }
 
-    // Set global middleware that exposes services
-    this.use(async (ctx: ParameterizedContext<RafikiState, RafikiContextMixin>, next: () => Promise<any>) => {
-      ctx.services = {
-        get peers () {
-          return peersOrThrow()
-        },
-        get router () {
-          return routerOrThrow()
-        },
-        get accounts () {
-          return accountsOrThrow()
-        }
+    // Set global context that exposes services
+    this.context.services = {
+      get peers () {
+        return peersOrThrow()
+      },
+      get router () {
+        return routerOrThrow()
+      },
+      get accounts () {
+        return accountsOrThrow()
       }
-      await next()
-    })
+    }
+
   }
 
   public get router () {
