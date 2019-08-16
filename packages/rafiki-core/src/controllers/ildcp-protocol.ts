@@ -1,5 +1,5 @@
 import { serve as ildcpServe } from 'ilp-protocol-ildcp'
-import { log } from '../winston'
+import { log } from '../logger'
 import { SELF_PEER_ID } from '../constants'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'ildcp-protocol' })
@@ -8,7 +8,8 @@ const logger = log.child({ middleware: 'ildcp-protocol' })
  * Intercepts and handles peer.config messages otherwise passes the request onto next.
  */
 export function createIldcpProtocolController () {
-  return async function ildcp ({ services, ilp, state: { peers : { incoming } } }: RafikiContext) {
+  return async function ildcp (ctx: RafikiContext) {
+    const { services, ilp, state: { peers : { incoming } } } = ctx
     if (ilp.prepare.destination === 'peer.config') {
 
       const peer = await incoming
@@ -35,6 +36,8 @@ export function createIldcpProtocolController () {
         }),
         serverAddress
       }))
+    } else {
+      ctx.throw('Invalid address in ILDCP request')
     }
   }
 }

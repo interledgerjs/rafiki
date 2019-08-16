@@ -128,8 +128,16 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
       method: 'post',
       path,
       handler
-    }).middleware()
-  )
+    }).middleware())
+  }
+
+  public useIldcp () {
+    this.ilpRoute('peer.config', createIldcpProtocolController())
+  }
+
+  public useEcho () {
+    // TODO: This won't work yet, we need to be able to match against OWN address
+    this.ilpRoute('local', createEchoProtocolController(1500))
   }
 }
 
@@ -147,8 +155,6 @@ export function createApp (config: Config, { auth, peers, accounts, router }: Pa
   const path = config.httpServerPath
   app.use(createAuthMiddleware(auth))
   app.useIlp({ path })
-  app.ilpRoute('peer.config.*', createIldcpProtocolController())
-  app.ilpRoute('peer.route.*', createCcpProtocolController())
   // TODO: ilpRoute needs a way to get our own address later and then setup this route
   // app.ilpRoute('get address from connector', createEchoProtocolController(1500))
   app.ilpRoute('*', middleware || createDefaultMiddleware(config))
