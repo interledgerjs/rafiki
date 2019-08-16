@@ -2,10 +2,9 @@ import {
   Config,
   RafikiContext,
   getBearerToken,
-  InMemoryPeers,
-  InMemoryConnector,
+  InMemoryRouter,
   createApp,
-  RafikiMiddleware, ClientConfig, BalanceConfig
+  RafikiMiddleware, InMemoryPeers
 } from '../src'
 
 // Can choose where you configs are loaded
@@ -16,15 +15,13 @@ config.loadFromEnv()
 const peers = new InMemoryPeers()
 peers.add({
   id: 'alice',
-  assetCode: 'XRP',
-  assetScale: 9,
   relation: 'child',
-  client: {} as ClientConfig,
-  balance: {} as BalanceConfig,
-  rules: {},
-  protocols: {}
+  defaultAccountId : 'test',
+  isCcpReceiver: false,
+  isCcpSender: false
 })
-const connector = new InMemoryConnector(peers, {
+
+const ilpRouter = new InMemoryRouter(peers, {
   globalPrefix: 'test',
   ilpAddress: config.ilpAddress
 })
@@ -49,7 +46,7 @@ const authMiddleware: RafikiMiddleware = async (ctx: RafikiContext, next: () => 
 }
 
 const customMiddlewareLogger: RafikiMiddleware = async (ctx: RafikiContext, next: () => Promise<any>) => {
-  console.log(ctx.state.ilp.req)
+  console.log(ctx.ilp.prepare)
   console.log(await ctx.state.peers.incoming)
   await next()
 }
@@ -58,7 +55,7 @@ const customMiddlewareLogger: RafikiMiddleware = async (ctx: RafikiContext, next
 const app = createApp(config, {
   auth: authMiddleware,
   peers,
-  connector
+  router: ilpRouter
 }, customMiddlewareLogger)
 
 app.listen(3000)

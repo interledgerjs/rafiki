@@ -5,7 +5,7 @@ import { log } from '../winston'
 import configSchema from '../schemas/Config.json'
 const {
   extractDefaultsFromSchema
-} = require('../lib/utils')
+} = require('../lib/schema')
 import Ajv = require('ajv')
 const logger = log.child({ component: 'config' })
 const ajv = new Ajv()
