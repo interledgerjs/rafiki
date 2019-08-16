@@ -1,4 +1,4 @@
-import { log } from '../winston'
+import { log } from '../logger'
 import { Errors as IlpPacketErrors, isReject } from 'ilp-packet'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'liquidity-check' })

@@ -1,4 +1,4 @@
-import { log } from '../../winston'
+import { log } from '../../logger'
 import { Context } from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'

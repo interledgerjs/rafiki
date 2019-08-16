@@ -1,6 +1,6 @@
 import Koa, { Context } from 'koa'
 import bodyParser from 'koa-bodyparser'
-import { log } from '../../winston'
+import { log } from '../../logger'
 import { Server, createServer } from 'http'
 import { ApiRouter } from './routes'
 import getRawBody = require('raw-body')

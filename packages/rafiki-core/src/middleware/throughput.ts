@@ -2,7 +2,7 @@ import { Rule } from '../types/rule'
 import { PeerInfo } from '../types/peer'
 import { TokenBucket } from '../lib/token-bucket'
 import { Errors } from 'ilp-packet'
-import { log } from '../winston'
+import { log } from '../logger'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'throughput' })
 const { InsufficientLiquidityError } = Errors

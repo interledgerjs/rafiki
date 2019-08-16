@@ -1,4 +1,4 @@
-import { log } from '../winston'
+import { log } from '../logger'
 const logger = log.child({ component: 'token-bucket' })
 export class TokenBucket {
   private _lastTime: number

@@ -1,6 +1,6 @@
 import { Errors } from 'ilp-packet'
 import { Rule } from '../types/rule'
-import { log } from '../winston'
+import { log } from '../logger'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'expire' })
 

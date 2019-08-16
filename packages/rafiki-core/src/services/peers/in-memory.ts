@@ -5,7 +5,7 @@ import { Peer as PeerModel } from '../../models/Peer'
 import Knex from 'knex'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError } from '../../errors'
-import { log } from '../../winston'
+import { log } from '../../logger'
 
 class InMemoryPeer implements Peer {
   readonly [key: string]: any

@@ -1,5 +1,5 @@
 import { AppContext } from '..'
-import { log } from '../../../winston'
+import { log } from '../../../logger'
 import { PeerNotFoundError } from '../../../errors'
 
 const logger = log.child({ component: 'settlement-admin-api:accountMessageController' })

@@ -1,5 +1,5 @@
 import { serve as ildcpServe } from 'ilp-protocol-ildcp'
-import { log } from '../winston'
+import { log } from '../logger'
 import { SELF_PEER_ID } from '../constants'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'ildcp-protocol' })

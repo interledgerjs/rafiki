@@ -1,6 +1,6 @@
 import { createHash } from 'crypto'
 import { isFulfill, Errors } from 'ilp-packet'
-import { log } from '../winston'
+import { log } from '../logger'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'validate-fulfillment' })
 const { WrongConditionError } = Errors

@@ -1,6 +1,6 @@
 import nanoid from 'nanoid/generate'
 import Knex from 'knex'
-import { log } from '../../winston'
+import { log } from '../../logger'
 import { AuthToken } from '../../models/AuthToken'
 import { TokenService, TokenInfo } from '.'
 import * as assert from 'assert'

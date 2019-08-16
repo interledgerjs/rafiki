@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// import * as winston from 'winston'
+import * as winston from 'winston'
 import Knex from 'knex'
 import { Server } from 'net'
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
@@ -18,25 +18,24 @@ import { AdminApi } from './servers'
 
 // Logging
 // tslint:disable-next-line
-// const stringify = (value: any) => typeof value === 'bigint' ? value.toString() : JSON.stringify(value)
-// const formatter = winston.format.printf(({ service, level, message, component, timestamp, ...metaData }) => {
-//   return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}` + (metaData ? ' meta data: ' + stringify(metaData) : '')
-// })
+const stringify = (value: any) => typeof value === 'bigint' ? value.toString() : JSON.stringify(value)
+const formatter = winston.format.printf(({ service, level, message, component, timestamp, ...metaData }) => {
+  return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}` + (metaData ? ' meta data: ' + stringify(metaData) : '')
+})
 
-// winston.configure({
-//   level: process.env.LOG_LEVEL || 'info',
-//   format: winston.format.combine(
-//     winston.format.colorize(),
-//     winston.format.timestamp(),
-//     winston.format.align(),
-//     formatter
-//   ),
-//   defaultMeta: { service: 'rafiki' },
-//   transports: [
-//     new winston.transports.Console()
-//   ]
-// })
-const winston = console
+winston.configure({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.colorize(),
+    winston.format.timestamp(),
+    winston.format.align(),
+    formatter
+  ),
+  defaultMeta: { service: 'rafiki' },
+  transports: [
+    new winston.transports.Console()
+  ]
+})
 
 // Load config from ENV vars
 const config = new Config()

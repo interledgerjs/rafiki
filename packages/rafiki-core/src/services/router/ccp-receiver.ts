@@ -7,7 +7,7 @@ import {
   CcpRouteUpdateResponse
 } from 'ilp-protocol-ccp'
 import { IncomingRoute } from 'ilp-routing'
-import { log } from '../../winston'
+import { log } from '../../logger'
 import { PeerNotFoundError } from '../../errors'
 const logger = log.child({ component: 'ccp-receiver' })
 

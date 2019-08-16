@@ -1,5 +1,5 @@
 import { IlpPrepare, Errors } from 'ilp-packet'
-import { log } from '../winston'
+import { log } from '../logger'
 import { RafikiContext } from '../rafiki'
 const { InsufficientTimeoutError } = Errors
 const logger = log.child({ middleware: 'reduce-expiry' })

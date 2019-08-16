@@ -1,5 +1,5 @@
 import { isFulfill } from 'ilp-packet'
-import { log } from '../winston'
+import { log } from '../logger'
 import { Peer } from '../services/peers'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ component: 'balance-middleware' })

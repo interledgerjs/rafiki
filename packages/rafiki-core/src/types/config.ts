@@ -1,7 +1,7 @@
 import { InvalidJsonBodyError } from '../errors/invalid-json-body-error'
 import { constantCase } from 'change-case'
 import { Config as ConfigSchemaTyping } from '../schemas/ConfigTyping'
-import { log } from '../winston'
+import { log } from '../logger'
 import configSchema from '../schemas/Config.json'
 const {
   extractDefaultsFromSchema

@@ -1,7 +1,7 @@
 import { Errors } from 'ilp-packet'
 import { TokenBucket } from '../lib/token-bucket'
 import { PeerInfo } from '../types/peer'
-import { log } from '../winston'
+import { log } from '../logger'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'rate-limit' })
 

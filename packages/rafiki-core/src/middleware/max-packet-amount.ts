@@ -1,5 +1,5 @@
 import { Errors } from 'ilp-packet'
-import { log } from '../winston'
+import { log } from '../logger'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'max-packet-amount' })
 const { AmountTooLargeError } = Errors

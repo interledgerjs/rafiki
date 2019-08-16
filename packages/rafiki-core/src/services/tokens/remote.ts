@@ -1,4 +1,4 @@
-import { log } from '../../winston'
+import { log } from '../../logger'
 import axios from 'axios'
 import { TokenService, TokenInfo } from '.'
 

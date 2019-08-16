@@ -8,7 +8,7 @@ import {
 } from 'ilp-protocol-ccp'
 import { ForwardingRoutingTable, BroadcastRoute, Relation, RouteUpdate } from 'ilp-routing'
 import { randomBytes } from 'crypto'
-import { log } from '../../winston'
+import { log } from '../../logger'
 import { PeerNotFoundError } from '../../errors'
 const logger = log.child({ component: 'ccp-sender' })
 

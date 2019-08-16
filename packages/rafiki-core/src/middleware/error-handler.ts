@@ -1,5 +1,5 @@
 import { errorToIlpReject, isFulfill, isReject } from 'ilp-packet'
-import { log } from '../winston'
+import { log } from '../logger'
 import { SELF_PEER_ID } from '../constants'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'error-handler' })

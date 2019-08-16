@@ -1,4 +1,4 @@
-import { log } from '../winston'
+import { log } from '../logger'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ controller: 'client' })
 

@@ -1,6 +1,6 @@
 import { serializeIlpPrepare } from 'ilp-packet'
 import { RafikiContext } from '../rafiki'
-import { log } from '../winston'
+import { log } from '../logger'
 const logger = log.child({ middleware: 'heartbeat' })
 
 const DEFAULT_HEARTBEAT_INTERVAL = 30 * 1000

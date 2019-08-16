@@ -1,7 +1,7 @@
 import { AccountInfo } from '../../types'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError, AccountNotFoundError } from '../../errors'
-import { log } from '../../winston'
+import { log } from '../../logger'
 import { Errors } from 'ilp-packet'
 import { AccountsService, AccountSnapshot } from '.'
 import { PeerService } from '../peers'
