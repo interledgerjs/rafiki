@@ -4,7 +4,7 @@
 import { deserializeIlpPrepare, IlpPrepare, IlpReply, IlpFulfill, IlpReject, serializeIlpPrepare, serializeIlpFulfill, deserializeIlpFulfill, serializeIlpReject, deserializeIlpReject, isFulfill, isReject } from 'ilp-packet'
 import { Readable } from 'stream'
 import { RafikiContext } from '../rafiki'
-import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from '../lib/ilp'
+import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from '../lib'
 import getRawBody from 'raw-body'
 
 const CONTENT_TYPE = 'application/octet-stream'

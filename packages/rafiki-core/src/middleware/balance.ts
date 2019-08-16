@@ -1,5 +1,4 @@
-import { isFulfill } from 'ilp-packet'
-import { log } from '../logger'
+import { log } from '@interledger/rafiki-utils'
 import { Peer } from '../services/peers'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ component: 'balance-middleware' })

@@ -1,3 +1,0 @@
-# Generated typings for schemas should not be checked in
-*.ts
-!index.ts

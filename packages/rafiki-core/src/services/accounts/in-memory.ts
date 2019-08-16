@@ -1,7 +1,7 @@
 import { AccountInfo } from '../../types'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError, AccountNotFoundError } from '../../errors'
-import { log } from '../../logger'
+import { log } from '@interledger/rafiki-utils'
 import { Errors } from 'ilp-packet'
 import { AccountsService, AccountSnapshot } from '.'
 import { PeerService } from '../peers'

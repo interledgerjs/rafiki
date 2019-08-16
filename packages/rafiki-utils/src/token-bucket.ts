@@ -1,5 +1,3 @@
-import { log } from '../logger'
-const logger = log.child({ component: 'token-bucket' })
 export class TokenBucket {
   private _lastTime: number
   private _left: bigint
@@ -20,11 +18,7 @@ export class TokenBucket {
 
     this._lastTime = now
     this._left = (this._left + refillAmount < this._capacity) ? this._left + refillAmount : this._capacity
-
-    // this debug statement is commented out for performance, uncomment when
-    // debugging rate limit middleware
-    // logger.silly('took token from bucket',{ left: this._left })
-
+    
     if (this._left < count) {
       return false
     }

@@ -1,5 +1,5 @@
 import { serve as ildcpServe } from 'ilp-protocol-ildcp'
-import { log } from '../logger'
+import { log } from '@interledger/rafiki-utils'
 import { SELF_PEER_ID } from '../constants'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'ildcp-protocol' })

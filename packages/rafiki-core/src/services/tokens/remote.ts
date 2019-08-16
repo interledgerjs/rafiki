@@ -1,4 +1,4 @@
-import { log } from '../../logger'
+import { log } from '@interledger/rafiki-utils'
 import axios from 'axios'
 import { TokenService, TokenInfo } from '.'
 

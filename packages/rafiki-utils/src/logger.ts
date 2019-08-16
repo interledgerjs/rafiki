@@ -9,8 +9,10 @@
 
 import * as winston from 'winston'
 
+export type Logger = winston.Logger
+
 const log = {
-  child: (options: Object): winston.Logger => {
+  child: (options: Object): Logger => {
     const logger = winston['default'].exceptions.logger
     const child = logger.child(options)
     // TODO: Consider adding a transport that writes to debug if this is enabled for the component

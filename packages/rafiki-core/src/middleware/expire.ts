@@ -1,6 +1,5 @@
 import { Errors } from 'ilp-packet'
-import { Rule } from '../types/rule'
-import { log } from '../logger'
+import { log } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'expire' })
 

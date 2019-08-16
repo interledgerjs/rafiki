@@ -1,12 +1,10 @@
 import Koa, { ParameterizedContext, Middleware } from 'koa'
-import compose from 'koa-compose'
 import createRouter from 'koa-joi-router'
 import { Router } from './services/router'
 import { createIlpPacketMiddleware, IlpPacketMiddlewareOptions, IlpContext, ilpAddressToPath } from './middleware/ilp-packet'
 import { PeerState, createPeerMiddleware, PeerMiddlewareOptions } from './middleware/peer'
 import { PeerService } from './services/peers'
 import { AuthState } from './middleware/auth'
-import { Config } from '.'
 import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
 import { AccountsService } from './services/accounts'
 import {
@@ -129,16 +127,17 @@ interface RafikiCreateAppServices extends RafikiServices {
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
 }
 
-export function createApp (config: Config, { auth, peers, accounts, router }: Partial<RafikiCreateAppServices>, middleware?: RafikiMiddleware) {
+export function createApp ({ auth, peers, accounts, router }: Partial<RafikiCreateAppServices>, middleware?: RafikiMiddleware) {
 
   const app = new Rafiki({
     peers,
     router,
     accounts
   })
-  const path = config.httpServerPath
+
   app.use(createAuthMiddleware(auth))
-  app.useIlp({ path })
+  // TODO - Resolve
+  // app.useIlp({ path })
   // TODO: ilpRoute needs a way to get our own address later and then setup this route
   // app.ilpRoute('get address from connector', createEchoProtocolController(1500))
   // app.ilpRoute('*', middleware)

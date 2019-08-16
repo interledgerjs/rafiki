@@ -18,14 +18,10 @@
     "build/doc"
   ],
   "scripts": {
-    "start": "npm run build && node ./build/start.js",
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "build": "npm run schema-to-tsd && tsc -p src/tsconfig.build.json && npm run copy-schemas",
-    "copy-schemas": "mkdir -p ./build/schemas && cp ./src/schemas/*.json ./build/schemas",
+    "build": "tsc -p src/tsconfig.build.json",
     "lint": "tslint --project .",
     "lintFix": "tslint --project . --fix",
-    "schema-to-tsd": "node scripts/build_schema_types",
-    "migrate:make": "knex migrate:make",
     "test": "jest --bail --runInBand",
     "test:name": "jest --bail --runInBand --testNamePattern=",
     "test:list": "jest --listTests",
@@ -33,7 +29,7 @@
     "doc": "typedoc --options typedoc.js src",
     "codecov": "codecov",
     "preversion": "npm run lint && npm test",
-    "prepublishOnly": "rm -Rf ./build/test && npm run lint && npm test && npm run doc"
+    "prepublishOnly": "npm run lint && npm test && npm run doc"
   },
   "repository": {
     "type": "git",
@@ -42,6 +38,7 @@
   "author": "Interledger Team <info@interledger.org>",
   "license": "Apache-2.0",
   "dependencies": {
+    "@interledger/rafiki-utils": "^0.1.0",
     "@types/koa": "^2.0.48",
     "@types/koa-bodyparser": "^4.3.0",
     "@types/koa-joi-router": "^5.2.2",

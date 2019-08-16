@@ -2,7 +2,7 @@ import { IncomingRoute, RouteManager, Router as RoutingTable } from 'ilp-routing
 import Knex from 'knex'
 import { fetch as ildcpFetch } from 'ilp-protocol-ildcp'
 import { Relation, RelationWeights, PeerInfo } from '../../types'
-import { log } from '../../logger'
+import { log } from '@interledger/rafiki-utils'
 import { PeerNotFoundError } from '../../errors'
 import { CcpRouteControlRequest, CcpRouteUpdateRequest, CcpRouteControlResponse, CcpRouteUpdateResponse } from 'ilp-protocol-ccp'
 import { CcpSender, CcpSenderService } from './ccp-sender'
@@ -10,7 +10,6 @@ import { CcpReceiver, CcpReceiverService } from './ccp-receiver'
 import { PeerService } from '../peers'
 import { Router, getRouteWeight } from '.'
 import { SELF_PEER_ID } from '../../constants'
-// import { Route } from '../../../../temp/models/Route'
 import { sendToPeer } from '../client'
 
 const logger = log.child({ component: 'in-memory-router' })

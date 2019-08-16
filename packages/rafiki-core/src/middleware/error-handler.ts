@@ -1,5 +1,5 @@
-import { errorToIlpReject, isFulfill, isReject } from 'ilp-packet'
-import { log } from '../logger'
+import { errorToIlpReject } from 'ilp-packet'
+import { log } from '@interledger/rafiki-utils'
 import { SELF_PEER_ID } from '../constants'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'error-handler' })

@@ -1,8 +1,7 @@
 import { serializeIlpPrepare } from 'ilp-packet'
 import { Reader, Writer } from 'oer-utils'
 import { InvalidPacketError } from 'ilp-packet/dist/src/errors'
-import { log } from '../logger'
-import { SELF_PEER_ID } from '../constants'
+import { log } from '@interledger/rafiki-utils'
 import { sendToPeer } from '../services'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'echo-protocol' })

@@ -1,5 +1,5 @@
 import { deserializeCcpRouteUpdateRequest, serializeCcpResponse, deserializeCcpRouteControlRequest } from 'ilp-protocol-ccp'
-import { log } from '../logger'
+import { log } from '@interledger/rafiki-utils'
 import { TemporaryApplicationError } from 'ilp-packet/dist/src/errors'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ middleware: 'ccp-protocol' })

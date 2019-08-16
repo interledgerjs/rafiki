@@ -1,4 +1,4 @@
-import { log } from '../logger'
+import { log } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../rafiki'
 const logger = log.child({ controller: 'client' })
 

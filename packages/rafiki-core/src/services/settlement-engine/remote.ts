@@ -1,6 +1,6 @@
-import axios, { AxiosResponse } from 'axios'
+import axios from 'axios'
 import { IlpPrepare, IlpReply, IlpFulfill, IlpReject } from 'ilp-packet'
-import { log } from '../../logger'
+import { log } from '@interledger/rafiki-utils'
 import { STATIC_FULFILLMENT } from '../../constants'
 import { SettlementEngine } from '.'
 const logger = log.child({ component: 'remote-settlement-engine' })

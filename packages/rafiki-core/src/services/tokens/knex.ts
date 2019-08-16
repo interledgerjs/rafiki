@@ -1,6 +1,6 @@
 import nanoid from 'nanoid/generate'
 import Knex from 'knex'
-import { log } from '../../logger'
+import { log } from '@interledger/rafiki-utils'
 // import { AuthToken } from '../../../../temp/models/AuthToken'
 import { TokenService, TokenInfo } from '.'
 import * as assert from 'assert'
