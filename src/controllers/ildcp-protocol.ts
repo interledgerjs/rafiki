@@ -6,15 +6,13 @@ const logger = log.child({ middleware: 'ildcp-protocol' })
 
 /**
  * Intercepts and handles peer.config messages otherwise passes the request onto next.
- *
- * TODO: Should be a controller
  */
-export function createIncomingIldcpProtocolMiddleware () {
-  return async ({ services, ilp, state: { peers : { incoming } } }: RafikiContext, next: () => Promise<any>) => {
+export function createIldcpProtocolController () {
+  return async function ildcp ({ services, ilp, state: { peers : { incoming } } }: RafikiContext) {
     if (ilp.prepare.destination === 'peer.config') {
 
-      const { info } = await incoming
-      const { assetCode, assetScale, protocols: { ildcp }, id, relation } = info
+      const peer = await incoming
+      const { assetCode, assetScale, id, relation } = peer
 
       if (relation !== 'child') {
         logger.warn('received ILDCP request for peer that is not a child', { peerId: id, relation })

@@ -2,7 +2,7 @@ import Koa, { ParameterizedContext, Middleware } from 'koa'
 import compose from 'koa-compose'
 import createRouter from 'koa-joi-router'
 import { Router } from './services/router'
-import { createIlpPacketMiddleware, IlpPacketMiddlewareOptions, IlpContext } from './middleware/ilp-packet'
+import { createIlpPacketMiddleware, IlpPacketMiddlewareOptions, IlpContext, ilpAddressToPath } from './middleware/ilp-packet'
 import { PeerState, createPeerMiddleware, PeerMiddlewareOptions } from './middleware/peer'
 import { PeerService } from './services/peers'
 import { AuthState } from './middleware/auth'
@@ -18,9 +18,9 @@ import {
   createIncomingThroughputMiddleware,
   createIncomingReduceExpiryMiddleware,
   createIncomingBalanceMiddleware,
-  createIncomingIldcpProtocolMiddleware,
-  createIncomingCcpProtocolMiddleware,
-  createOutgoingEchoProtocolMiddleware,
+  createIldcpProtocolController,
+  createCcpProtocolController,
+  createEchoProtocolController,
   createOutgoingThroughputMiddleware,
   createOutgoingExpireMiddleware,
   createOutgoingReduceExpiryMiddleware,
@@ -28,13 +28,17 @@ import {
   createOutgoingValidateFulfillmentMiddleware
 } from './middleware'
 
+export const DEFAULT_ILP_PATH = '/ilp'
+
 export interface RafikiServices {
   router: Router
   peers: PeerService
   accounts: AccountsService
 }
 
-export type RafikiIlpConfig = IlpPacketMiddlewareOptions & PeerMiddlewareOptions
+export interface RafikiIlpConfig extends IlpPacketMiddlewareOptions, PeerMiddlewareOptions {
+  path?: string
+}
 export type RafikiState = PeerState & AuthState
 export type RafikiContextMixin = { services: RafikiServices, ilp: IlpContext }
 export type RafikiContext = Koa.ParameterizedContext<RafikiState, RafikiContextMixin>
@@ -46,7 +50,7 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
   private _router?: Router
   private _peers?: PeerService
   private _accounts?: AccountsService
-
+  private _ilpPath?: string
   constructor (config?: Partial<RafikiServices>) {
     super()
 
@@ -109,8 +113,23 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
   }
 
   public useIlp (config?: RafikiIlpConfig) {
+    this._ilpPath = (config) ? config.path || DEFAULT_ILP_PATH : DEFAULT_ILP_PATH
     this.use(createIlpPacketMiddleware(config))
     this.use(createPeerMiddleware(config))
+  }
+
+  public ilpRoute (ilpAddressPattern: string, handler: RafikiMiddleware) {
+    // TODO: Check that ILP middleware is being used otherwise this won't work
+
+    const path = '/' + ilpAddressToPath(ilpAddressPattern)
+    .split('/').filter(Boolean).join('/') // Trim trailing slash
+    .replace('*', '(.*)') // Replace wildcard with regex that only matches valid address chars
+    this.use(createRouter().route({
+      method: 'post',
+      path,
+      handler
+    }).middleware()
+  )
   }
 }
 
@@ -125,20 +144,14 @@ export function createApp (config: Config, { auth, peers, accounts, router }: Pa
     router,
     accounts
   })
-
+  const path = config.httpServerPath
   app.use(createAuthMiddleware(auth))
-  app.useIlp()
-
-  const mw = middleware || createDefaultMiddleware(config)
-
-  const koaRouter = createRouter()
-  koaRouter.route({
-    method: 'post',
-    path: config.httpServerPath,
-    handler: mw
-  })
-
-  app.use(koaRouter.middleware())
+  app.useIlp({ path })
+  app.ilpRoute('peer.config.*', createIldcpProtocolController())
+  app.ilpRoute('peer.route.*', createCcpProtocolController())
+  // TODO: ilpRoute needs a way to get our own address later and then setup this route
+  // app.ilpRoute('get address from connector', createEchoProtocolController(1500))
+  app.ilpRoute('*', middleware || createDefaultMiddleware(config))
   return app
 }
 
@@ -167,15 +180,10 @@ export function createDefaultMiddleware (config: Config) {
     createIncomingRateLimitMiddleware(),
     createIncomingThroughputMiddleware(),
     createIncomingReduceExpiryMiddleware(),
-    createIncomingBalanceMiddleware(),
-    createIncomingIldcpProtocolMiddleware(),
-    createIncomingCcpProtocolMiddleware()
+    createIncomingBalanceMiddleware()
   ])
 
   const outgoing = compose([
-    // Router
-    createOutgoingEchoProtocolMiddleware(1500),
-
     // Outgoing Rules
     createOutgoingBalanceMiddleware(),
     createOutgoingThroughputMiddleware(),

@@ -9,8 +9,8 @@ const logger = log.child({ middleware: 'ccp-protocol' })
  *
  * TODO: Should be a controller
  */
-export function createIncomingCcpProtocolMiddleware () {
-  return async ({ ilp, services, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
+export function createCcpProtocolController () {
+  return async function ccp ({ ilp, services, state: { peers: { incoming } } }: RafikiContext) {
     const peer = await incoming
     switch (ilp.prepare.destination) {
       case 'peer.route.control': {
@@ -34,7 +34,7 @@ export function createIncomingCcpProtocolMiddleware () {
         break
       }
       default: {
-        await next()
+        throw new Error('Unrecognized CCP message')
       }
     }
   }

@@ -241,7 +241,7 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions) 
     ctx.assert(ctx.request.type === CONTENT_TYPE, 400, 'Expected Content-Type of ' + CONTENT_TYPE)
 
     ctx.ilp = new IlpContext(await _getRawBody(ctx.req))
-    ctx.path = ctx.ilp.prepare.destination.replace('.', '/')
+    ctx.path = ilpAddressToPath(ctx.path)
 
     await next()
 
@@ -250,4 +250,8 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions) 
     ctx.body = ctx.ilp.reply!.raw
   }
 
+}
+
+export function ilpAddressToPath (ilpAddress: string, prefix?: string) {
+  return (prefix ? prefix + '/' : '') + ilpAddress.replace(/\./g, '/')
 }
