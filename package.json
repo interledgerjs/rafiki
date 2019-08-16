@@ -1,108 +1,11 @@
 {
-  "name": "@interledger/rafiki",
-  "version": "0.0.1-beta.4",
-  "description": "A modular ILP connector with stand-alone settlement engine and router",
-  "engines": {
-    "node": ">=10.13"
-  },
-  "main": "build/src/index.js",
-  "types": "build/src/index.d.ts",
-  "bin": {
-    "rafiki": "build/src/start.js"
-  },
-  "files": [
-    "build/src/**/*.json",
-    "build/src/**/*.js",
-    "build/src/**/*.js.map",
-    "build/src/**/*.d.ts",
-    "build/doc"
-  ],
+  "name": "root",
+  "private": true,
   "scripts": {
-    "start": "npm run build && node ./build/src/start.js",
-    "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "build": "npm run schema-to-tsd && tsc && npm run copy-schemas",
-    "copy-schemas": "mkdir -p ./build/src/schemas && cp ./src/schemas/*.json ./build/src/schemas",
-    "lint": "tslint --project .",
-    "lintFix": "tslint --project . --fix",
-    "schema-to-tsd": "node scripts/build_schema_types",
-    "migrate:make": "knex migrate:make",
-    "test": "jest --bail --runInBand",
-    "test:name": "jest --bail --runInBand --testNamePattern=",
-    "test:list": "jest --listTests",
-    "test:ci": "jest --bail --runInBand --coverage --ci",
-    "doc": "typedoc --options typedoc.js src",
-    "codecov": "codecov",
-    "preversion": "npm run lint && npm test",
-    "prepublishOnly": "rm -Rf ./build/test && npm run lint && npm test && npm run doc"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/interledgerjs/rafiki.git"
-  },
-  "author": "Interledger Team <info@interledger.org>",
-  "license": "Apache-2.0",
-  "dependencies": {
-    "@types/koa": "^2.0.48",
-    "@types/koa-bodyparser": "^4.3.0",
-    "@types/koa-joi-router": "^5.2.2",
-    "@types/nanoid": "^2.0.0",
-    "@types/node-fetch": "^2.3.3",
-    "agentkeepalive": "^4.0.2",
-    "ajv": "^6.9.1",
-    "axios": "^0.18.0",
-    "change-case": "^3.1.0",
-    "extensible-error": "^1.0.2",
-    "ilp-packet": "^3.0.8",
-    "ilp-protocol-ccp": "^1.1.1",
-    "ilp-protocol-ildcp": "^2.0.1",
-    "ilp-routing": "^20.0.1-beta.1",
-    "knex": "^0.18.2",
-    "koa": "^2.7.0",
-    "koa-bodyparser": "^4.2.1",
-    "koa-joi-router": "^6.0.0",
-    "mysql": "^2.17.1",
-    "nanoid": "^2.0.3",
-    "objection": "^1.6.9",
-    "oer-utils": "^4.0.0",
-    "prom-client": "^11.2.1",
-    "raw-body": "^2.4.1",
-    "rxjs": "^6.5.2",
-    "sqlite3": "^4.0.9",
-    "winston": "^3.2.1"
+    "build": "lerna run build --sort --concurrency=1 --stream",
+    "test": "lerna run test --concurrency=1 --stream"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.17",
-    "@types/rosie": "0.0.36",
-    "codecov": "^3.1.0",
-    "ilp-plugin-http": "^1.5.0",
-    "ilp-protocol-stream": "^1.8.9",
-    "jest": "^24.8.0",
-    "json-schema-to-typescript": "^6.1.1",
-    "rosie": "^2.0.1",
-    "source-map-support": "^0.5.10",
-    "ts-jest": "^24.0.2",
-    "tslint": "^5.12.1",
-    "tslint-config-standard": "^8.0.1",
-    "typedoc": "^0.14.2",
-    "typescript": "^3.5.3"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    },
-    "coverageReporters": [
-      "json",
-      "lcov"
-    ],
-    "coverageDirectory": "./coverage",
-    "setupFiles": [
-      "./test/logger/index.ts"
-    ]
+    "lerna": "^3.16.4"
   }
 }
