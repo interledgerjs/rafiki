@@ -7,5 +7,8 @@
   },
   "devDependencies": {
     "lerna": "^3.16.4"
+  },
+  "dependencies": {
+    "ilp-packet": "^3.0.8"
   }
 }

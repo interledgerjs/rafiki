@@ -1,6 +1,5 @@
 import { Errors } from 'ilp-packet'
-import { log } from '../logger'
-import { RafikiContext } from '../rafiki'
+import { RafikiContext, log } from '@interledger/rafiki-core'
 const logger = log.child({ middleware: 'max-packet-amount' })
 const { AmountTooLargeError } = Errors
 

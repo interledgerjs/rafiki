@@ -3,7 +3,7 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import {IlpPrepare, IlpReject, isFulfill} from 'ilp-packet'
-import {HeartbeatRule} from '../../src/middleware/heartbeat'
+import {HeartbeatRule} from '../../../rafiki-middleware/src/heartbeat'
 import {setPipelineReader} from '../../src/types/rule'
 import {MockIlpEndpoint} from '../mocks/mockIlpEndpoint'
 

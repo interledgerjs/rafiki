@@ -1,8 +1,8 @@
 import { createHash } from 'crypto'
-import { isFulfill, Errors } from 'ilp-packet'
-import { log } from '../logger'
-import { RafikiContext } from '../rafiki'
+import { log, RafikiContext } from '@interledger/rafiki-core'
 const logger = log.child({ middleware: 'validate-fulfillment' })
+import { Errors } from 'ilp-packet'
+
 const { WrongConditionError } = Errors
 
 export function createOutgoingValidateFulfillmentMiddleware () {

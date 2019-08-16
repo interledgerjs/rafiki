@@ -3,7 +3,7 @@ import * as sinon from 'sinon'
 import * as Chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import {Errors, IlpFulfill, IlpPrepare, isFulfill} from 'ilp-packet'
-import {createThroughputLimitBucketsForPeer, ThroughputRule} from '../../src/middleware/throughput'
+import {createThroughputLimitBucketsForPeer, ThroughputRule} from '../../../rafiki-middleware/src/throughput'
 import {setPipelineReader} from '../../src/types/rule'
 
 Chai.use(chaiAsPromised)

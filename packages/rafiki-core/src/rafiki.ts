@@ -11,21 +11,13 @@ import { createClientController } from './controllers/client'
 import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
 import { AccountsService } from './services/accounts'
 import {
-  createIncomingHeartbeatMiddleware,
   createIncomingErrorHandlerMiddleware,
-  createIncomingMaxPacketAmountMiddleware,
-  createIncomingRateLimitMiddleware,
-  createIncomingThroughputMiddleware,
-  createIncomingReduceExpiryMiddleware,
   createIncomingBalanceMiddleware,
   createIldcpProtocolController,
   createCcpProtocolController,
   createEchoProtocolController,
-  createOutgoingThroughputMiddleware,
   createOutgoingExpireMiddleware,
-  createOutgoingReduceExpiryMiddleware,
   createOutgoingBalanceMiddleware,
-  createOutgoingValidateFulfillmentMiddleware
 } from './middleware'
 
 export const DEFAULT_ILP_PATH = '/ilp'
@@ -157,7 +149,7 @@ export function createApp (config: Config, { auth, peers, accounts, router }: Pa
   app.useIlp({ path })
   // TODO: ilpRoute needs a way to get our own address later and then setup this route
   // app.ilpRoute('get address from connector', createEchoProtocolController(1500))
-  app.ilpRoute('*', middleware || createDefaultMiddleware(config))
+  // app.ilpRoute('*', middleware)
   return app
 }
 
@@ -167,42 +159,4 @@ export function createAuthMiddleware (auth?: RafikiMiddleware | Partial<TokenAut
   } else {
     return createTokenAuthMiddleware(auth)
   }
-}
-
-export function createDefaultMiddleware (config: Config) {
-  const incoming = compose([
-    // Incoming Rules
-    createIncomingHeartbeatMiddleware({
-      heartbeatInterval: 5 * 60 * 1000,
-      onFailedHeartbeat: (peerId: string) => {
-        // TODO: Handle failed heartbeat
-      },
-      onSuccessfulHeartbeat: (peerId: string) => {
-        // TODO: Handle successful heartbeat
-      }
-    }),
-    createIncomingErrorHandlerMiddleware(),
-    createIncomingMaxPacketAmountMiddleware(),
-    createIncomingRateLimitMiddleware(),
-    createIncomingThroughputMiddleware(),
-    createIncomingReduceExpiryMiddleware(),
-    createIncomingBalanceMiddleware()
-  ])
-
-  const outgoing = compose([
-    // Outgoing Rules
-    createOutgoingBalanceMiddleware(),
-    createOutgoingThroughputMiddleware(),
-    createOutgoingReduceExpiryMiddleware(),
-    createOutgoingExpireMiddleware(),
-    createOutgoingValidateFulfillmentMiddleware(),
-
-    // Send outgoing packets
-    createClientController()
-  ])
-
-  return compose([
-    incoming,
-    outgoing
-  ])
 }

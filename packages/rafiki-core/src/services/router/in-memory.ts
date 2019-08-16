@@ -10,7 +10,7 @@ import { CcpReceiver, CcpReceiverService } from './ccp-receiver'
 import { PeerService } from '../peers'
 import { Router, getRouteWeight } from '.'
 import { SELF_PEER_ID } from '../../constants'
-import { Route } from '../../models/Route'
+// import { Route } from '../../../../temp/models/Route'
 import { sendToPeer } from '../client'
 
 const logger = log.child({ component: 'in-memory-router' })
@@ -57,10 +57,10 @@ export class InMemoryRouter implements Router {
   }
 
   public async load (knex: Knex) {
-    const routes = await Route.query(knex)
-    routes.forEach(entry => {
-      this._addRoute(entry.peerId, entry.targetPrefix)
-    })
+    // const routes = await Route.query(knex)
+    // routes.forEach(entry => {
+    //   this._addRoute(entry.peerId, entry.targetPrefix)
+    // })
   }
 
   public async handleRouteControl (peerId: string, request: CcpRouteControlRequest): Promise<CcpRouteControlResponse> {

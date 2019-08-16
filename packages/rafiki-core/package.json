@@ -1,27 +1,27 @@
 {
-  "name": "@interledger/rafiki",
-  "version": "0.0.1-beta.4",
+  "name": "@interledger/rafiki-core",
+  "version": "0.1.0",
   "description": "A modular ILP connector with stand-alone settlement engine and router",
   "engines": {
     "node": ">=10.13"
   },
-  "main": "build/src/index.js",
-  "types": "build/src/index.d.ts",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
   "bin": {
-    "rafiki": "build/src/start.js"
+    "rafiki": "build/start.js"
   },
   "files": [
-    "build/src/**/*.json",
-    "build/src/**/*.js",
-    "build/src/**/*.js.map",
-    "build/src/**/*.d.ts",
+    "build/**/*.json",
+    "build/**/*.js",
+    "build/**/*.js.map",
+    "build/**/*.d.ts",
     "build/doc"
   ],
   "scripts": {
-    "start": "npm run build && node ./build/src/start.js",
+    "start": "npm run build && node ./build/start.js",
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
     "build": "npm run schema-to-tsd && tsc -p src/tsconfig.build.json && npm run copy-schemas",
-    "copy-schemas": "mkdir -p ./build/src/schemas && cp ./src/schemas/*.json ./build/src/schemas",
+    "copy-schemas": "mkdir -p ./build/schemas && cp ./src/schemas/*.json ./build/schemas",
     "lint": "tslint --project .",
     "lintFix": "tslint --project . --fix",
     "schema-to-tsd": "node scripts/build_schema_types",
@@ -45,6 +45,7 @@
     "@types/koa": "^2.0.48",
     "@types/koa-bodyparser": "^4.3.0",
     "@types/koa-joi-router": "^5.2.2",
+    "@types/lodash": "^4.14.136",
     "@types/nanoid": "^2.0.0",
     "@types/node-fetch": "^2.3.3",
     "agentkeepalive": "^4.0.2",

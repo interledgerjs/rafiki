@@ -1,6 +1,4 @@
-import { serializeIlpPrepare } from 'ilp-packet'
-import { RafikiContext } from '../rafiki'
-import { log } from '../logger'
+import { RafikiContext, log } from '@interledger/rafiki-core'
 const logger = log.child({ middleware: 'heartbeat' })
 
 const DEFAULT_HEARTBEAT_INTERVAL = 30 * 1000

@@ -1,7 +1,6 @@
 import { Peer, PeerService } from '.'
 import { PeerInfo, PeerRelation } from '../../types'
 import { AxiosClient } from '../client/axios'
-import { Peer as PeerModel } from '../../models/Peer'
 import Knex from 'knex'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError } from '../../errors'
@@ -101,17 +100,17 @@ export class InMemoryPeers implements PeerService {
   }
 
   public async load (knex: Knex) {
-    const result = await PeerModel.query(knex).eager('[rules,protocols,endpoint]')
-    return Promise.all(result.map(async peer => {
-
-      // TODO: Fix Knex loader
-      return this.add({
-        id: peer.id,
-        isCcpReceiver: false,
-        isCcpSender: false,
-        relation: peer.relation as PeerRelation,
-        defaultAccountId: peer.id // BIG ASSUMPTION HERE
-      })
-    }))
+    // const result = await PeerModel.query(knex).eager('[rules,protocols,endpoint]')
+    // return Promise.all(result.map(async peer => {
+    //
+    //   // TODO: Fix Knex loader
+    //   return this.add({
+    //     id: peer.id,
+    //     isCcpReceiver: false,
+    //     isCcpSender: false,
+    //     relation: peer.relation as PeerRelation,
+    //     defaultAccountId: peer.id // BIG ASSUMPTION HERE
+    //   })
+    // }))
   }
 }

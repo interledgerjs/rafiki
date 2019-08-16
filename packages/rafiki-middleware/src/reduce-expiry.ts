@@ -1,6 +1,5 @@
 import { IlpPrepare, Errors } from 'ilp-packet'
-import { log } from '../logger'
-import { RafikiContext } from '../rafiki'
+import { log, RafikiContext } from '@interledger/rafiki-core'
 const { InsufficientTimeoutError } = Errors
 const logger = log.child({ middleware: 'reduce-expiry' })
 

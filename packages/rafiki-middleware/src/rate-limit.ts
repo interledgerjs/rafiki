@@ -1,8 +1,5 @@
 import { Errors } from 'ilp-packet'
-import { TokenBucket } from '../lib/token-bucket'
-import { PeerInfo } from '../types/peer'
-import { log } from '../logger'
-import { RafikiContext } from '../rafiki'
+import { TokenBucket, PeerInfo, log, RafikiContext } from '@interledger/rafiki-core'
 const logger = log.child({ middleware: 'rate-limit' })
 
 const { RateLimitedError } = Errors

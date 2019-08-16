@@ -1,8 +1,7 @@
-import { log } from '../logger'
-import { Errors as IlpPacketErrors, isReject } from 'ilp-packet'
-import { RafikiContext } from '../rafiki'
+import { log, RafikiContext } from '@interledger/rafiki-core'
+import { Errors } from 'ilp-packet'
 const logger = log.child({ middleware: 'liquidity-check' })
-const { T04_INSUFFICIENT_LIQUIDITY } = IlpPacketErrors.codes
+const { T04_INSUFFICIENT_LIQUIDITY } = Errors.codes
 
 /**
  * Log error for reject packets caused by insufficient liquidity or an exceeded maximum balance.

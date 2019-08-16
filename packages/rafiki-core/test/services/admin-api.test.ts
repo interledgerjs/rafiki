@@ -10,8 +10,8 @@ import { EndpointInfo } from '../../src'
 import { Config } from '../../src'
 import { DB } from '../helpers/db'
 import { MockTokenService } from '../mocks/mockTokenService'
-import { Peer } from '../../src/models/Peer'
-import { AuthToken } from '../../src/models/AuthToken';
+import { Peer } from '../../../temp/models/Peer'
+import { AuthToken } from '../../../temp/models/AuthToken';
 import { createTokenAuthMiddleware } from '../../src/middleware/token-auth';
 import { TokenService } from '../../src/services/tokens';
 

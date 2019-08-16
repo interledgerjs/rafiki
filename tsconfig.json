@@ -18,7 +18,8 @@
   "exclude": [
     "**/node_modules/**/*",
     "packages/*/build/**/*",
-    "packages/*/test/**/*"
+    "packages/*/test/**/*",
+    "packages/test/**/*"
   ],
   "include": [
     "packages/**/*.ts"

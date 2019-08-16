@@ -1085,6 +1085,11 @@ before-after-hook@^2.0.0:
   resolved "https://registry.yarnpkg.com/before-after-hook/-/before-after-hook-2.1.0.tgz#b6c03487f44e24200dd30ca5e6a1979c5d2fb635"
   integrity sha512-IWIbu7pMqyw3EAJHzzHbWa85b6oud/yfKYg5rqB5hNE8CeMi3nX+2C2sj0HswfblST86hpVEOAb9x34NZd6P7A==
 
+bignumber.js@^7.2.1:
+  version "7.2.1"
+  resolved "https://registry.yarnpkg.com/bignumber.js/-/bignumber.js-7.2.1.tgz#80c048759d826800807c4bfd521e50edbba57a5f"
+  integrity sha512-S4XzBk5sMB+Rcb/LNcpzXr57VRTxgAvaAEDAl1AwRx27j00hT84O6OkteE7u8UB3NuaaygCRrEpqox4uDOrbdQ==
+
 bluebird@^3.5.1, bluebird@^3.5.3, bluebird@^3.5.5:
   version "3.5.5"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.5.5.tgz#a8d0afd73251effbbd5fe384a77d73003c17a71f"
@@ -1841,6 +1846,11 @@ extend@~3.0.2:
   resolved "https://registry.yarnpkg.com/extend/-/extend-3.0.2.tgz#f8b1136b4071fbd8eb140aff858b1019ec2915fa"
   integrity sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==
 
+extensible-error@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/extensible-error/-/extensible-error-1.0.2.tgz#6e71e9e5663017f81963cb5b332ed15e8d1960c7"
+  integrity sha512-kXU1FiTsGT8PyMKtFM074RK/VBpzwuQJicAHqBpsPDeTXBQiSALPjkjKXlyKdG/GP6lR7bBaEkq8qdoO2geu9g==
+
 external-editor@^3.0.3:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/external-editor/-/external-editor-3.1.0.tgz#cb03f740befae03ea4d283caed2741a83f335495"
@@ -2324,6 +2334,15 @@ ignore@^4.0.3:
   version "4.0.6"
   resolved "https://registry.yarnpkg.com/ignore/-/ignore-4.0.6.tgz#750e3db5862087b4737ebac8207ffd1ef27b25fc"
   integrity sha512-cyFDKrqc/YdcWFniJhzI42+AzS+gNwmUzOSFcRCQYwySuBBBy/KjuxWLZ/FHEH6Moq1NizMOBWyTcv8O4OZIMg==
+
+ilp-packet@^3.0.8:
+  version "3.0.8"
+  resolved "https://registry.yarnpkg.com/ilp-packet/-/ilp-packet-3.0.8.tgz#ed22174279f6b833943bb69400039397dea3d427"
+  integrity sha512-bi199aq5ptPm+fLybkManwDYZ6nuxxtSZtvTU1xPkzmIoLxAIqc9kBWqT7SXsCUsZ3Py3bZL2RZ79BqjmK5Nvw==
+  dependencies:
+    extensible-error "^1.0.2"
+    long "^4.0.0"
+    oer-utils "^4.0.0"
 
 import-fresh@^2.0.0:
   version "2.0.0"
@@ -2885,6 +2904,11 @@ lodash@^4.17.14, lodash@^4.17.15, lodash@^4.2.1:
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.15.tgz#b447f6670a0455bbfeedd11392eff330ea097548"
   integrity sha512-8xOcRHvCjnocdS5cpwXQXVzmmh5e5+saE2QGoeQmbKmRS6J3VQppPOIt0MnmE+4xlZoumy0GPG0D0MVIQbNA1A==
 
+long@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/long/-/long-4.0.0.tgz#9a7b71cfb7d361a194ea555241c92f7468d5bf28"
+  integrity sha512-XsP+KhQif4bjX1kbuSiySJFNAehNxgLb6hPRGJ9QsUr8ajHkuXGdrHmFUTUUXhDwVX2R5bY4JNZEwbUiMhV+MA==
+
 loud-rejection@^1.0.0:
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/loud-rejection/-/loud-rejection-1.6.0.tgz#5b46f80147edee578870f086d04821cf998e551f"
@@ -3379,6 +3403,13 @@ octokit-pagination-methods@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/octokit-pagination-methods/-/octokit-pagination-methods-1.1.0.tgz#cf472edc9d551055f9ef73f6e42b4dbb4c80bea4"
   integrity sha512-fZ4qZdQ2nxJvtcasX7Ghl+WlWS/d9IgnBIwFZXVNNZUmzpno91SX5bc5vuxiuKoCtK78XxGGNuSCrDC7xYB3OQ==
+
+oer-utils@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/oer-utils/-/oer-utils-4.0.0.tgz#bfd1227d2441b709079814fdebd50e9edab764fb"
+  integrity sha512-WxX0gNGSS0Lzig4IdliHlIQ03PVTpIuLFbOAag5lJrx1hWNG3f/yhx3QOmORpoXe2e53HZbeet8qoOAsiWz5BQ==
+  dependencies:
+    bignumber.js "^7.2.1"
 
 once@^1.3.0, once@^1.3.1, once@^1.4.0:
   version "1.4.0"
