@@ -1,5 +1,5 @@
 import { IlpPrepare, Errors } from 'ilp-packet'
-import { RafikiContext, Logger } from '@interledger/rafiki-core'
+import { RafikiContext, Logger, RafikiMiddleware } from '@interledger/rafiki-core'
 const { InsufficientTimeoutError } = Errors
 
 /**
@@ -9,21 +9,19 @@ const { InsufficientTimeoutError } = Errors
  * // TODO: Should we reduce the expiry on the packet or just expire the packet?
  * // TODO: Maybe this should be combined with the expiry checker and the expiry timeout?
  */
-export function createIncomingReduceExpiryMiddleware () {
-  return async ({ log, ilp, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+export function createIncomingReduceExpiryMiddleware (): RafikiMiddleware {
+  return async ({ log, request: { prepare }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
     const { minOutgoingExpirationWindow, maxHoldWindow } = await peers.incoming
-    // TODO: Validate this logic. Do we want to change the expiry on the incoming packet?
-    // This is now (correctly?) a read-only object
-    // ilp.prepare.expiresAt = getDestinationExpiry(ilp.prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, log)
+    prepare.expiresAt = getDestinationExpiry(prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, log)
     await next()
   }
 }
 
-export function createOutgoingReduceExpiryMiddleware () {
-  return async ({ log, ilp, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+export function createOutgoingReduceExpiryMiddleware (): RafikiMiddleware {
+  return async ({ log, request: { prepare }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
     const { minOutgoingExpirationWindow, maxHoldWindow } = await peers.outgoing
     // TODO: These values should not be undefined. The defaults should be set in the service
-    ilp.outgoingPrepare.expiresAt = getDestinationExpiry(ilp.prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, log)
+    prepare.expiresAt = getDestinationExpiry(prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, log)
     await next()
   }
 }

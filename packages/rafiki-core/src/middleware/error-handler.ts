@@ -9,10 +9,10 @@ import { RafikiContext } from '../rafiki'
  * reject that is sent back to sender.
  */
 export function createIncomingErrorHandlerMiddleware () {
-  return async ({ log, ilp, services }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, request, response, services }: RafikiContext, next: () => Promise<any>) => {
     try {
       await next()
-      if (!ilp.reply) {
+      if (!response.rawReply) {
         log.error('handler did not return a valid value.')
         throw new Error('handler did not return a value.')
       }
@@ -23,7 +23,7 @@ export function createIncomingErrorHandlerMiddleware () {
       }
       log.error('Error thrown in incoming pipeline', { err })
       const self = services.router.getAddresses(SELF_PEER_ID)
-      ilp.respond(errorToIlpReject(self.length > 0 ? self[0] : 'peer', err))
+      response.reject = errorToIlpReject(self.length > 0 ? self[0] : 'peer', err)
     }
   }
 }

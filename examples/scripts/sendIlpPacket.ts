@@ -10,17 +10,19 @@ async function run () {
     executionCondition: STATIC_CONDITION,
     expiresAt: new Date()
   }
-  const ilpPacketBuffer = await axios.post('http://localhost:3000', serializeIlpPrepare(prepare), {
+  const response = await axios.post<Buffer>('http://localhost:3000/', serializeIlpPrepare(prepare), {
     headers: {
       'content-type': 'application/octet-stream',
       'authorization': 'Bearer ' + 'alice'
-    }
-  }).then((resp: any) => resp.data)
-    .catch((error: any) => {
-      console.log(error.response)
-    })
+    },
+    responseType: 'arraybuffer'
+  })
 
-  console.log('received ilpReply', deserializeIlpReply(ilpPacketBuffer))
+  if (response) {
+    console.log('received ilpReply', deserializeIlpReply(response.data))
+  } else {
+    console.error('no reply received')
+  }
+
 }
-
-run().catch(error => console.log('error', error))
+run().catch(console.error)

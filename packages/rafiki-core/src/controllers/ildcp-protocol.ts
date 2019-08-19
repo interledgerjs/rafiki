@@ -7,8 +7,8 @@ import { RafikiContext } from '../rafiki'
  */
 export function createIldcpProtocolController () {
   return async function ildcp (ctx: RafikiContext) {
-    const { log, services, ilp, state: { peers : { incoming } } } = ctx
-    if (ilp.prepare.destination === 'peer.config') {
+    const { log, services, request, response, state: { peers : { incoming } } } = ctx
+    if (request.prepare.destination === 'peer.config') {
 
       const peer = await incoming
       const { id, relation } = peer
@@ -25,15 +25,15 @@ export function createIldcpProtocolController () {
       log.info('responding to ILDCP request from child', { peerId: id, address: clientAddress })
 
       // TODO: Remove unnecessary serialization from ILDCP module
-      ilp.respond(await ildcpServe({
-        requestPacket: ilp.prepare.raw,
+      response.rawReply = await ildcpServe({
+        requestPacket: request.rawPrepare,
         handler: () => Promise.resolve({
           clientAddress,
           assetScale,
           assetCode
         }),
         serverAddress
-      }))
+      })
     } else {
       ctx.throw('Invalid address in ILDCP request')
     }

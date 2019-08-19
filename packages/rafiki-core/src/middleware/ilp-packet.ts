@@ -13,12 +13,15 @@ import {
   isReject,
   serializeIlpFulfill,
   serializeIlpPrepare,
-  serializeIlpReject
+  serializeIlpReject,
+  deserializeIlpReply
 } from 'ilp-packet'
 import { Readable } from 'stream'
-import { RafikiContext } from '../rafiki'
+import { IncomingMessage } from 'http'
+import { RafikiContext, RafikiResponseMixin } from '../rafiki'
 import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from '../lib'
 import getRawBody from 'raw-body'
+import { object } from 'joi';
 
 const CONTENT_TYPE = 'application/octet-stream'
 
@@ -30,214 +33,89 @@ interface RawPacket {
   readonly raw: Buffer
 }
 
-export interface IlpContext {
-  readonly prepare: Readonly<IlpPrepare> & RawPacket
-  readonly outgoingPrepare: IlpPrepare & RawPacket
-  readonly fulfill?: Readonly<IlpFulfill> & RawPacket
-  readonly reject?: Readonly<IlpReject> & RawPacket
-  readonly reply: Readonly<IlpFulfill> & RawPacket | Readonly<IlpReject> & RawPacket | undefined
-  respond: (reply: IlpReply | Buffer) => void
+export interface RafikiPrepare extends IlpPrepare {
+  intAmount: bigint
+  readonly originalAmount: bigint
+  readonly originalExpiresAt: Date
+
+  readonly amountChanged: boolean
+  readonly expiresAtChanged: boolean
 }
 
-/**
- * Overcomplicated context that attempts to avoid doing unnecessary serialization
- */
-export class ZeroCopyIlpContext implements IlpContext {
-
-  private _prepare: IlpPrepare & RawPacket
-  private _outgoingPrepare: OutgoingIlpPrepare
-  private _fulfill?: IlpFulfill
-  private _fulfillRaw?: Buffer
-  private _reject?: IlpReject
-  private _rejectRaw?: Buffer
+export class ZeroCopyIlpPrepare implements RafikiPrepare {
+  private _originalAmount: bigint
+  private _originalExpiresAt: Date
+  private _prepare: IlpPrepare
+  private _amount: bigint
   public _expiresAtChanged = false
   public _amountChanged = false
 
   constructor (prepare: Buffer | IlpPrepare) {
-    if (Buffer.isBuffer(prepare)) {
-      const raw = prepare
-      const packet = deserializeIlpPrepare(prepare)
-      const outgoingPrepare = new OutgoingIlpPrepare(raw, packet)
-      this._prepare = {
-        ...packet,
-        get raw () {
-          if (outgoingPrepare.dirty) throw new Error('illegal access to raw incoming prepare packet after building outgoing prepare')
-          return raw
-        }
-      }
-      this._outgoingPrepare = outgoingPrepare
-    } else {
-      const raw = serializeIlpPrepare(prepare)
-      const packet = prepare
-      const outgoingPrepare = new OutgoingIlpPrepare(raw, packet)
-      this._prepare = {
-        ...packet,
-        get raw () {
-          if (outgoingPrepare.dirty) throw new Error('illegal access to raw incoming prepare packet after building outgoing prepare')
-          return raw
-        }
-      }
-    }
+    const packet = (Buffer.isBuffer(prepare))
+      ? deserializeIlpPrepare(prepare)
+      : prepare
+    this._prepare = packet
+    this._originalAmount = this._amount = BigInt(packet.amount)
+    this._originalExpiresAt = packet.expiresAt
   }
 
-  get prepare (): IlpPrepare & RawPacket {
-    return this._prepare
+  get destination (): string {
+    return this._prepare.destination
   }
 
-  get outgoingPrepare (): OutgoingIlpPrepare {
-    return this._outgoingPrepare
+  get executionCondition (): Buffer {
+    return this._prepare.executionCondition
   }
 
-  get fulfill (): Readonly<IlpFulfill> & RawPacket | undefined {
-    if (!this._fulfillRaw) {
-      if (!this._fulfill) return undefined
-      const ilp = this
-      return {
-        ...this._fulfill,
-        get raw () {
-          ilp._fulfillRaw = serializeIlpFulfill(this._fulfill)
-          return ilp._fulfillRaw
-        }
-      }
-    } else {
-      if (!this._fulfill) this._fulfill = deserializeIlpFulfill(this._fulfillRaw)
-      return {
-        raw: this._fulfillRaw,
-        ...this._fulfill
-      }
-    }
+  get data (): Buffer {
+    return this._prepare.data
   }
 
-  get reject (): Readonly<IlpReject> & RawPacket | undefined {
-    if (!this._rejectRaw) {
-      if (!this._reject) return undefined
-      const ilp = this
-      return {
-        ...this._reject,
-        get raw () {
-          ilp._rejectRaw = serializeIlpReject(this._reject)
-          return ilp._rejectRaw
-        }
-      }
-    } else {
-      if (!this._reject) this._reject = deserializeIlpReject(this._rejectRaw)
-      return {
-        ...this._reject,
-        raw: this._rejectRaw
-      }
-    }
+  get expiresAt (): Date {
+    return this._prepare.expiresAt
   }
 
-  get reply () {
-    return this.fulfill || this.reject
+  get amount (): string {
+    return this._prepare.amount
   }
 
-  public respond (reply: IlpReply | Buffer) {
-    if (Buffer.isBuffer(reply)) {
-      if (reply[0] === 13) {
-        this._fulfillRaw = reply
-        this._reject = undefined
-        this._rejectRaw = undefined
-        return
-      }
-      if (reply[0] === 14) {
-        this._rejectRaw = reply
-        this._fulfill = undefined
-        this._fulfillRaw = undefined
-        return
-      }
-      // TODO: Custom error?
-      throw new Error('invalid reply packet')
-    } else {
-      if (isFulfill(reply)) {
-        this._fulfill = reply
-        this._reject = undefined
-        this._rejectRaw = undefined
-        return
-      }
-      if (isReject(reply)) {
-        this._reject = reply
-        this._fulfill = undefined
-        this._fulfillRaw = undefined
-      }
-    }
-  }
-}
-
-export class OutgoingIlpPrepare implements IlpPrepare, RawPacket {
-
-  private _amount: string
-  private _executionCondition: Buffer
-  private _expiresAt: Date
-  private _destination: string
-  private _data: Buffer
-  private _raw: Buffer
-  private _expiresAtDirty = false
-  private _amountDirty = false
-  private _rebuildRaw = false
-  private _rawDirty = false
-
-  constructor (raw: Buffer, packet: IlpPrepare) {
-    this._amount = packet.amount
-    this._executionCondition = packet.executionCondition
-    this._expiresAt = packet.expiresAt
-    this._destination = packet.destination
-    this._data = packet.data
-    this._raw = raw
-  }
-
-  get destination () {
-    return this._destination
-  }
-
-  get executionCondition () {
-    return this._executionCondition
-  }
-
-  get data () {
-    return this._data
-  }
-
-  get expiresAt () {
-    return this._expiresAt
-  }
-
-  get amount () {
+  get intAmount (): bigint {
     return this._amount
   }
 
-  get dirty () {
-    return this._rawDirty
+  set expiresAt (val: Date) {
+    this._expiresAtChanged = true
+    this._prepare.expiresAt = val
   }
 
-  set expiresAt (value: Date) {
-    this._expiresAt = value
-    this._expiresAtDirty = true
-    this._rebuildRaw = true
+  set amount (val: string) {
+    this._amountChanged = true
+    this._prepare.amount = val
+    this._amount = BigInt(val)
   }
 
-  set amount (value: string) {
-    this._amount = value
-    this._amountDirty = true
-    this._rebuildRaw = true
+  set intAmount (val: bigint) {
+    this._amountChanged = true
+    this._prepare.amount = val.toString()
+    this._amount = val
   }
 
-  get raw () {
-    if (this._rebuildRaw) {
-      if (this._amountDirty) {
-        modifySerializedIlpPrepareAmount(this._raw, this._amount)
-        this._rawDirty = true
-        this._amountDirty = false
-      }
-      if (this._expiresAtDirty) {
-        modifySerializedIlpPrepareExpiry(this._raw, this._expiresAt)
-        this._rawDirty = true
-        this._expiresAtDirty = false
-      }
-      this._rebuildRaw = false
-    }
-    return this._raw
+  get amountChanged () {
+    return this._amountChanged
   }
+
+  get expiresAtChanged () {
+    return this._expiresAtChanged
+  }
+
+  get originalAmount () {
+    return this._originalAmount
+  }
+
+  get originalExpiresAt () {
+    return this._originalExpiresAt
+  }
+
 }
 
 export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions) {
@@ -247,15 +125,122 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions) 
   return async function ilpPacket (ctx: RafikiContext, next: () => Promise<any>) {
 
     ctx.assert(ctx.request.type === CONTENT_TYPE, 400, 'Expected Content-Type of ' + CONTENT_TYPE)
+    const buffer = await _getRawBody(ctx.req)
+    const prepare = new ZeroCopyIlpPrepare(buffer)
+    ctx.req.prepare = prepare
+    ctx.request.prepare = prepare
+    ctx.req.rawPrepare = buffer
+    ctx.request.rawPrepare = buffer
+    ctx.path = ilpAddressToPath(prepare.destination, ctx.path)
 
-    ctx.ilp = new ZeroCopyIlpContext(await _getRawBody(ctx.req))
-    ctx.path = ilpAddressToPath(ctx.path)
+    let reject: IlpReject | undefined = undefined
+    let fulfill: IlpFulfill | undefined = undefined
+    let rawReject: Buffer | undefined = undefined
+    let rawFulfill: Buffer | undefined = undefined
+
+    const properties: PropertyDescriptorMap = {
+      fulfill : {
+        enumerable: true,
+        get: () => fulfill,
+        set: (val: IlpFulfill | undefined) => {
+          fulfill = val
+          if (val) {
+            reject = rawReject = undefined
+            rawFulfill = serializeIlpFulfill(val)
+          } else {
+            rawFulfill = undefined
+          }
+        }
+      },
+      rawFulfill : {
+        enumerable: true,
+        get: () => rawFulfill,
+        set: (val: Buffer | undefined) => {
+          rawFulfill = val
+          if (val) {
+            reject = rawReject = undefined
+            fulfill = deserializeIlpFulfill(val)
+          } else {
+            fulfill = undefined
+          }
+        }
+      },
+      reject : {
+        enumerable: true,
+        get: () => reject,
+        set: (val: IlpReject | undefined) => {
+          reject = val
+          if (val) {
+            fulfill = rawFulfill = undefined
+            rawReject = serializeIlpReject(val)
+          } else {
+            rawReject = undefined
+          }
+        }
+      },
+      rawReject : {
+        enumerable: true,
+        get: () => rawReject,
+        set: (val: Buffer | undefined) => {
+          rawReject = val
+          if (val) {
+            fulfill = rawFulfill = undefined
+            reject = deserializeIlpReject(val)
+          } else {
+            reject = undefined
+          }
+        }
+      },
+      reply : {
+        enumerable: true,
+        get: () => (fulfill || reject),
+        set: (val: IlpReply | undefined) => {
+          if (val) {
+            if (isFulfill(val)) {
+              fulfill = val
+              rawFulfill = serializeIlpFulfill(val)
+              reject = rawReject = undefined
+            } else {
+              reject = val
+              rawReject = serializeIlpReject(val)
+              fulfill = rawFulfill = undefined
+            }
+          } else {
+            fulfill = rawFulfill = undefined
+            reject = rawReject = undefined
+          }
+        }
+      },
+      rawReply : {
+        enumerable: true,
+        get: () => (rawFulfill || rawReject),
+        set: (val: Buffer | undefined) => {
+          if (val) {
+            const packet = deserializeIlpReply(val)
+            if (isFulfill(packet)) {
+              fulfill = packet
+              rawFulfill = val
+              reject = rawReject = undefined
+            } else {
+              reject = packet
+              rawReject = val
+              fulfill = rawFulfill = undefined
+            }
+          } else {
+            fulfill = rawFulfill = undefined
+            reject = rawReject = undefined
+          }
+        }
+      }
+    }
+    Object.defineProperties(ctx.res, properties)
+    Object.defineProperties(ctx.response, properties)
 
     await next()
 
-    ctx.assert(ctx.ilp.reply, 500, 'empty reply')
-    ctx.type = CONTENT_TYPE
-    ctx.body = ctx.ilp.reply!.raw
+    ctx.assert(!ctx.body, 500, 'response body already set')
+    ctx.assert(ctx.response.rawReply, 500, 'ilp reply not set')
+    ctx.body = ctx.response.rawReply
   }
 
 }

@@ -1,7 +1,7 @@
 import HttpLogger, { Options } from 'pino-http'
 import { DestinationStream, SerializedRequest, SerializedResponse } from 'pino'
-import { ParameterizedContext } from 'koa'
-import { RafikiContext, RafikiMiddleware, Logger } from '@interledger/rafiki-core'
+import { IncomingMessage, ServerResponse } from 'http'
+import { RafikiContext, RafikiMiddleware, RafikiRequestMixin, RafikiResponseMixin } from '@interledger/rafiki-core'
 
 export function pino (opts?: Options, stream?: DestinationStream): RafikiMiddleware {
 
@@ -33,29 +33,36 @@ export function pino (opts?: Options, stream?: DestinationStream): RafikiMiddlew
 }
 
 export interface SerializedIlpRequest extends SerializedRequest {
-  amount: string
-  condition: Buffer
-  expiresAt: number
+  ilpAmount: string
+  ilpExecutionCondition: string
+  IlpExpiresAt: Date
+  raw: IncomingMessage & RafikiRequestMixin
 }
-
-interface SerializedIlpReject extends SerializedResponse {
-  code: string
-  triggeredBy: string
-}
-
-interface SerializedIlpFulfill extends SerializedResponse {
-  fulfillment: Buffer
+export interface SerializedIlpResponse extends SerializedResponse {
+  ilpFulfillment: string
+  ilpRejectCode: string
+  ilpRejectMessage: string
+  ilpRejectTriggeredBy: string
+  raw: ServerResponse & RafikiResponseMixin
 }
 
 function serializeIlpPrepare (req: SerializedIlpRequest) {
-  // TODO: Extract top-level properties
-  req.amount = '10'
-  req.condition = Buffer.alloc(32)
-  req.expiresAt = Date.now() + 30000
-  return req
+  if (req.raw.prepare) {
+    req.ilpAmount = req.raw.prepare.amount
+    req.ilpExecutionCondition = req.raw.prepare.executionCondition.toString('hex')
+    req.IlpExpiresAt = req.raw.prepare.expiresAt
+    return req
+  }
 }
 
-function serializeIlpReply (res: SerializedIlpReject | SerializedIlpFulfill) {
-  // TODO: Extract top-level properties
+function serializeIlpReply (res: SerializedIlpResponse) {
+  if (res.raw.fulfill) {
+    res.ilpFulfillment = res.raw.fulfill.fulfillment.toString('hex')
+  }
+  if (res.raw.reject) {
+    res.ilpRejectCode = res.raw.reject.code
+    res.ilpRejectMessage = res.raw.reject.message
+    res.ilpRejectTriggeredBy = res.raw.reject.triggeredBy
+  }
   return res
 }

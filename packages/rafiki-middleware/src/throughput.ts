@@ -1,4 +1,4 @@
-import { RafikiContext, PeerInfo, Peer } from '@interledger/rafiki-core'
+import { RafikiContext, PeerInfo, Peer, RafikiMiddleware } from '@interledger/rafiki-core'
 import { Errors } from 'ilp-packet'
 import { TokenBucket } from '@interledger/rafiki-utils'
 const { InsufficientLiquidityError } = Errors
@@ -8,11 +8,11 @@ const DEFAULT_REFILL_PERIOD = 1000 // 1 second
 /**
  * The Throughput rule throttles throughput based on the amount in the packets.
  */
-export function createIncomingThroughputMiddleware () {
+export function createIncomingThroughputMiddleware (): RafikiMiddleware {
 
   const _buckets = new Map<string,TokenBucket>()
 
-  return async ({ log, ilp, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, request: { prepare }, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
     const peer = await incoming
     let incomingBucket = _buckets.get(peer.id)
     if (!incomingBucket) {
@@ -20,8 +20,8 @@ export function createIncomingThroughputMiddleware () {
       if (incomingBucket) _buckets.set(peer.id, incomingBucket)
     }
     if (incomingBucket) {
-      if (!incomingBucket.take(BigInt(ilp.prepare.amount))) {
-        log.warn('throttling incoming packet due to bandwidth exceeding limit', { ilp })
+      if (!incomingBucket.take(BigInt(prepare.amount))) {
+        log.warn('throttling incoming packet due to bandwidth exceeding limit', { prepare })
         throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
       }
     }
@@ -29,11 +29,11 @@ export function createIncomingThroughputMiddleware () {
   }
 }
 
-export function createOutgoingThroughputMiddleware () {
+export function createOutgoingThroughputMiddleware (): RafikiMiddleware {
 
   const _buckets = new Map<string,TokenBucket>()
 
-  return async ({ log, ilp, state: { peers: { outgoing } } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, request: { prepare }, state: { peers: { outgoing } } }: RafikiContext, next: () => Promise<any>) => {
     const peer = await outgoing
     let outgoingBucket = _buckets.get(peer.id)
     if (!outgoingBucket) {
@@ -41,8 +41,8 @@ export function createOutgoingThroughputMiddleware () {
       if (outgoingBucket) _buckets.set(peer.id, outgoingBucket)
     }
     if (outgoingBucket) {
-      if (!outgoingBucket.take(BigInt(ilp.outgoingPrepare.amount))) {
-        log.warn('throttling outgoing packet due to bandwidth exceeding limit', { ilp })
+      if (!outgoingBucket.take(BigInt(prepare.amount))) {
+        log.warn('throttling outgoing packet due to bandwidth exceeding limit', { prepare })
         throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
       }
     }

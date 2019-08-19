@@ -1,19 +1,19 @@
 import { Errors } from 'ilp-packet'
-import { RafikiContext } from '@interledger/rafiki-core'
+import { RafikiContext, RafikiMiddleware } from '@interledger/rafiki-core'
 const { AmountTooLargeError } = Errors
 
 /**
  * @throws {AmountTooLargeError} Throws if the request amount is greater than the prescribed max packet amount.
  */
-export function createIncomingMaxPacketAmountMiddleware () {
-  return async ({ log, ilp, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+export function createIncomingMaxPacketAmountMiddleware (): RafikiMiddleware {
+  return async ({ log, request, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
     const { maxPacketAmount } = await peers.incoming
     if (maxPacketAmount) {
-      const amount = BigInt(ilp.prepare.amount)
+      const amount = request.prepare.intAmount
       if (amount > maxPacketAmount) {
-        log.warn('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount, ilp })
-        throw new AmountTooLargeError(`packet size too large. maxAmount=${maxPacketAmount} actualAmount=${ilp.prepare.amount}`, {
-          receivedAmount: ilp.prepare.amount,
+        log.warn('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount, request })
+        throw new AmountTooLargeError(`packet size too large. maxAmount=${maxPacketAmount} actualAmount=${request.prepare.amount}`, {
+          receivedAmount: request.prepare.amount,
           maximumAmount: maxPacketAmount.toString()
         })
       }

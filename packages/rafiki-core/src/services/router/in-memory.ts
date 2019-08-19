@@ -26,7 +26,7 @@ export class InMemoryRouter implements Router {
 
   constructor (private _peers: PeerService, { globalPrefix, ilpAddress }: ImMemoryRouterConfig, log?: Logger) {
 
-    this._log = log || new DebugLogger('InMemoryRouter')
+    this._log = log || new DebugLogger('rafiki:in-memory-router')
 
     // Setup the `self` peer
     this._routeManager.addPeer(SELF_PEER_ID, 'local')

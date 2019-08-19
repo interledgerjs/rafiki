@@ -1,7 +1,7 @@
 // Can choose where you configs are loaded
 import { InMemoryPeers } from '../packages/rafiki-core/src/services/peers'
 import { InMemoryRouter } from '../packages/rafiki-core/src/services/router'
-import { createApp, getBearerToken, RafikiContext, RafikiMiddleware } from '../packages/rafiki-core/src'
+import { createApp, getBearerToken, RafikiContext, RafikiMiddleware, createClientController } from '../packages/rafiki-core/src'
 import { pino } from '../packages/rafiki-logger-pino'
 
 // Setup minimum required setup
@@ -12,7 +12,7 @@ peers.add({
   defaultAccountId : 'test',
   isCcpReceiver: false,
   isCcpSender: false
-})
+}).catch(console.error)
 
 const router = new InMemoryRouter(peers, {
   globalPrefix: 'test',
@@ -22,6 +22,8 @@ const router = new InMemoryRouter(peers, {
 // Define a custom auth function
 const auth: RafikiMiddleware = async (ctx: RafikiContext, next: () => Promise<any>) => {
   const token = getBearerToken(ctx)
+  ctx.log.debug('got token', token)
+
   if (token === 'alice') {
     ctx.state.user = {
       active: true,
@@ -44,18 +46,13 @@ const app = createApp({
   peers,
   router,
   logger: pino()
-},
-  (ctx: RafikiContext) => {
-    ctx.ilp.respond({
-      fulfillment: Buffer.alloc(32),
-      data: Buffer.alloc(0)
-    })
+})
+
+app.use((ctx: RafikiContext) => {
+  ctx.response.fulfill = {
+    fulfillment: Buffer.alloc(32),
+    data: Buffer.alloc(0)
   }
-)
+})
 
-// app.on('info', console.log)
-// app.on('warn', console.log)
-// app.on('error', console.error)
-// app.on('debug', console.log)
-
-app.listen(3000)
+app.listen(3000, () => app.context.log.info('Listening on port 3000'))

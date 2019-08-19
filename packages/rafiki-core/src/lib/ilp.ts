@@ -1,9 +1,10 @@
 import { Reader } from 'oer-utils'
-export function modifySerializedIlpPrepareAmount (prepare: Buffer, amount: string): Buffer {
+export function modifySerializedIlpPrepareAmount (prepare: Buffer, amount: bigint): Buffer {
   const reader = new Reader(prepare)
   reader.skip(1) // skip packet type
   reader.readLengthPrefix()
-  const hex = BigInt(amount).toString(16).padStart(8 * 2, '0').slice(0, 8 * 2)
+  // FIXME: @don: Why .slice() ?
+  const hex = amount.toString(16).padStart(8 * 2, '0').slice(0, 8 * 2)
   prepare.write(hex, reader.cursor, 8, 'hex')
   return prepare
 }
@@ -18,14 +19,28 @@ export function modifySerializedIlpPrepareExpiry (prepare: Buffer, expiry: Date)
   return prepare
 }
 
-// copied from ilp-packet
-function pad (n: number) {
-  return n < 10
-    ? '0' + n
-    : String(n)
+export function modifySerializedIlpPrepare (prepare: Buffer, amount?: bigint, expiresAt?: Date): Buffer {
+  if (amount || expiresAt) {
+    const reader = new Reader(prepare)
+    reader.skip(1) // skip packet type
+    reader.readLengthPrefix()
+    if (amount) {
+      prepare.write(amount.toString(16).padStart(8 * 2, '0'), reader.cursor, 8, 'hex')
+    } else {
+      reader.skip(8)
+    }
+    if (expiresAt) {
+      prepare.write(dateToInterledgerTime(expiresAt), reader.cursor, 17)
+    }
+  }
+  return prepare
 }
 
 export function dateToInterledgerTime (date: Date): string {
+  const pad = (n: number) => (n < 10)
+      ? '0' + n
+      : String(n)
+
   return date.getUTCFullYear() +
     pad(date.getUTCMonth() + 1) +
     pad(date.getUTCDate()) +

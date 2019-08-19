@@ -4,8 +4,8 @@ import { Router } from './services/router'
 import {
   createIlpPacketMiddleware,
   ilpAddressToPath,
-  IlpContext,
-  IlpPacketMiddlewareOptions
+  IlpPacketMiddlewareOptions,
+  RafikiPrepare
 } from './middleware/ilp-packet'
 import { createPeerMiddleware, PeerMiddlewareOptions, PeerState } from './middleware/peer'
 import { PeerService } from './services/peers'
@@ -13,7 +13,9 @@ import { AuthState } from './middleware/auth'
 import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
 import { AccountsService } from './services/accounts'
 import { Logger } from './types/logger'
-import { EventLogger } from './lib'
+import { IncomingMessage, ServerResponse } from 'http'
+import { IlpReply, IlpReject, IlpFulfill } from 'ilp-packet'
+import debug from 'debug'
 
 export interface RafikiServices {
   router: Router
@@ -25,11 +27,33 @@ export interface RafikiIlpConfig extends IlpPacketMiddlewareOptions, PeerMiddlew
   path?: string
 }
 export type RafikiState = PeerState & AuthState
-export type RafikiContextMixin = {
-  services: RafikiServices,
-  ilp: IlpContext,
-  log: Logger
+
+export type RafikiRequestMixin = {
+  prepare: RafikiPrepare,
+  rawPrepare: Buffer
 }
+export type RafikiResponseMixin = {
+  reject?: IlpReject
+  rawReject?: Buffer
+  fulfill?: IlpFulfill
+  rawFulfill?: Buffer
+  reply?: IlpReply
+  rawReply?: Buffer
+}
+
+export type RafikiRequest = Koa.Request & RafikiRequestMixin
+export type RafikiResponse = Koa.Response & RafikiResponseMixin
+
+export type RafikiContextMixin = {
+  services: RafikiServices
+  ilp: never
+  log: Logger
+  request: RafikiRequest
+  response: RafikiResponse
+  req: IncomingMessage & RafikiRequestMixin
+  res: ServerResponse & RafikiResponseMixin
+}
+
 export type RafikiContext = Koa.ParameterizedContext<RafikiState, RafikiContextMixin>
 export type ParameterizedRafikiContext<T> = Koa.ParameterizedContext<RafikiState & T, RafikiContextMixin>
 export type RafikiMiddleware = Middleware<RafikiState, RafikiContextMixin>
@@ -72,8 +96,15 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
         return accountsOrThrow()
       }
     }
-
-    this.context.log = new EventLogger(this)
+    const log = debug('rafiki')
+    this.context.log = {
+      fatal: log,
+      error: log,
+      warn: log,
+      info: log,
+      debug: log,
+      trace: log
+    }
 
   }
 
