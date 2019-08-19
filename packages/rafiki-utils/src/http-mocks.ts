@@ -1,4 +1,4 @@
-import { IncomingMessage, IncomingHttpHeaders, ServerResponse, STATUS_CODES, OutgoingHttpHeaders } from 'http'
+import { IncomingMessage, IncomingHttpHeaders, STATUS_CODES, OutgoingHttpHeaders } from 'http'
 import { Transform } from 'stream'
 import { Socket } from 'net'
 
@@ -11,7 +11,7 @@ export interface MockIncomingMessageOptions {
 
 }
 
-export class MockIncomingMessage extends Transform implements IncomingMessage {
+export class MockIncomingMessage extends Transform {
   httpVersion: '1.1'
   httpVersionMajor: 1
   httpVersionMinor: 1
@@ -29,6 +29,7 @@ export class MockIncomingMessage extends Transform implements IncomingMessage {
   statusCode?: number | undefined
   statusMessage?: string | undefined
   socket: Socket
+  log: any
 
   private _failError?: Error
 
@@ -87,7 +88,7 @@ export class MockIncomingMessage extends Transform implements IncomingMessage {
   }
 }
 
-export class MockServerResponse extends Transform implements ServerResponse {
+export class MockServerResponse extends Transform {
 
   statusCode: number
   statusMessage: string

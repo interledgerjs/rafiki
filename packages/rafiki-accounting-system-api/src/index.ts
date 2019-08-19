@@ -1,8 +1,7 @@
 import bodyParser from 'koa-bodyparser'
-import { log, Rafiki, PeerService, AccountsService } from '@interledger/rafiki-core'
+import { Rafiki, PeerService, AccountsService } from '@interledger/rafiki-core'
 import { createSettlementApiRoutes } from './routes'
 import getRawBody = require('raw-body')
-const logger = log.child({ component: 'settlement-admin-api' })
 
 export interface SettlementAdminApiOptions {
   host?: string,
@@ -14,15 +13,11 @@ export interface SettlementApiConfig {
   accounts: AccountsService
 }
 
-
-
-export function createApp({ peers, accounts }: SettlementApiConfig) : Rafiki {
-
+export function createApp ({ peers, accounts }: SettlementApiConfig): Rafiki {
 
   const app = new Rafiki({ peers, accounts })
 
   app.use(async (ctx, next) => {
-    logger.debug('Received request', { path: ctx.request.path })
     if (ctx.request.headers['content-type'] === 'application/octet-stream') {
       ctx.disableBodyParser = true
       ctx.request.body = await getRawBody(ctx.req)
@@ -35,4 +30,3 @@ export function createApp({ peers, accounts }: SettlementApiConfig) : Rafiki {
   return app
 
 }
-

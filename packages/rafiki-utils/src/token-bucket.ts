@@ -18,7 +18,7 @@ export class TokenBucket {
 
     this._lastTime = now
     this._left = (this._left + refillAmount < this._capacity) ? this._left + refillAmount : this._capacity
-    
+
     if (this._left < count) {
       return false
     }

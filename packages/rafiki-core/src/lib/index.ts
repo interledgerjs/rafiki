@@ -1,4 +1,3 @@
 export * from './crypto'
-export * from './http'
+export * from './event-logger'
 export * from './ilp'
-export * from './koa'

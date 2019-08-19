@@ -1,5 +1,5 @@
-import Koa from 'koa'
-import { MockIncomingMessageOptions, MockIncomingMessage, MockServerResponse } from './http'
+import Koa, { Middleware } from 'koa'
+import { MockIncomingMessageOptions, MockIncomingMessage, MockServerResponse } from '.'
 
 export type Options<StateT, CustomT> = {
   app?: Koa<StateT, CustomT>

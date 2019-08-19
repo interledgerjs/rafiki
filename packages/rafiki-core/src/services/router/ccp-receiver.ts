@@ -7,9 +7,8 @@ import {
   CcpRouteUpdateResponse
 } from 'ilp-protocol-ccp'
 import { IncomingRoute } from 'ilp-routing'
-import { log } from '@interledger/rafiki-utils'
 import { PeerNotFoundError } from '../../errors'
-const logger = log.child({ component: 'ccp-receiver' })
+import { Logger } from '../../types'
 
 export class CcpReceiverService extends Map<string,CcpReceiver> {
   public getOrThrow (id: string): CcpReceiver {
@@ -51,7 +50,7 @@ export class CcpReceiver {
    */
   private _epoch: number = 0
 
-  constructor ({ peerId, sendData, addRoute, removeRoute, getRouteWeight }: CcpReceiverOpts) {
+  constructor ({ peerId, sendData, addRoute, removeRoute, getRouteWeight }: CcpReceiverOpts, private _log: Logger) {
     this._peerId = peerId
     this._sendData = sendData
     this._addRoute = addRoute
@@ -82,33 +81,33 @@ export class CcpReceiver {
     this._bump(holdDownTime)
 
     if (this._routingTableId !== routingTableId) {
-      logger.silly('saw new routing table.', { oldRoutingTableId: this._routingTableId, newRoutingTableId: routingTableId })
+      this._log.trace('saw new routing table.', { oldRoutingTableId: this._routingTableId, newRoutingTableId: routingTableId })
       this._routingTableId = routingTableId
       this._epoch = 0
     }
 
     if (fromEpochIndex > this._epoch) {
       // There is a gap, we need to go back to the last epoch we have
-      logger.silly('gap in routing updates', { expectedEpoch: this._epoch, actualFromEpoch: fromEpochIndex })
+      this._log.trace('gap in routing updates', { expectedEpoch: this._epoch, actualFromEpoch: fromEpochIndex })
       await this.sendRouteControl(true) // TODO: test
       return []
     }
     if (this._epoch > toEpochIndex) {
       // This routing update is older than what we already have
-      logger.silly('old routing update, ignoring', { expectedEpoch: this._epoch, actualFromEpoch: toEpochIndex })
+      this._log.trace('old routing update, ignoring', { expectedEpoch: this._epoch, actualFromEpoch: toEpochIndex })
       return []
     }
 
     // just a heartbeat
     if (newRoutes.length === 0 && withdrawnRoutes.length === 0) {
-      logger.silly('pure heartbeat.', { fromEpoch: fromEpochIndex , toEpoch: toEpochIndex })
+      this._log.trace('pure heartbeat.', { fromEpoch: fromEpochIndex , toEpoch: toEpochIndex })
       this._epoch = toEpochIndex
       return []
     }
 
     const changedPrefixes: string[] = []
     if (withdrawnRoutes.length > 0) {
-      logger.silly('received withdrawn routes', { routes: withdrawnRoutes })
+      this._log.trace('received withdrawn routes', { routes: withdrawnRoutes })
       for (const prefix of withdrawnRoutes) {
         this._removeRoute(this._peerId, prefix)
       }
@@ -125,7 +124,7 @@ export class CcpReceiver {
 
     this._epoch = toEpochIndex
 
-    logger.verbose('applied route update', { count: changedPrefixes.length, fromEpoch: fromEpochIndex, toEpoch: toEpochIndex })
+    this._log.debug('applied route update', { count: changedPrefixes.length, fromEpoch: fromEpochIndex, toEpoch: toEpochIndex })
 
     return {} as CcpRouteUpdateResponse
   }
@@ -137,23 +136,23 @@ export class CcpReceiver {
       lastKnownEpoch: this._epoch,
       features: []
     }
-    logger.silly('Sending Route Control message')
+    this._log.trace('Sending Route Control message')
 
     try {
       const data = await this._sendData(serializeCcpRouteControlRequest(routeControl))
       const packet = deserializeIlpReply(data)
       if (isFulfill(packet)) {
-        logger.silly('successfully sent route control message.')
+        this._log.trace('successfully sent route control message.')
       } else if (isReject(packet)) {
-        logger.debug('route control message was rejected.')
+        this._log.debug('route control message was rejected.')
         throw new Error('route control message rejected.')
       } else {
-        logger.debug('unknown response packet type')
+        this._log.debug('unknown response packet type')
         throw new Error('route control message returned unknown response.')
       }
     } catch (err) {
       const errInfo = (err instanceof Object && err.stack) ? err.stack : err
-      logger.debug('failed to set route control information on peer', { error: errInfo })
+      this._log.debug('failed to set route control information on peer', { error: errInfo })
       // TODO: Should have more elegant, thought-through retry logic here
       if (!sendOnce) {
         const retryTimeout = setTimeout(this.sendRouteControl, ROUTE_CONTROL_RETRY_INTERVAL)
@@ -167,7 +166,7 @@ export class CcpReceiver {
   }
 
   private async _maybeSendRouteControl () {
-    logger.silly('Checking if need to send new route control')
+    this._log.debug('Checking if need to send new route control')
     if (Date.now() - this._expiry > 60 * 1000) {
       await this.sendRouteControl(true)
     }

@@ -30,10 +30,19 @@ interface RawPacket {
   readonly raw: Buffer
 }
 
+export interface IlpContext {
+  readonly prepare: Readonly<IlpPrepare> & RawPacket
+  readonly outgoingPrepare: IlpPrepare & RawPacket
+  readonly fulfill?: Readonly<IlpFulfill> & RawPacket
+  readonly reject?: Readonly<IlpReject> & RawPacket
+  readonly reply: Readonly<IlpFulfill> & RawPacket | Readonly<IlpReject> & RawPacket | undefined
+  respond: (reply: IlpReply | Buffer) => void
+}
+
 /**
  * Overcomplicated context that attempts to avoid doing unnecessary serialization
  */
-export class IlpContext {
+export class ZeroCopyIlpContext implements IlpContext {
 
   private _prepare: IlpPrepare & RawPacket
   private _outgoingPrepare: OutgoingIlpPrepare
@@ -239,7 +248,7 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions) 
 
     ctx.assert(ctx.request.type === CONTENT_TYPE, 400, 'Expected Content-Type of ' + CONTENT_TYPE)
 
-    ctx.ilp = new IlpContext(await _getRawBody(ctx.req))
+    ctx.ilp = new ZeroCopyIlpContext(await _getRawBody(ctx.req))
     ctx.path = ilpAddressToPath(ctx.path)
 
     await next()

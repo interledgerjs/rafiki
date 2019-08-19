@@ -1,8 +1,6 @@
 import { deserializeCcpRouteUpdateRequest, serializeCcpResponse, deserializeCcpRouteControlRequest } from 'ilp-protocol-ccp'
-import { log } from '@interledger/rafiki-utils'
 import { TemporaryApplicationError } from 'ilp-packet/dist/src/errors'
 import { RafikiContext } from '../rafiki'
-const logger = log.child({ middleware: 'ccp-protocol' })
 
 /**
  * Intercept CCP messages and send to the router service to handle them
@@ -10,11 +8,11 @@ const logger = log.child({ middleware: 'ccp-protocol' })
  * TODO: Should be a controller
  */
 export function createCcpProtocolController () {
-  return async function ccp ({ ilp, services, state: { peers: { incoming } } }: RafikiContext) {
+  return async function ccp ({ log, ilp, services, state: { peers: { incoming } } }: RafikiContext) {
     const peer = await incoming
     switch (ilp.prepare.destination) {
       case 'peer.route.control': {
-        logger.silly('received peer.route.control', { request: ilp.prepare })
+        log.trace('received peer.route.control', { request: ilp.prepare })
         try {
           await services.router.handleRouteControl(peer.id, deserializeCcpRouteControlRequest(ilp.prepare.raw))
           ilp.respond(serializeCcpResponse())
@@ -24,7 +22,7 @@ export function createCcpProtocolController () {
         break
       }
       case 'peer.route.update': {
-        logger.silly('received peer.route.update', { request: ilp.prepare })
+        log.trace('received peer.route.update', { request: ilp.prepare })
         try {
           await services.router.handleRouteUpdate(peer.id, deserializeCcpRouteUpdateRequest(ilp.prepare.raw))
           ilp.respond(serializeCcpResponse())

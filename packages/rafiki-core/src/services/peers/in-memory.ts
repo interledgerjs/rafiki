@@ -4,7 +4,6 @@ import { AxiosClient } from '../client/axios'
 import Knex from 'knex'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError } from '../../errors'
-import { log, Logger } from '@interledger/rafiki-utils'
 
 class InMemoryPeer implements Peer {
   readonly [key: string]: any
@@ -17,7 +16,6 @@ class InMemoryPeer implements Peer {
   isCcpReceiver: boolean
   defaultAccountId: string
 
-  static logger: Logger = log.child({ component: 'in-memory-peer' })
   constructor (info: PeerInfo) {
     Object.assign(this, info)
   }
@@ -36,8 +34,6 @@ class InMemoryPeer implements Peer {
 }
 
 export class InMemoryPeers implements PeerService {
-
-  static logger: Logger = log.child({ component: 'in-memory-peers-service' })
 
   private _addedPeers: Subject<Peer>
   private _updatedPeers: Subject<Peer>

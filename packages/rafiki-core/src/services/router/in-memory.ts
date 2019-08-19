@@ -1,8 +1,7 @@
 import { IncomingRoute, RouteManager, Router as RoutingTable } from 'ilp-routing'
 import Knex from 'knex'
 import { fetch as ildcpFetch } from 'ilp-protocol-ildcp'
-import { Relation, RelationWeights, PeerInfo } from '../../types'
-import { log } from '@interledger/rafiki-utils'
+import { Relation, RelationWeights, PeerInfo, Logger } from '../../types'
 import { PeerNotFoundError } from '../../errors'
 import { CcpRouteControlRequest, CcpRouteUpdateRequest, CcpRouteControlResponse, CcpRouteUpdateResponse } from 'ilp-protocol-ccp'
 import { CcpSender, CcpSenderService } from './ccp-sender'
@@ -11,8 +10,7 @@ import { PeerService } from '../peers'
 import { Router, getRouteWeight } from '.'
 import { SELF_PEER_ID } from '../../constants'
 import { sendToPeer } from '../client'
-
-const logger = log.child({ component: 'in-memory-router' })
+import { DebugLogger } from '../../lib/debug-logger';
 
 export interface ImMemoryRouterConfig {
   globalPrefix?: string,
@@ -20,12 +18,15 @@ export interface ImMemoryRouterConfig {
 }
 
 export class InMemoryRouter implements Router {
-  _routingTable: RoutingTable = new RoutingTable()
-  _routeManager: RouteManager = new RouteManager(this._routingTable)
-  _ccpSenders: CcpSenderService = new CcpSenderService()
-  _ccpReceivers: CcpReceiverService = new CcpReceiverService()
+  private _log: Logger
+  private _routingTable: RoutingTable = new RoutingTable()
+  private _routeManager: RouteManager = new RouteManager(this._routingTable)
+  private _ccpSenders: CcpSenderService = new CcpSenderService()
+  private _ccpReceivers: CcpReceiverService = new CcpReceiverService()
 
-  constructor (private _peers: PeerService, { globalPrefix, ilpAddress }: ImMemoryRouterConfig) {
+  constructor (private _peers: PeerService, { globalPrefix, ilpAddress }: ImMemoryRouterConfig, log?: Logger) {
+
+    this._log = log || new DebugLogger('InMemoryRouter')
 
     // Setup the `self` peer
     this._routeManager.addPeer(SELF_PEER_ID, 'local')
@@ -42,7 +43,7 @@ export class InMemoryRouter implements Router {
 
     // Updated
     this._peers.updated.subscribe(async (peer: PeerInfo) => {
-      logger.info('Peer has updated')
+      this._log.info('Peer has updated')
       return
     })
 
@@ -89,12 +90,12 @@ export class InMemoryRouter implements Router {
   }
 
   private async _addPeer (peerId: string, relation: Relation, weight: number, isSender = false, isReceiver = false) {
-    logger.info('adding peer', { peerId, relation })
+    this._log.info('adding peer', { peerId, relation })
     this._routeManager.addPeer(peerId, relation)
 
     if (isReceiver) {
       // TODO This needs to be cleaned up.
-      logger.info('creating CCP receiver for peer', { peerId })
+      this._log.info('creating CCP receiver for peer', { peerId })
       const receiver = new CcpReceiver({
         peerId,
         sendData: async (data: Buffer) => {
@@ -103,13 +104,13 @@ export class InMemoryRouter implements Router {
         addRoute: (route: IncomingRoute) => { this._routeManager.addRoute(route) },
         removeRoute:  (peerId: string, prefix: string) => { this._routeManager.removeRoute(peerId, prefix) },
         getRouteWeight
-      })
+      }, this._log)
       this._ccpReceivers.set(peerId, receiver)
     }
 
     if (isSender) {
       // TODO This needs to be cleaned up.
-      logger.info('creating CCP sender for peer', { peerId })
+      this._log.info('creating CCP sender for peer', { peerId })
       const sender = new CcpSender({
         peerId,
         sendData: async (data: Buffer) => {
@@ -124,7 +125,7 @@ export class InMemoryRouter implements Router {
         },
         routeExpiry: 0, // TODO: Configurable
         routeBroadcastInterval: 10000 // TODO: Configurable
-      })
+      }, this._log)
       this._ccpSenders.set(peerId, sender)
     }
 
@@ -134,10 +135,10 @@ export class InMemoryRouter implements Router {
       })
       if (clientAddress === 'unknown') {
         const e = new Error('Failed to get ILDCP address from parent.')
-        logger.error(e)
+        this._log.error(e)
         throw e
       }
-      logger.info('received ILDCP address from parent', { address: clientAddress })
+      this._log.info('received ILDCP address from parent', { address: clientAddress })
       this._addOwnAddress(clientAddress, weight || RelationWeights.parent)
     }
 
@@ -153,7 +154,7 @@ export class InMemoryRouter implements Router {
   }
 
   private async _removePeer (id: string): Promise<void> {
-    logger.info('removing peer', { peerId: id })
+    this._log.info('removing peer', { peerId: id })
     this._routeManager.removePeer(id)
     this._ccpReceivers.delete(id)
     const sender = this._ccpSenders.get(id)
@@ -164,7 +165,7 @@ export class InMemoryRouter implements Router {
   }
 
   private _addOwnAddress (address: string, weight: number = 500) {
-    logger.info('setting own address', { address })
+    this._log.info('setting own address', { address })
     this._routingTable.setOwnAddress(address) // Tricky: This needs to be here for now to append to path of forwarding routing table
     this._routeManager.addRoute({
       prefix: address,
@@ -184,11 +185,11 @@ export class InMemoryRouter implements Router {
   }
 
   private _addRoute (peerId: string, prefix: string) {
-    logger.info('adding route', { prefix, peerId })
+    this._log.info('adding route', { prefix, peerId })
     const peer = this._routeManager.getPeer(peerId)
     if (!peer) {
       const msg = 'Cannot add route for unknown peerId=' + peerId
-      logger.error(msg)
+      this._log.error(msg)
       throw new Error(msg)
     }
     this._routeManager.addRoute({

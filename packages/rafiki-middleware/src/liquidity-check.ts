@@ -1,13 +1,12 @@
-import { log, RafikiContext } from '@interledger/rafiki-core'
+import { RafikiContext } from '@interledger/rafiki-core'
 import { Errors } from 'ilp-packet'
-const logger = log.child({ middleware: 'liquidity-check' })
 const { T04_INSUFFICIENT_LIQUIDITY } = Errors.codes
 
 /**
  * Log error for reject packets caused by insufficient liquidity or an exceeded maximum balance.
  */
 export function createOutgoingLiquidityCheckMiddleware () {
-  return async ({ ilp, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, ilp, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
 
     await next()
 
@@ -19,8 +18,8 @@ export function createOutgoingLiquidityCheckMiddleware () {
       // money but restarted before it was settled.
       if (ilp.reject.message !== 'exceeded maximum balance.') return
 
-      logger.error('Liquidity Check Error', {
-        peerId: (await peers.outgoing).info.id,
+      log.error('Liquidity Check Error', {
+        peerId: (await peers.outgoing).id,
         triggerBy: ilp.reject.triggeredBy,
         message: ilp.reject.message
       })

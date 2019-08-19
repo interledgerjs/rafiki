@@ -1,5 +1,4 @@
-import { RafikiContext, log } from '@interledger/rafiki-core'
-const logger = log.child({ middleware: 'heartbeat' })
+import { RafikiContext } from '@interledger/rafiki-core'
 
 const DEFAULT_HEARTBEAT_INTERVAL = 30 * 1000
 
@@ -16,10 +15,10 @@ export interface HeartbeatRuleServices {
  * TODO: Should be a controller
  */
 export function createIncomingHeartbeatMiddleware (config: HeartbeatRuleServices) {
-  return async ({ ilp }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, ilp }: RafikiContext, next: () => Promise<any>) => {
     const { destination, data } = ilp.prepare
     if (destination === 'peer.heartbeat') {
-      logger.debug('received incoming heartbeat')
+      log.debug('received incoming heartbeat')
       ilp.respond({
         fulfillment: data.slice(0, 32),
         data
