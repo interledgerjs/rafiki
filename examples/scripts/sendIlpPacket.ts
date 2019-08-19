@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { deserializeIlpReply, IlpPrepare, serializeIlpPrepare } from 'ilp-packet'
-import {STATIC_CONDITION} from '../../packages/rafiki-core/src'
+import { STATIC_CONDITION } from '../../packages/rafiki-core/src'
 
 async function run () {
   const prepare: IlpPrepare = {
@@ -10,7 +10,7 @@ async function run () {
     executionCondition: STATIC_CONDITION,
     expiresAt: new Date()
   }
-  const ilpPacketBuffer = await axios.post('http://localhost:3000/ilp', serializeIlpPrepare(prepare), {
+  const ilpPacketBuffer = await axios.post('http://localhost:3000', serializeIlpPrepare(prepare), {
     headers: {
       'content-type': 'application/octet-stream',
       'authorization': 'Bearer ' + 'alice'

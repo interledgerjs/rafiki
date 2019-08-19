@@ -1,11 +1,8 @@
 import nanoid from 'nanoid/generate'
 import Knex from 'knex'
-import { log } from '@interledger/rafiki-utils'
-// import { AuthToken } from '../../../../temp/models/AuthToken'
 import { TokenService, TokenInfo } from '.'
 import * as assert from 'assert'
 
-const logger = log.child({ component: 'auth-service' })
 const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
 // TODO FIX
@@ -51,7 +48,6 @@ export class KnexTokenService implements TokenService {
     const token = nanoid(alphabet, 36)
 
     if (tokenInfo.sub !== '') {
-      logger.debug('setting peer token for ', tokenInfo.sub)
       await this.store(token, tokenInfo)
     }
 

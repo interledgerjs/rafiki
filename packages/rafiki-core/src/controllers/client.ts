@@ -1,6 +1,4 @@
-import { log } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../rafiki'
-const logger = log.child({ controller: 'client' })
 
 export function createClientController () {
   return async function ilpClient (ctx: RafikiContext) {

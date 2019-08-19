@@ -1,7 +1,5 @@
-import { log } from '@interledger/rafiki-utils'
 import { Peer } from '../services/peers'
 import { RafikiContext } from '../rafiki'
-const logger = log.child({ component: 'balance-middleware' })
 
 export interface SettlementInfo {
   url: string,
@@ -10,7 +8,7 @@ export interface SettlementInfo {
 }
 
 export function createIncomingBalanceMiddleware () {
-  return async ({ ilp, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, ilp, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
     const { amount } = ilp.prepare
 
     // TODO - Move to dedicated middleware
@@ -42,30 +40,30 @@ export function createIncomingBalanceMiddleware () {
 
     // Increase balance on prepare
     const account = await accounts.adjustBalance(BigInt(amount), peer.id)
-    logger.debug('balance increased due to incoming ilp prepare', { peer, amount, account })
+    log.debug('balance increased due to incoming ilp prepare', { peer, amount, account })
 
     try {
       await next()
     } catch (err) {
       // Refund on error
       const account = await accounts.adjustBalance(-BigInt(amount), peer.id)
-      logger.debug('incoming packet refunded due to error', { peer, amount, account })
+      log.debug('incoming packet refunded due to error', { peer, amount, account })
       throw err
     }
 
     if (ilp.fulfill) {
-      this.maybeSettle(await peers.incoming).catch(logger.error)
+      this.maybeSettle(await peers.incoming).catch(log.error)
       // this.stats.incomingDataPacketValue.increment(this.peer, { result: 'fulfilled' }, + amount)
     } else {
       // Refund on reject
       const account = await accounts.adjustBalance(-BigInt(amount), peer.id)
-      logger.debug('incoming packet refunded due to ilp reject', { peer, amount, account })
+      log.debug('incoming packet refunded due to ilp reject', { peer, amount, account })
     }
   }
 }
 
 export function createOutgoingBalanceMiddleware () {
-  return async ({ ilp, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, ilp, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
     const { amount, destination } = ilp.outgoingPrepare
 
     if (destination.startsWith('peer.settle')) {
@@ -86,7 +84,7 @@ export function createOutgoingBalanceMiddleware () {
     try {
       await next()
     } catch (err) {
-      logger.debug('outgoing packet not applied due to error', { peer, amount })
+      log.debug('outgoing packet not applied due to error', { peer, amount })
       // this.stats.outgoingDataPacketValue.increment(peer, { result: 'failed' }, + amount)
       throw err
     }
@@ -95,12 +93,12 @@ export function createOutgoingBalanceMiddleware () {
       // Decrease balance on fulfill
       const account = await accounts.adjustBalance(BigInt(amount), peer.id)
       this.maybeSettle(await peers.outgoing).catch()
-      logger.debug('balance decreased due to outgoing ilp fulfill', { peer, amount, account })
+      log.debug('balance decreased due to outgoing ilp fulfill', { peer, amount, account })
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(peer, {}, balance.getValue().toNumber())
       // this.stats.outgoingDataPacketValue.increment(peer, { result: 'fulfilled' }, + amount)
     } else {
-      logger.debug('outgoing packet not applied due to ilp reject', { peer, amount })
+      log.debug('outgoing packet not applied due to ilp reject', { peer, amount })
       // this.stats.outgoingDataPacketValue.increment(peer, { result: 'rejected' }, + amount)
     }
   }

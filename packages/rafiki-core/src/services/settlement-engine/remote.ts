@@ -1,41 +1,40 @@
 import axios from 'axios'
 import { IlpPrepare, IlpReply, IlpFulfill, IlpReject } from 'ilp-packet'
-import { log } from '@interledger/rafiki-utils'
 import { STATIC_FULFILLMENT } from '../../constants'
 import { SettlementEngine } from '.'
-const logger = log.child({ component: 'remote-settlement-engine' })
+import { Logger } from '../../types'
+import { DebugLogger } from '../../lib/debug-logger'
 
 export class RemoteSettlementEngine implements SettlementEngine {
-  private _url: string
-
-  constructor (url: string) {
-    this._url = url
+  private _log: Logger
+  constructor (private _url: string, private log: Logger) {
+    this._log = log || new DebugLogger('InMemoryRouter')
   }
 
   async addAccount (accountId: string) {
-    logger.info('Creating account on settlement engine for peer=' + accountId + ' endpoint:' + `${this._url}/accounts`)
+    this._log.info('Creating account on settlement engine for peer=' + accountId + ' endpoint:' + `${this._url}/accounts`)
     await axios.post(`${this._url}/accounts`, { accountId })
     .then(response => {
-      logger.info('Created account on settlement engine', { response: response.status })
+      this._log.info('Created account on settlement engine', { response: response.status })
     })
     .catch(error => {
-      logger.error('Failed to create account on settlement engine. Retrying in 5s', { accountId, responseStatus: error.response.status })
+      this._log.error('Failed to create account on settlement engine. Retrying in 5s', { accountId, responseStatus: error.response.status })
       const timeout = setTimeout(() => this.addAccount(accountId), 5000)
       timeout.unref()
     })
   }
 
   async removeAccount (accountId: string) {
-    logger.info('Removing account on settlement engine', { accountId })
+    this._log.info('Removing account on settlement engine', { accountId })
     await axios.delete(`${this._url}/accounts/${accountId}`).catch(error => {
       console.log('failed to delete account' + accountId, 'url', `${this._url}/accounts/${accountId}`, 'error', error)
-      logger.error('Failed to delete account on settlement engine', { accountId, responseStatus: error.response.status })
+      this._log.error('Failed to delete account on settlement engine', { accountId, responseStatus: error.response.status })
       throw error
     })
   }
 
   async receiveRequest (accountId: string, packet: IlpPrepare): Promise<IlpReply> {
-    logger.debug('Forwarding packet onto settlement engine', { accountId, packet, url: `${this._url}/accounts/${accountId}/messages` })
+    this._log.debug('Forwarding packet onto settlement engine', { accountId, packet, url: `${this._url}/accounts/${accountId}/messages` })
     const bufferMessage = packet.data
     try {
       const response = await axios.post(`${this._url}/accounts/${accountId}/messages`, bufferMessage, { headers: { 'content-type': 'application/octet-stream' }, responseType: 'arraybuffer' })
@@ -45,7 +44,7 @@ export class RemoteSettlementEngine implements SettlementEngine {
       }
       return ilpFulfill
     } catch (error) {
-      logger.error('Could not deliver message to SE.', { errorStatus: error.status, errorMessage: error.message })
+      this._log.error('Could not deliver message to SE.', { errorStatus: error.status, errorMessage: error.message })
       const ilpReject: IlpReject = {
         code: 'F00',
         triggeredBy: 'peer.settle',
@@ -57,7 +56,7 @@ export class RemoteSettlementEngine implements SettlementEngine {
   }
 
   async sendSettlement (accountId: string, amount: bigint, scale: number): Promise<void> {
-    logger.debug('requesting SE to do settlement', { accountId, amount: amount.toString(), scale })
+    this._log.debug('requesting SE to do settlement', { accountId, amount: amount.toString(), scale })
     const message = {
       amount: amount.toString(),
       scale

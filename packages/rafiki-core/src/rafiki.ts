@@ -12,6 +12,8 @@ import { PeerService } from './services/peers'
 import { AuthState } from './middleware/auth'
 import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
 import { AccountsService } from './services/accounts'
+import { Logger } from './types/logger'
+import { EventLogger } from './lib'
 
 export interface RafikiServices {
   router: Router
@@ -23,7 +25,11 @@ export interface RafikiIlpConfig extends IlpPacketMiddlewareOptions, PeerMiddlew
   path?: string
 }
 export type RafikiState = PeerState & AuthState
-export type RafikiContextMixin = { services: RafikiServices, ilp: IlpContext }
+export type RafikiContextMixin = {
+  services: RafikiServices,
+  ilp: IlpContext,
+  log: Logger
+}
 export type RafikiContext = Koa.ParameterizedContext<RafikiState, RafikiContextMixin>
 export type ParameterizedRafikiContext<T> = Koa.ParameterizedContext<RafikiState & T, RafikiContextMixin>
 export type RafikiMiddleware = Middleware<RafikiState, RafikiContextMixin>
@@ -66,6 +72,9 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
         return accountsOrThrow()
       }
     }
+
+    this.context.log = new EventLogger(this)
+
   }
 
   public get router () {
@@ -100,15 +109,24 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
 
 interface RafikiCreateAppServices extends RafikiServices {
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
+  logger: RafikiMiddleware | Logger
 }
 
-export function createApp ({ auth, peers, accounts, router }: Partial<RafikiCreateAppServices>) {
+export function createApp ({ auth, peers, accounts, router, logger }: Partial<RafikiCreateAppServices>) {
 
   const app = new Rafiki({
     peers,
     router,
     accounts
   })
+
+  if (logger) {
+    if (typeof logger === 'function') {
+      app.use(logger)
+    } else {
+      app.context.log = logger
+    }
+  }
 
   app.use(createAuthMiddleware(auth))
   app.useIlp()

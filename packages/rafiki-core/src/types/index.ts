@@ -1,4 +1,5 @@
 export * from './account'
 export * from './agreement'
+export * from './logger'
 export * from './peer'
 export * from './rule'

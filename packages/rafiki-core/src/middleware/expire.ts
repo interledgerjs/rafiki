@@ -1,7 +1,5 @@
 import { Errors } from 'ilp-packet'
-import { log } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../rafiki'
-const logger = log.child({ middleware: 'expire' })
 
 const { TransferTimedOutError } = Errors
 
@@ -10,11 +8,11 @@ const { TransferTimedOutError } = Errors
  * the whole pipeline process the reject that is generated when a prepare expires
  */
 export function createOutgoingExpireMiddleware () {
-  return async ({ ilp }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, ilp }: RafikiContext, next: () => Promise<any>) => {
     const { expiresAt } = ilp.outgoingPrepare
     const duration = expiresAt.getTime() - Date.now()
     const timeout = setTimeout(() => {
-      logger.debug('packet expired', { ilp })
+      log.debug('packet expired', { ilp })
       throw new TransferTimedOutError('packet expired.')
     }, duration)
     await next()

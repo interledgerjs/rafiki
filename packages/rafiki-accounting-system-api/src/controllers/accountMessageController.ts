@@ -1,11 +1,7 @@
-import { log, PeerNotFoundError, STATIC_CONDITION, RafikiContext, sendToPeer } from '@interledger/rafiki-core'
-import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet';
-
-const logger = log.child({ server: 'settlement-api', controller: 'account-message' })
+import { PeerNotFoundError, STATIC_CONDITION, RafikiContext, sendToPeer } from '@interledger/rafiki-core'
+import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
 
 export async function create (ctx: RafikiContext) {
-  logger.debug('Received message to forward', { params: ctx.request.params, payload: ctx.request.body })
-  
   const accountId = ctx.request.params['accountId']
   try {
     const message = Buffer.from(ctx.request.body)

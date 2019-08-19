@@ -1,10 +1,10 @@
-import { AccountInfo } from '../../types'
+import { AccountInfo, Logger } from '../../types'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError, AccountNotFoundError } from '../../errors'
-import { log } from '@interledger/rafiki-utils'
 import { Errors } from 'ilp-packet'
 import { AccountsService, AccountSnapshot } from '.'
 import { PeerService } from '../peers'
+import { DebugLogger } from '../../lib/debug-logger'
 const { InsufficientLiquidityError } = Errors
 
 interface InMemoryAccount extends AccountInfo {
@@ -12,13 +12,13 @@ interface InMemoryAccount extends AccountInfo {
 }
 
 export class InMemoryAccountsService implements AccountsService {
-  static logger = log.child({ component: 'in-memory-accounts-service' })
 
+  private _log: Logger
   private _updatedAccounts: Subject<AccountSnapshot>
-
   private _accounts = new Map<string, InMemoryAccount[]>()
 
-  constructor (private _peers: PeerService) {
+  constructor (private _peers: PeerService, log: Logger) {
+    this._log = log || new DebugLogger('InMemoryRouter')
     this._updatedAccounts = new Subject<AccountSnapshot>()
   }
 
@@ -41,12 +41,12 @@ export class InMemoryAccountsService implements AccountsService {
     const newBalance = account.balance + amount
 
     if (newBalance > account.maximumBalance) {
-      InMemoryAccountsService.logger.error(`exceeded maximum balance. proposedBalance=${newBalance.toString()} maximum balance=${account.maximumBalance.toString()}`)
+      this._log.error(`exceeded maximum balance. proposedBalance=${newBalance.toString()} maximum balance=${account.maximumBalance.toString()}`)
       throw new InsufficientLiquidityError('exceeded maximum balance.')
     }
 
     if (newBalance < account.minimumBalance) {
-      InMemoryAccountsService.logger.error(`insufficient funds. oldBalance=${account.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${account.minimumBalance.toString()}`)
+      this._log.error(`insufficient funds. oldBalance=${account.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${account.minimumBalance.toString()}`)
       throw new Error(`insufficient funds. oldBalance=${account.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${account.minimumBalance.toString()}`)
     }
 

@@ -1,10 +1,8 @@
 import { serializeIlpPrepare } from 'ilp-packet'
 import { Reader, Writer } from 'oer-utils'
 import { InvalidPacketError } from 'ilp-packet/dist/src/errors'
-import { log } from '@interledger/rafiki-utils'
 import { sendToPeer } from '../services'
 import { RafikiContext } from '../rafiki'
-const logger = log.child({ middleware: 'echo-protocol' })
 
 const MINIMUM_ECHO_PACKET_DATA_LENGTH = 16 + 1
 const ECHO_DATA_PREFIX = Buffer.from('ECHOECHOECHOECHO', 'ascii')
@@ -13,7 +11,7 @@ const ECHO_DATA_PREFIX = Buffer.from('ECHOECHOECHOECHO', 'ascii')
  * Intercepts and handles messages addressed to the connector otherwise forwards it onto next.
  */
 export function createEchoProtocolController (minMessageWindow: number) {
-  return async function echo ({ ilp, state: { peers: { outgoing } } }: RafikiContext) {
+  return async function echo ({ log, ilp, state: { peers: { outgoing } } }: RafikiContext) {
 
     const { data, amount, expiresAt, executionCondition } = ilp.outgoingPrepare
     if (data.length < MINIMUM_ECHO_PACKET_DATA_LENGTH) throw new InvalidPacketError('packet data too short for echo request. length=' + data.length)
@@ -29,7 +27,7 @@ export function createEchoProtocolController (minMessageWindow: number) {
       writer.write(ECHO_DATA_PREFIX)
       writer.writeUInt8(0x01)
 
-      logger.verbose('responding to echo packet', { sourceAddress })
+      log.debug('responding to echo packet', { sourceAddress })
 
       ilp.respond(await sendToPeer(await outgoing, serializeIlpPrepare({
         amount: amount,
@@ -39,7 +37,7 @@ export function createEchoProtocolController (minMessageWindow: number) {
         data: writer.getBuffer()
       })))
     } else {
-      logger.error('received unexpected echo response.')
+      log.error('received unexpected echo response.')
       throw new Error('received unexpected echo response.')
     }
   }

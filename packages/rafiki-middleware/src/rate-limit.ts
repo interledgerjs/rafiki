@@ -1,6 +1,6 @@
 import { Errors } from 'ilp-packet'
-import { TokenBucket, PeerInfo, log, RafikiContext } from '@interledger/rafiki-core'
-const logger = log.child({ middleware: 'rate-limit' })
+import { PeerInfo, RafikiContext } from '@interledger/rafiki-core'
+import { TokenBucket } from '@interledger/rafiki-utils'
 
 const { RateLimitedError } = Errors
 
@@ -11,7 +11,7 @@ const DEFAULT_REFILL_COUNT = 10000n
  * Throttles throughput based on the number of requests per minute.
  */
 export function createIncomingRateLimitMiddleware () {
-  return async ({ ilp : { prepare }, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, ilp : { prepare }, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
     const peer = await incoming
     let bucket = this._buckets.get(peer.id)
     if (!bucket) {
@@ -19,7 +19,7 @@ export function createIncomingRateLimitMiddleware () {
       this._buckets.set(peer.id, bucket)
     }
     if (!bucket.take()) {
-      logger.warn(`rate limited a packet`, { bucket, prepare, peer })
+      log.warn(`rate limited a packet`, { bucket, prepare, peer })
       throw new RateLimitedError('too many requests, throttling.')
     }
     await next()

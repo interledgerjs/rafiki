@@ -1,9 +1,8 @@
-import { log , Router, Rafiki, RafikiMiddleware, createAuthMiddleware, TokenAuthConfig, PeerService } from '@interledger/rafiki-core'
+import { Router, Rafiki, RafikiMiddleware, createAuthMiddleware, TokenAuthConfig, PeerService, AccountsService } from '@interledger/rafiki-core'
 import { Context } from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server } from 'http'
-const logger = log.child({ component: 'admin-api' })
 
 export interface AdminApiOptions {
   host?: string,
@@ -13,7 +12,8 @@ export interface AdminApiOptions {
 export interface AdminApiServices {
   peers: PeerService
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
-  router: Router
+  router: Router,
+  accounts: AccountsService,
 }
 
 /**
@@ -24,10 +24,10 @@ export class AdminApi {
   private _httpServer?: Server
   private _host?: string
   private _port?: number
-  constructor ({ host, port }: AdminApiOptions, { auth, router, peers }: AdminApiServices) {
+  constructor ({ host, port }: AdminApiOptions, { auth, router, peers, accounts }: AdminApiServices) {
     this._koa = new Rafiki()
     this._koa.use(createAuthMiddleware(auth))
-    this._koa.use(this._getRoutes(router, peers).middleware())
+    this._koa.use(this._getRoutes(router, peers, accounts).middleware())
     this._host = host
     this._port = port
   }
@@ -41,10 +41,10 @@ export class AdminApi {
     const adminApiPort = this._port || 7780
 
     this._httpServer = this._koa.listen(adminApiPort, adminApiHost)
-    logger.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
+    this._koa.context.log.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
   }
 
-  private _getRoutes (router: Router, peers: PeerService) {
+  private _getRoutes (router: Router, peers: PeerService, accounts: AccountsService) {
     const middlewareRouter = createRouter()
 
     middlewareRouter.use(bodyParser())
@@ -73,11 +73,8 @@ export class AdminApi {
       path: '/balance/:id',
       handler: async (ctx: Context) => {
         try {
-          const peer = await peers.get(ctx.request.params['id'])
-          const balance = await peer.getAccountBalance()
-          ctx.body = {
-            minimum: peer.info.accounts
-          }
+          const account = await accounts.get(ctx.request.params['id'])
+          ctx.body = account
         } catch (error) {
           ctx.response.status = 404
         }

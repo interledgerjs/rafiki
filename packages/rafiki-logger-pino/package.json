@@ -1,0 +1,53 @@
+{
+  "name": "@interledger/rafiki-logger-pino",
+  "version": "0.1.0",
+  "description": "pino logging rafiki middleware",
+  "keywords": [
+    "interledger",
+    "rafiki",
+    "pino",
+    "logging"
+  ],
+  "homepage": "https://github.com/interledgerjs/rafiki#readme",
+  "license": "Apache-2.0",
+  "main": "build/index.js",
+  "files": [
+    "build/**/*.json",
+    "build/**/*.js",
+    "build/**/*.js.map",
+    "build/**/*.d.ts",
+    "build/doc"
+  ],
+  "scripts": {
+    "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
+    "build": "tsc -p src/tsconfig.build.json",
+    "lint": "tslint --project .",
+    "lintFix": "tslint --project . --fix",
+    "test": "jest --bail --runInBand",
+    "test:name": "jest --bail --runInBand --testNamePattern=",
+    "test:list": "jest --listTests",
+    "test:ci": "jest --bail --runInBand --coverage --ci",
+    "doc": "typedoc --options typedoc.js src",
+    "codecov": "codecov",
+    "preversion": "npm run lint && npm test",
+    "prepublishOnly": "npm run lint && npm test && npm run doc"
+  },
+  "author": "Interledger Team <info@interledger.org>",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/interledgerjs/rafiki.git"
+  },
+  "bugs": {
+    "url": "https://github.com/interledgerjs/rafiki/issues"
+  },
+  "dependencies": {
+    "@interledger/rafiki-core": "^0.1.0",
+    "@types/koa": "^2.0.49",
+    "@types/pino-http": "^4.0.3",
+    "koa": "^2.7.0",
+    "pino-http": "^4.2.0"
+  }
+}

@@ -1,15 +1,13 @@
-import { log } from '@interledger/rafiki-utils'
 import axios from 'axios'
 import { TokenService, TokenInfo } from '.'
-
-const logger = log.child({ component: 'remote-auth-service' })
+import { Logger } from '../../types'
 
 export class RemoteTokenService implements TokenService {
-  constructor (private _url: string) {
+  constructor (private _url: string, private _log: Logger) {
   }
 
   public async introspect (token: string): Promise<TokenInfo> {
-    logger.debug(`Introspecting token [${token}] at ${this._url} `)
+    this._log.debug(`Introspecting token [${token}] at ${this._url} `)
     const { data } = await axios.post<TokenInfo>(this._url, { token })
     return data
   }
