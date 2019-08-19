@@ -51,10 +51,10 @@ export function createTokenAuthMiddleware (config?: Partial<TokenAuthConfig>) {
 }
 
 export function getBearerToken (ctx: Koa.Context): string | undefined {
-  if (!ctx.header || !ctx.header.authorization) {
+  if (!ctx.request.header || !ctx.request.header.authorization) {
     return
   }
-  const parts = ctx.header.authorization.split(' ')
+  const parts = ctx.request.header.authorization.split(' ')
   if (parts.length === 2) {
     const scheme = parts[0]
     const credentials = parts[1]

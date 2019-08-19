@@ -54,6 +54,7 @@
     "ilp-protocol-ccp": "^1.1.1",
     "ilp-protocol-ildcp": "^2.0.1",
     "ilp-routing": "^20.0.1-beta.1",
+    "jest": "^24.9.0",
     "knex": "^0.18.2",
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.2.1",

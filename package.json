@@ -6,6 +6,8 @@
     "test": "lerna run test --concurrency=1 --stream"
   },
   "devDependencies": {
+    "@types/jest": "^24.0.17",
+    "jest": "^24.9.0",
     "lerna": "^3.16.4"
   },
   "dependencies": {
