@@ -17,7 +17,7 @@ export class InMemoryAccountsService implements AccountsService {
   private _updatedAccounts: Subject<AccountSnapshot>
   private _accounts = new Map<string, InMemoryAccount[]>()
 
-  constructor (private _peers: PeerService, log: Logger) {
+  constructor (private _peers: PeerService, log?: Logger) {
     this._log = log || new DebugLogger('rafiki:in-memory-accounts-service')
     this._updatedAccounts = new Subject<AccountSnapshot>()
   }

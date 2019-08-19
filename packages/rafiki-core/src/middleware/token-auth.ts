@@ -1,6 +1,7 @@
 import * as Koa from 'koa'
 import { AuthState } from './auth'
 import { TokenInfo, IntrospectFunction } from '../services/tokens'
+import { verify } from 'jsonwebtoken'
 
 export interface TokenAuthState extends AuthState {
   token: string
@@ -16,9 +17,10 @@ const defaultAuthenticate = (tokenInfo: TokenInfo): boolean => {
   return Boolean(tokenInfo.active && tokenInfo.sub)
 }
 
-const defaultIntrospect: IntrospectFunction = (token: string) => {
-  // TODO: Parse out JWT and convert to tokenInfo
-  throw new Error('not implemented')
+const defaultIntrospect: IntrospectFunction = async (token: string) => {
+  const decodedToken = await verify(token, 'SECRET')
+  // TODO fix
+  return decodedToken as TokenInfo
 }
 
 /**

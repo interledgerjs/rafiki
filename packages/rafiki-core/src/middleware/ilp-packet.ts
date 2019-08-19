@@ -241,5 +241,5 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions) 
 }
 
 export function ilpAddressToPath (ilpAddress: string, prefix?: string) {
-  return (prefix ? prefix + '/' : '') + ilpAddress.replace(/\./g, '/')
+  return (prefix ? prefix : '') + ilpAddress.replace(/\./g, '/')
 }
