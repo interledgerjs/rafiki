@@ -1,27 +1,26 @@
 /**
  * Parse ILP packets
  */
-import { deserializeIlpPrepare, IlpPrepare, IlpReply, IlpFulfill, IlpReject, serializeIlpPrepare, serializeIlpFulfill, deserializeIlpFulfill, serializeIlpReject, deserializeIlpReject, isFulfill, isReject } from 'ilp-packet'
+import {
+  deserializeIlpFulfill,
+  deserializeIlpPrepare,
+  deserializeIlpReject,
+  IlpFulfill,
+  IlpPrepare,
+  IlpReject,
+  IlpReply,
+  isFulfill,
+  isReject,
+  serializeIlpFulfill,
+  serializeIlpPrepare,
+  serializeIlpReject
+} from 'ilp-packet'
 import { Readable } from 'stream'
 import { RafikiContext } from '../rafiki'
 import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from '../lib'
 import getRawBody from 'raw-body'
 
 const CONTENT_TYPE = 'application/octet-stream'
-
-// TODO req and res are weird. Maybe it should be prepare and reply?
-export interface IlpState {
-  ilp: {
-    req: IlpPrepare
-    res?: IlpReply
-    rawReq: Buffer
-    rawRes?: Buffer
-    outgoingAmount: bigint
-    outgoingExpiry: Date
-    readonly outgoingRawReq: Buffer
-    readonly incomingRawRes: Buffer
-  }
-}
 
 export interface IlpPacketMiddlewareOptions {
   getRawBody?: (req: Readable) => Promise<Buffer>

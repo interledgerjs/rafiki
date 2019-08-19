@@ -1,5 +1,6 @@
 import { createHash } from 'crypto'
-import { log, RafikiContext } from '@interledger/rafiki-core'
+import { RafikiContext } from '@interledger/rafiki-core'
+import { log } from '@interledger/rafiki-utils'
 const logger = log.child({ middleware: 'validate-fulfillment' })
 import { Errors } from 'ilp-packet'
 

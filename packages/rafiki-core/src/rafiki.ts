@@ -1,16 +1,18 @@
-import Koa, { ParameterizedContext, Middleware } from 'koa'
+import Koa, { Middleware } from 'koa'
 import createRouter from 'koa-joi-router'
 import { Router } from './services/router'
-import { createIlpPacketMiddleware, IlpPacketMiddlewareOptions, IlpContext, ilpAddressToPath } from './middleware/ilp-packet'
-import { PeerState, createPeerMiddleware, PeerMiddlewareOptions } from './middleware/peer'
+import {
+  createIlpPacketMiddleware,
+  ilpAddressToPath,
+  IlpContext,
+  IlpPacketMiddlewareOptions
+} from './middleware/ilp-packet'
+import { createPeerMiddleware, PeerMiddlewareOptions, PeerState } from './middleware/peer'
 import { PeerService } from './services/peers'
 import { AuthState } from './middleware/auth'
 import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
 import { AccountsService } from './services/accounts'
-import {
-  createIldcpProtocolController,
-  createEchoProtocolController
-} from './middleware'
+import { createEchoProtocolController, createIldcpProtocolController } from './middleware'
 
 export const DEFAULT_ILP_PATH = '/ilp'
 
@@ -34,7 +36,7 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
   private _router?: Router
   private _peers?: PeerService
   private _accounts?: AccountsService
-  private _ilpPath?: string
+
   constructor (config?: Partial<RafikiServices>) {
     super()
 
@@ -95,8 +97,7 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
   }
 
   public useIlp (config?: RafikiIlpConfig) {
-    this._ilpPath = (config) ? config.path || DEFAULT_ILP_PATH : DEFAULT_ILP_PATH
-    this.use(createIlpPacketMiddleware(config))
+    this.use(createIlpPacketMiddleware())
     this.use(createPeerMiddleware(config))
   }
 
@@ -106,6 +107,8 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
     const path = '/' + ilpAddressToPath(ilpAddressPattern)
     .split('/').filter(Boolean).join('/') // Trim trailing slash
     .replace('*', '(.*)') // Replace wildcard with regex that only matches valid address chars
+
+    // TODO is a new router for every path correct way to do this?
     this.use(createRouter().route({
       method: 'post',
       path,
@@ -117,6 +120,7 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
     this.ilpRoute('peer.config', createIldcpProtocolController())
   }
 
+  // TODO Takes in function to get own address? or looks at router?
   public useEcho () {
     // TODO: This won't work yet, we need to be able to match against OWN address
     this.ilpRoute('local', createEchoProtocolController(1500))
@@ -127,7 +131,7 @@ interface RafikiCreateAppServices extends RafikiServices {
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
 }
 
-export function createApp ({ auth, peers, accounts, router }: Partial<RafikiCreateAppServices>, middleware?: RafikiMiddleware) {
+export function createApp ({ auth, peers, accounts, router }: Partial<RafikiCreateAppServices>, middleware: RafikiMiddleware) {
 
   const app = new Rafiki({
     peers,
@@ -136,11 +140,9 @@ export function createApp ({ auth, peers, accounts, router }: Partial<RafikiCrea
   })
 
   app.use(createAuthMiddleware(auth))
-  // TODO - Resolve
-  // app.useIlp({ path })
-  // TODO: ilpRoute needs a way to get our own address later and then setup this route
-  // app.ilpRoute('get address from connector', createEchoProtocolController(1500))
-  // app.ilpRoute('*', middleware)
+  app.useIlp()
+  app.ilpRoute('*', middleware)
+
   return app
 }
 

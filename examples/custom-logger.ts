@@ -1,15 +1,7 @@
-import {
-  Config,
-  RafikiContext,
-  getBearerToken,
-  InMemoryRouter,
-  createApp,
-  RafikiMiddleware, InMemoryPeers
-} from '../src'
-
 // Can choose where you configs are loaded
-const config = new Config()
-config.loadFromEnv()
+import { InMemoryPeers } from '../packages/rafiki-core/src/services/peers'
+import { InMemoryRouter } from '../packages/rafiki-core/src/services/router'
+import { createApp, getBearerToken, RafikiContext, RafikiMiddleware } from '../packages/rafiki-core/src'
 
 // Setup minimum required setup
 const peers = new InMemoryPeers()
@@ -23,7 +15,7 @@ peers.add({
 
 const ilpRouter = new InMemoryRouter(peers, {
   globalPrefix: 'test',
-  ilpAddress: config.ilpAddress
+  ilpAddress: 'test.bob'
 })
 
 // Define a custom auth function
@@ -52,7 +44,7 @@ const customMiddlewareLogger: RafikiMiddleware = async (ctx: RafikiContext, next
 }
 
 // Create Rafiki and set out to look for alice an bob peers
-const app = createApp(config, {
+const app = createApp({
   auth: authMiddleware,
   peers,
   router: ilpRouter

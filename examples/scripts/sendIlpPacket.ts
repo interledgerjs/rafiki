@@ -1,6 +1,6 @@
 import axios from 'axios'
-import {deserializeIlpReply, IlpPrepare, serializeIlpPrepare} from 'ilp-packet'
-import {STATIC_CONDITION} from '../../src'
+import { deserializeIlpReply, IlpPrepare, serializeIlpPrepare } from 'ilp-packet'
+import {STATIC_CONDITION} from '../../packages/rafiki-core/src'
 
 async function run () {
   const prepare: IlpPrepare = {
@@ -15,8 +15,8 @@ async function run () {
       'content-type': 'application/octet-stream',
       'authorization': 'Bearer ' + 'alice'
     }
-  }).then(resp => resp.data)
-    .catch(error => {
+  }).then((resp: any) => resp.data)
+    .catch((error: any) => {
       console.log(error.response)
     })
 

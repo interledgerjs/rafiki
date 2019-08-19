@@ -50,9 +50,6 @@ export function createIncomingBalanceMiddleware () {
       // Refund on error
       const account = await accounts.adjustBalance(-BigInt(amount), peer.id)
       logger.debug('incoming packet refunded due to error', { peer, amount, account })
-      // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
-      // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
-      // this.stats.incomingDataPacketValue.increment(this.peer, { result: 'failed' }, + amount)
       throw err
     }
 
@@ -63,10 +60,6 @@ export function createIncomingBalanceMiddleware () {
       // Refund on reject
       const account = await accounts.adjustBalance(-BigInt(amount), peer.id)
       logger.debug('incoming packet refunded due to ilp reject', { peer, amount, account })
-
-      // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
-      // this.stats.balance.setValue(this.peer, {}, this.balance.getValue().toNumber())
-      // this.stats.incomingDataPacketValue.increment(peer, { result: 'rejected' }, + amount)
     }
   }
 }
