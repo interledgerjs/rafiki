@@ -10,7 +10,7 @@ export interface HeartbeatRuleServices {
 
 /**
  * Sends a peer.heartbeat message using a prescribed endpoint at a specified interval. Calls the onFailedHeartbeat function if the sending throws an error
- * otherwise onSuccessfullHeartbeat is called.
+ * otherwise onSuccessfulHeartbeat is called.
  *
  * TODO: Should be a controller
  */

@@ -1,4 +1,4 @@
-import { RafikiContext, PeerInfo, Peer, RafikiMiddleware } from '@interledger/rafiki-core'
+import { RafikiContext, Peer, RafikiMiddleware } from '@interledger/rafiki-core'
 import { Errors } from 'ilp-packet'
 import { TokenBucket } from '@interledger/rafiki-utils'
 const { InsufficientLiquidityError } = Errors
@@ -53,7 +53,7 @@ export function createOutgoingThroughputMiddleware (): RafikiMiddleware {
 export function createThroughputLimitBucketsForPeer (peer: Peer, inOrOut: 'incoming' | 'outgoing'): TokenBucket | undefined {
   const refillPeriod = peer['throughputLimitRefillPeriod'] || DEFAULT_REFILL_PERIOD
   const incomingAmount = peer['throughputIncomingAmount'] || false
-  const outgoingAmount = peer['throughputOutgingAmount'] || false
+  const outgoingAmount = peer['throughputOutgoingAmount'] || false
 
   if (inOrOut === 'incoming' && incomingAmount) {
     // TODO: We should handle updates to the peer config

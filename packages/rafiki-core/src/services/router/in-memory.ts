@@ -10,7 +10,7 @@ import { PeerService } from '../peers'
 import { Router, getRouteWeight } from '.'
 import { SELF_PEER_ID } from '../../constants'
 import { sendToPeer } from '../client'
-import { DebugLogger } from '../../lib/debug-logger';
+import { DebugLogger } from '../../lib/debug-logger'
 
 export interface ImMemoryRouterConfig {
   globalPrefix?: string,
