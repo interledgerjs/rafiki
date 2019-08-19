@@ -19,3 +19,5 @@ export interface AccountsService {
   adjustBalance: (amount: bigint, peerId: string, accountId?: string) => Promise<AccountSnapshot>
 
 }
+
+export * from './in-memory'

@@ -1,5 +1,5 @@
 import Koa, { Middleware } from 'koa'
-import createRouter from 'koa-joi-router'
+import createRouter, { Router as KoaRouter } from 'koa-joi-router'
 import { Router } from './services/router'
 import {
   createIlpPacketMiddleware,
@@ -12,9 +12,6 @@ import { PeerService } from './services/peers'
 import { AuthState } from './middleware/auth'
 import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
 import { AccountsService } from './services/accounts'
-import { createEchoProtocolController, createIldcpProtocolController } from './middleware'
-
-export const DEFAULT_ILP_PATH = '/ilp'
 
 export interface RafikiServices {
   router: Router
@@ -69,7 +66,6 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
         return accountsOrThrow()
       }
     }
-
   }
 
   public get router () {
@@ -100,38 +96,13 @@ export class Rafiki extends Koa<RafikiState, RafikiContextMixin> {
     this.use(createIlpPacketMiddleware())
     this.use(createPeerMiddleware(config))
   }
-
-  public ilpRoute (ilpAddressPattern: string, handler: RafikiMiddleware) {
-    // TODO: Check that ILP middleware is being used otherwise this won't work
-
-    const path = '/' + ilpAddressToPath(ilpAddressPattern)
-    .split('/').filter(Boolean).join('/') // Trim trailing slash
-    .replace('*', '(.*)') // Replace wildcard with regex that only matches valid address chars
-
-    // TODO is a new router for every path correct way to do this?
-    this.use(createRouter().route({
-      method: 'post',
-      path,
-      handler
-    }).middleware())
-  }
-
-  public useIldcp () {
-    this.ilpRoute('peer.config', createIldcpProtocolController())
-  }
-
-  // TODO Takes in function to get own address? or looks at router?
-  public useEcho () {
-    // TODO: This won't work yet, we need to be able to match against OWN address
-    this.ilpRoute('local', createEchoProtocolController(1500))
-  }
 }
 
 interface RafikiCreateAppServices extends RafikiServices {
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
 }
 
-export function createApp ({ auth, peers, accounts, router }: Partial<RafikiCreateAppServices>, middleware: RafikiMiddleware) {
+export function createApp ({ auth, peers, accounts, router }: Partial<RafikiCreateAppServices>) {
 
   const app = new Rafiki({
     peers,
@@ -141,7 +112,6 @@ export function createApp ({ auth, peers, accounts, router }: Partial<RafikiCrea
 
   app.use(createAuthMiddleware(auth))
   app.useIlp()
-  app.ilpRoute('*', middleware)
 
   return app
 }
@@ -151,5 +121,26 @@ export function createAuthMiddleware (auth?: RafikiMiddleware | Partial<TokenAut
     return auth
   } else {
     return createTokenAuthMiddleware(auth)
+  }
+}
+
+// TODO the joi-koa-middleware needs to be replaced by @koa/router. But the type defs are funky and require work
+export class RafikiRouter {
+  private _router: KoaRouter
+
+  constructor () {
+    this._router = createRouter()
+  }
+
+  public ilpRoute (ilpAddressPattern: string, handler: RafikiMiddleware) {
+    const path = '/' + ilpAddressToPath(ilpAddressPattern)
+      .split('/').filter(Boolean).join('/') // Trim trailing slash
+      .replace('*', '(.*)') // Replace wildcard with regex that only matches valid address chars
+
+    this._router.post(path, handler)
+  }
+
+  public routes (): RafikiMiddleware {
+    return this._router.middleware()
   }
 }
