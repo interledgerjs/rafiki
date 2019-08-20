@@ -8,7 +8,7 @@ export interface SettlementInfo {
 }
 
 export function createIncomingBalanceMiddleware () {
-  return async ({ log, request, response, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, request, response, services: { accounts }, peers }: RafikiContext, next: () => Promise<any>) => {
     const { amount } = request.prepare
 
     // TODO - Move to dedicated middleware
@@ -62,7 +62,7 @@ export function createIncomingBalanceMiddleware () {
 }
 
 export function createOutgoingBalanceMiddleware () {
-  return async ({ log, request, response, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, request, response, services: { accounts }, peers }: RafikiContext, next: () => Promise<any>) => {
     const { amount } = request.prepare
 
     // TODO - Move to dedicated middleware

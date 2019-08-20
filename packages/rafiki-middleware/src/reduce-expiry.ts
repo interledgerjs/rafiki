@@ -10,7 +10,7 @@ const { InsufficientTimeoutError } = Errors
  * // TODO: Maybe this should be combined with the expiry checker and the expiry timeout?
  */
 export function createIncomingReduceExpiryMiddleware (): RafikiMiddleware {
-  return async ({ log, request: { prepare }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
     const { minOutgoingExpirationWindow, maxHoldWindow } = await peers.incoming
     prepare.expiresAt = getDestinationExpiry(prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, log)
     await next()
@@ -18,7 +18,7 @@ export function createIncomingReduceExpiryMiddleware (): RafikiMiddleware {
 }
 
 export function createOutgoingReduceExpiryMiddleware (): RafikiMiddleware {
-  return async ({ log, request: { prepare }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
     const { minOutgoingExpirationWindow, maxHoldWindow } = await peers.outgoing
     // TODO: These values should not be undefined. The defaults should be set in the service
     prepare.expiresAt = getDestinationExpiry(prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, log)

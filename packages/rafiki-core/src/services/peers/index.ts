@@ -5,7 +5,7 @@ export interface Peer extends Readonly<PeerInfo> {
   send: (data: Buffer) => Promise<Buffer>
 }
 
-export interface PeerService {
+export interface PeersService {
   readonly added: Observable<Peer>
   readonly updated: Observable<Peer>
   readonly deleted: Observable<string>

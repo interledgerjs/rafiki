@@ -1,6 +1,10 @@
 {
   "name": "root",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
   "scripts": {
     "build": "lerna run build --sort --concurrency=1 --stream",
     "test": "lerna run test --concurrency=1 --stream"
@@ -20,5 +24,7 @@
     "tslint": "^5.18.0",
     "tslint-config-standard": "^8.0.1",
     "typescript": "^3.5.3"
+  },
+  "dependencies": {
   }
 }

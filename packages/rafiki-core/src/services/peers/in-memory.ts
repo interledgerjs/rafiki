@@ -1,10 +1,15 @@
-import { Peer, PeerService } from '.'
+import { Peer, PeersService } from '.'
 import { PeerInfo, PeerRelation } from '../../types'
 import { AxiosClient } from '../client/axios'
-import Knex from 'knex'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError } from '../../errors'
+import debug from 'debug'
+// Implementations SHOULD use a better logger than debug for production services
+const log = debug('rafiki:in-memory-peers-service')
 
+/**
+ * An in-memory peer service for development and testing purposes.
+ */
 class InMemoryPeer implements Peer {
   readonly [key: string]: any
   id: string
@@ -35,7 +40,7 @@ class InMemoryPeer implements Peer {
 
 }
 
-export class InMemoryPeers implements PeerService {
+export class InMemoryPeers implements PeersService {
 
   private _addedPeers: Subject<Peer>
   private _updatedPeers: Subject<Peer>
@@ -70,6 +75,7 @@ export class InMemoryPeers implements PeerService {
     const peer = new InMemoryPeer(peerInfo)
     this._peers.set(peer.id, peer)
     this._addedPeers.next(peer)
+    log('added peer', peerInfo)
     return peer
   }
 
@@ -81,6 +87,7 @@ export class InMemoryPeers implements PeerService {
     peer = new InMemoryPeer(peerInfo)
     this._peers.set(peerInfo.id, peer)
     this._updatedPeers.next(peer)
+    log('updated peer', peerInfo)
     return peer
   }
 
@@ -91,6 +98,7 @@ export class InMemoryPeers implements PeerService {
     }
     this._peers.delete(peerId)
     this._removedPeers.next(peerId)
+    log('removed peer', oldPeer)
   }
 
   async list () {
