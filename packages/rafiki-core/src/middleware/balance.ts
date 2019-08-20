@@ -9,7 +9,7 @@ export interface SettlementInfo {
 
 export function createIncomingBalanceMiddleware () {
   return async ({ log, request, response, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
-    const { amount } = request.body
+    const { amount } = request.prepare
 
     // TODO - Move to dedicated middleware
     // Handle peer.settle
@@ -52,8 +52,7 @@ export function createIncomingBalanceMiddleware () {
     }
 
     if (response.fulfill) {
-      this.maybeSettle(await peers.incoming).catch(log.error)
-      // this.stats.incomingDataPacketValue.increment(this.peer, { result: 'fulfilled' }, + amount)
+      maybeSettle(await peers.incoming).catch(log.error)
     } else {
       // Refund on reject
       const account = await accounts.adjustBalance(-BigInt(amount), peer.id)
@@ -64,12 +63,14 @@ export function createIncomingBalanceMiddleware () {
 
 export function createOutgoingBalanceMiddleware () {
   return async ({ log, request, response, services: { accounts }, state: { peers } }: RafikiContext, next: () => Promise<any>) => {
-    const { amount, destination } = request.body
+    const { amount } = request.prepare
 
-    if (destination.startsWith('peer.settle')) {
-      await next()
-      return
-    }
+    // TODO - Move to dedicated middleware
+    // Handle peer.settle
+    // if (destination.startsWith('peer.settle')) {
+    //   await next()
+    //   return
+    // }
 
     // Ignore zero amount packets
     if (amount === '0') {
@@ -77,7 +78,7 @@ export function createOutgoingBalanceMiddleware () {
       return
     }
 
-    const peer = await peers.incoming
+    const peer = await peers.outgoing
 
     // We do nothing here (i.e. unlike for incoming packets) and wait until the packet is fulfilled
     // This means we always take the most conservative view of our balance with the upstream peer
@@ -85,14 +86,13 @@ export function createOutgoingBalanceMiddleware () {
       await next()
     } catch (err) {
       log.debug('outgoing packet not applied due to error', { peer, amount })
-      // this.stats.outgoingDataPacketValue.increment(peer, { result: 'failed' }, + amount)
       throw err
     }
 
     if (response.fulfill) {
       // Decrease balance on fulfill
       const account = await accounts.adjustBalance(BigInt(amount), peer.id)
-      this.maybeSettle(await peers.outgoing).catch()
+      maybeSettle(await peers.outgoing).catch()
       log.debug('balance decreased due to outgoing ilp fulfill', { peer, amount, account })
       // TODO: This statistic isn't a good idea but we need to provide another way to get the current balance
       // this.stats.balance.setValue(peer, {}, balance.getValue().toNumber())
