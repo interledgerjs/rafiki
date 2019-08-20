@@ -1,13 +1,13 @@
-import { PeerNotFoundError, RafikiContext, AccountSnapshot } from '@interledger/rafiki-core'
+import { PeerNotFoundError, AccountNotFoundError, RafikiContext, AccountSnapshot } from '@interledger/rafiki-core'
 
-export async function create ({ services: { accounts }, request: { params, body }, response }: RafikiContext) {
+export async function create ({ services: { accounts, peers }, request: { params, body }, response }: RafikiContext) {
 
-  const id = params['id']
+  const peerId = params['peerId']
   const amount = -BigInt(body['amount'])
   const scale = +body['scale']
 
   try {
-    const account = getAccountBySettlementId(id)
+    const account = await accounts.get(peerId)
     const scaleDiff = account.assetScale - scale
 
     // TODO: update to check whether scaledAmountDiff is an integer
@@ -19,19 +19,16 @@ export async function create ({ services: { accounts }, request: { params, body 
 
     const scaleRatio = Math.pow(10, scaleDiff)
     const scaledAmountDiff = amount * BigInt(scaleRatio)
+
     await accounts.adjustBalance(scaledAmountDiff, account.peerId, account.id)
     response.status = 200
+
   } catch (error) {
-    if (error instanceof PeerNotFoundError) {
+    if (error instanceof PeerNotFoundError || error instanceof AccountNotFoundError) {
       response.status = 404
       response.message = error.message
       return
     }
     throw error
   }
-}
-
-// TODO: Implement mapping between settlement engine id and accounting system id
-function getAccountBySettlementId (id: string): AccountSnapshot {
-  throw new Error('not implemented')
 }

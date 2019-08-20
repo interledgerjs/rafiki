@@ -1,7 +1,5 @@
 // Can choose where you configs are loaded
-import { InMemoryPeers } from '../packages/rafiki-core/src/services/peers'
-import { InMemoryRouter } from '../packages/rafiki-core/src/services/router'
-import { createApp, getBearerToken, RafikiContext, RafikiMiddleware } from '../packages/rafiki-core/src'
+import { createApp, getBearerToken, RafikiContext, RafikiMiddleware, InMemoryPeers, InMemoryRouter } from '@interledger/rafiki-core'
 
 // Setup minimum required setup
 const peers = new InMemoryPeers()

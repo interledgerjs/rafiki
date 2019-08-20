@@ -1,5 +1,5 @@
 import bodyParser from 'koa-bodyparser'
-import { Rafiki, PeerService, AccountsService } from '@interledger/rafiki-core'
+import { Rafiki, PeersService, AccountsService } from '@interledger/rafiki-core'
 import { createSettlementApiRoutes } from './routes'
 import getRawBody = require('raw-body')
 
@@ -9,7 +9,7 @@ export interface SettlementAdminApiOptions {
 }
 
 export interface SettlementApiConfig {
-  peers: PeerService
+  peers: PeersService
   accounts: AccountsService
 }
 

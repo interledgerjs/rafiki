@@ -11,6 +11,7 @@
   "homepage": "https://github.com/interledgerjs/rafiki#readme",
   "license": "Apache-2.0",
   "main": "build/index.js",
+  "types": "build/index.d.ts",
   "files": [
     "build/**/*.json",
     "build/**/*.js",
@@ -45,9 +46,8 @@
   },
   "dependencies": {
     "@interledger/rafiki-core": "^0.1.0",
-    "@types/koa": "^2.0.49",
-    "@types/pino-http": "^4.0.3",
-    "koa": "^2.7.0",
-    "pino-http": "^4.2.0"
+    "@types/pino": "^5.8.9",
+    "@types/pino-std-serializers": "^2.4.0",
+    "pino-std-serializers": "^2.4.2"
   }
 }

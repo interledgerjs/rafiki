@@ -9,7 +9,7 @@ import { RafikiContext } from '../rafiki'
  * reject that is sent back to sender.
  */
 export function createIncomingErrorHandlerMiddleware () {
-  return async ({ log, request, response, services }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ log, response, services }: RafikiContext, next: () => Promise<any>) => {
     try {
       await next()
       if (!response.rawReply) {

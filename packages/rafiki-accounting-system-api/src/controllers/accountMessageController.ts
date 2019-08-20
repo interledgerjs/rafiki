@@ -2,8 +2,11 @@ import { PeerNotFoundError, STATIC_CONDITION, RafikiContext, sendToPeer } from '
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
 
 export async function create (ctx: RafikiContext) {
-  const accountId = ctx.request.params['accountId']
+  const peerId = ctx.request.params['peerId']
   try {
+
+    // TODO: Do we need to do some validation here that the SE is supposed to be talking to this peer?
+
     const message = Buffer.from(ctx.request.body)
     const packet = serializeIlpPrepare({
       amount: '0',
@@ -13,7 +16,7 @@ export async function create (ctx: RafikiContext) {
       data: message
     })
 
-    const reply = deserializeIlpReply(await sendToPeer(accountId, packet, ctx.services.peers))
+    const reply = deserializeIlpReply(await sendToPeer(peerId, packet, ctx.services.peers))
     if (isReject(reply)) {
       throw new Error('IlpPacket to settlement engine was rejected')
     }

@@ -1,4 +1,4 @@
-import { Router, Rafiki, RafikiMiddleware, createAuthMiddleware, TokenAuthConfig, PeerService, AccountsService } from '@interledger/rafiki-core'
+import { Router, Rafiki, RafikiMiddleware, createAuthMiddleware, TokenAuthConfig, PeersService, AccountsService } from '@interledger/rafiki-core'
 import { Context } from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
@@ -10,7 +10,7 @@ export interface AdminApiOptions {
 }
 
 export interface AdminApiServices {
-  peers: PeerService
+  peers: PeersService
   auth: RafikiMiddleware | Partial<TokenAuthConfig>
   router: Router,
   accounts: AccountsService,
@@ -44,7 +44,7 @@ export class AdminApi {
     this._koa.context.log.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
   }
 
-  private _getRoutes (router: Router, peers: PeerService, accounts: AccountsService) {
+  private _getRoutes (router: Router, peers: PeersService, accounts: AccountsService) {
     const middlewareRouter = createRouter()
 
     middlewareRouter.use(bodyParser())

@@ -1,24 +1,28 @@
-import { AccountInfo, Logger } from '../../types'
+import { AccountInfo} from '../../types'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError, AccountNotFoundError } from '../../errors'
 import { Errors } from 'ilp-packet'
 import { AccountsService, AccountSnapshot } from '.'
-import { PeerService } from '../peers'
-import { DebugLogger } from '../../lib/debug-logger'
+import { PeersService } from '../peers'
+import debug from 'debug'
 const { InsufficientLiquidityError } = Errors
 
+// Implementations SHOULD use a better logger than debug for production services
+const log = debug('rafiki:in-memory-accounts-service')
+
+/**
+ * An in-memory account service for development and testing purposes.
+ */
 interface InMemoryAccount extends AccountInfo {
   balance: bigint
 }
 
 export class InMemoryAccountsService implements AccountsService {
 
-  private _log: Logger
   private _updatedAccounts: Subject<AccountSnapshot>
   private _accounts = new Map<string, InMemoryAccount[]>()
 
-  constructor (private _peers: PeerService, log?: Logger) {
-    this._log = log || new DebugLogger('rafiki:in-memory-accounts-service')
+  constructor (private _peers: PeersService) {
     this._updatedAccounts = new Subject<AccountSnapshot>()
   }
 
@@ -41,12 +45,12 @@ export class InMemoryAccountsService implements AccountsService {
     const newBalance = account.balance + amount
 
     if (newBalance > account.maximumBalance) {
-      this._log.error(`exceeded maximum balance. proposedBalance=${newBalance.toString()} maximum balance=${account.maximumBalance.toString()}`)
+      log(`exceeded maximum balance. proposedBalance=${newBalance.toString()} maximum balance=${account.maximumBalance.toString()}`)
       throw new InsufficientLiquidityError('exceeded maximum balance.')
     }
 
     if (newBalance < account.minimumBalance) {
-      this._log.error(`insufficient funds. oldBalance=${account.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${account.minimumBalance.toString()}`)
+      log(`insufficient funds. oldBalance=${account.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${account.minimumBalance.toString()}`)
       throw new Error(`insufficient funds. oldBalance=${account.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${account.minimumBalance.toString()}`)
     }
 

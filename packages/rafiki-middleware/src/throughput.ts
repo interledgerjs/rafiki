@@ -12,8 +12,8 @@ export function createIncomingThroughputMiddleware (): RafikiMiddleware {
 
   const _buckets = new Map<string,TokenBucket>()
 
-  return async ({ log, request: { prepare }, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
-    const peer = await incoming
+  return async ({ log, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
+    const peer = await peers.incoming
     let incomingBucket = _buckets.get(peer.id)
     if (!incomingBucket) {
       incomingBucket = createThroughputLimitBucketsForPeer(peer, 'incoming')
@@ -33,8 +33,8 @@ export function createOutgoingThroughputMiddleware (): RafikiMiddleware {
 
   const _buckets = new Map<string,TokenBucket>()
 
-  return async ({ log, request: { prepare }, state: { peers: { outgoing } } }: RafikiContext, next: () => Promise<any>) => {
-    const peer = await outgoing
+  return async ({ log, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
+    const peer = await peers.outgoing
     let outgoingBucket = _buckets.get(peer.id)
     if (!outgoingBucket) {
       outgoingBucket = createThroughputLimitBucketsForPeer(peer, 'outgoing')

@@ -11,8 +11,8 @@ const DEFAULT_REFILL_COUNT = 10000n
  * Throttles throughput based on the number of requests per minute.
  */
 export function createIncomingRateLimitMiddleware (): RafikiMiddleware {
-  return async ({ log, request : { prepare }, state: { peers: { incoming } } }: RafikiContext, next: () => Promise<any>) => {
-    const peer = await incoming
+  return async ({ log, request : { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
+    const peer = await peers.incoming
     let bucket = this._buckets.get(peer.id)
     if (!bucket) {
       bucket = createRateLimitBucketForPeer(peer)

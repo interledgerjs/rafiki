@@ -15,7 +15,7 @@ import {
   deserializeIlpReply
 } from 'ilp-packet'
 import { Readable } from 'stream'
-import { RafikiContext } from '../rafiki'
+import { RafikiContext, RafikiMiddleware } from '../rafiki'
 import getRawBody from 'raw-body'
 
 const CONTENT_TYPE = 'application/octet-stream'
@@ -113,7 +113,7 @@ export class ZeroCopyIlpPrepare implements RafikiPrepare {
 
 }
 
-export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions) {
+export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions): RafikiMiddleware {
 
   const _getRawBody = (config && config.getRawBody) ? config.getRawBody : getRawBody
 
