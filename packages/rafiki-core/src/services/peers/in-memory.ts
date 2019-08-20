@@ -16,19 +16,21 @@ class InMemoryPeer implements Peer {
   isCcpReceiver: boolean
   defaultAccountId: string
 
+  readonly axiosClient: AxiosClient
+
   constructor (info: PeerInfo) {
     Object.assign(this, info)
+
+    if (this.url) {
+      const axiosConfig = { responseType: 'arraybuffer', headers: {} }
+      if (this.authToken) axiosConfig.headers = { 'Authorization': `Bearer ${this.authToken}` }
+      this.axiosClient = new AxiosClient(this.url, axiosConfig)
+    }
   }
 
   public send (data: Buffer) {
-    if (!this.url) throw new Error('No URL configured for peer')
-
-    // TODO: Connection pooling and keep-alive
-    const axiosConfig = { responseType: 'arraybuffer', headers: {} }
-    if (this.authToken) axiosConfig.headers = { 'Authorization': `Bearer ${this.authToken}` }
-    const client = new AxiosClient(this.url, axiosConfig)
-
-    return client.send(data)
+    if (!this.axiosClient) throw new Error('No send client configured for peer')
+    return this.axiosClient.send(data)
   }
 
 }
@@ -93,20 +95,5 @@ export class InMemoryPeers implements PeerService {
 
   async list () {
     return [...this._peers.values()].map(peer => peer.info)
-  }
-
-  public async load (knex: Knex) {
-    // const result = await PeerModel.query(knex).eager('[rules,protocols,endpoint]')
-    // return Promise.all(result.map(async peer => {
-    //
-    //   // TODO: Fix Knex loader
-    //   return this.add({
-    //     id: peer.id,
-    //     isCcpReceiver: false,
-    //     isCcpSender: false,
-    //     relation: peer.relation as PeerRelation,
-    //     defaultAccountId: peer.id // BIG ASSUMPTION HERE
-    //   })
-    // }))
   }
 }
