@@ -26,7 +26,7 @@ export class AdminApi {
   private _port?: number
   constructor ({ host, port }: AdminApiOptions, { auth, router, peers, accounts }: AdminApiServices) {
     this._koa = new Rafiki()
-    this._koa.use(createAuthMiddleware(auth))
+    // this._koa.use(createAuthMiddleware(auth))
     this._koa.use(this._getRoutes(router, peers, accounts).middleware())
     this._host = host
     this._port = port
@@ -85,16 +85,17 @@ export class AdminApi {
       path: '/peers',
       validate: {
         body: {
-          peerInfo: Joi.object().required()
+          id: Joi.string().required()
         },
         type: 'json'
       },
       handler: async (ctx: Context) => {
-        const peerInfo = ctx.request.body['peerInfo']
-        await peers.add(peerInfo)
+        const peerInfo = ctx.request.body
+        const peer = await peers.add(peerInfo)
         // TODO: Do we create the token automatically
         // await tokenService.create({ sub: peerInfo.id, active: true })
-        ctx.response.status = 204
+        ctx.response.body = peer
+        ctx.response.status = 201
       }
     })
     middlewareRouter.route({

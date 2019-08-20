@@ -20,6 +20,8 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
  - [ ] Pluggable settlement and/or alternative settlement engines
  - [ ] Support unsolicited peer connections
  - [ ] Add TESTS
+ - [ ] Admin API cleanup and being semantically correct 
+ - [ ] Fix path matching for letting connector listen on non standard ilp path
  
 *Cleanup*:
  - [ ] Thorough code review 😬

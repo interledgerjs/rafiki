@@ -6,9 +6,9 @@ async function run () {
   const prepare: IlpPrepare = {
     amount: '1',
     data: Buffer.alloc(0),
-    destination: 'g.whatever',
+    destination: 'test.harry',
     executionCondition: STATIC_CONDITION,
-    expiresAt: new Date()
+    expiresAt: new Date(Date.now() + 60000)
   }
   const response = await axios.post<Buffer>('http://localhost:3000/', serializeIlpPrepare(prepare), {
     headers: {
