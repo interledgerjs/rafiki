@@ -6,6 +6,7 @@
     "examples/*"
   ],
   "scripts": {
+    "bootstrap": "lerna bootstrap",
     "build": "lerna run build --sort --concurrency=1 --stream",
     "test": "lerna run test --concurrency=1 --stream"
   },
