@@ -19,7 +19,8 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
  - [ ] Synchronous/atomic settlement model (alternative balance rule and settlement engine)
  - [ ] Pluggable settlement and/or alternative settlement engines
  - [ ] Support unsolicited peer connections
-
+ - [ ] Add TESTS
+ 
 *Cleanup*:
  - [ ] Thorough code review 😬
  - [ ] CI/CD and some automation around commit checks
@@ -37,9 +38,9 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
 
  - Stand-alone routing table and route manager
  - Stand-alone settlement engine
- - [Endpoints](./endpoints.md) replace plugins and are built in for major transports
- - Rules and protocols replace middleware and controllers and are instantiated per peer
-
+ - ~~Rules and protocols replace middleware and controllers and are instantiated per peer~~
+ - Middleware and controllers now replace rules and protocols (Humble 🥧 🤣)
+ 
 
 ## Project
 
