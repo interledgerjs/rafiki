@@ -3,8 +3,7 @@ export function modifySerializedIlpPrepareAmount (prepare: Buffer, amount: bigin
   const reader = new Reader(prepare)
   reader.skip(1) // skip packet type
   reader.readLengthPrefix()
-  // FIXME: @don: Why .slice() ?
-  const hex = amount.toString(16).padStart(8 * 2, '0').slice(0, 8 * 2)
+  const hex = amount.toString(16).padStart(8 * 2, '0')
   prepare.write(hex, reader.cursor, 8, 'hex')
   return prepare
 }
