@@ -12,27 +12,24 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
 
 **This is a BETA. There are still TODO's:**
 
- - [ ] Thorough code review 😬
- - [ ] Documentation
- - [ ] CI/CD and some automation around commit checks
- - [ ] Get/set own address when child
- - [ ] Update config schemas and/or support old schemas
- - [ ] HTTP/2 endpoint reconnect logic
- - [ ] Support unsolicited peer connections
- - [ ] Pluggable settlement and/or alternative settlement engines
+*Dev* :
+ - [ ] Check how connector reacts if child and gets own address.
+ - [ ] Config for rafiki-connector
+ - [ ] Exchange rate middleware
  - [ ] Synchronous/atomic settlement model (alternative balance rule and settlement engine)
- - [ ] Exchange rate rules
- - [ ] Connector control-plane service
- - [ ] Consider creating mono-repo including endpoints and router
+ - [ ] Pluggable settlement and/or alternative settlement engines
+ - [ ] Support unsolicited peer connections
+ - [ ] Add TESTS
  
- Dependencies:
+*Cleanup*:
+ - [ ] Thorough code review 😬
+ - [ ] CI/CD and some automation around commit checks
+ - [ ] Check each package dependency and remove unnecessary ones
  
-> Changes required in other projects that we've worked around for now.
+*Documentation*:
+ - [ ] Documentation
+ - [ ] Updated architecture diagram
  
- - [ ] https://github.com/winstonjs/logform/pull/84
- - [ ] https://github.com/interledgerjs/ilp-protocol-ccp/pull/3
- - [ ] https://github.com/winstonjs/winston/pull/1603
-
 ## About
 
 > More details coming soon, some major differences from `ilp-connector` below:
@@ -41,9 +38,9 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
 
  - Stand-alone routing table and route manager
  - Stand-alone settlement engine
- - [Endpoints](./endpoints.md) replace plugins and are built in for major transports
- - Rules and protocols replace middleware and controllers and are instantiated per peer
-
+ - ~~Rules and protocols replace middleware and controllers and are instantiated per peer~~
+ - Middleware and controllers now replace rules and protocols (Humble 🥧 🤣)
+ 
 
 ## Project
 
