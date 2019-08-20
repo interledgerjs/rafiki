@@ -21,15 +21,38 @@ import {
 import compose = require('koa-compose')
 import { AdminApi } from '@interledger/rafiki-admin-api'
 
+import { config } from 'dotenv'
+import { Server } from 'http'
+config()
+
+import createLogger from 'pino'
+const logger = createLogger()
+
+/**
+ * Admin API Variables
+ */
+const ADMIN_API_HOST = process.env.ADMIN_API_HOST || '127.0.0.1'
+const ADMIN_API_PORT = parseInt(process.env.ADMIN_API_PORT || '3001', 10)
+const ADMIN_API_AUTH_TOKEN = process.env.ADMIN_API_AUTH_TOKEN || '' // TODO
+
+/**
+ * Connector variables
+ */
+const PREFIX = process.env.PREFIX || 'test'
+const ILP_ADDRESS = process.env.ILP_ADDRESS || undefined
+const PORT = parseInt(process.env.ADMIN_API_PORT || '3000', 10)
+
 const peerService = new InMemoryPeers()
 const accountsService = new InMemoryAccountsService(peerService)
 const router = new InMemoryRouter(peerService, {
-  globalPrefix: 'test',
-  ilpAddress: 'test.alice'
+  globalPrefix: PREFIX,
+  ilpAddress: ILP_ADDRESS
 })
 
-const adminApi = new AdminApi({ host: '0.0.0.0', port: 3001 }, {
-  auth: () => Promise.resolve('test'),
+const adminApi = new AdminApi({ host: ADMIN_API_HOST, port: ADMIN_API_PORT }, {
+  auth: () => {
+    return true
+  },
   peers: peerService,
   accounts: accountsService,
   router: router
@@ -77,8 +100,56 @@ appRouter.ilpRoute('peer.route.*', createCcpProtocolController())
 
 app.use(appRouter.routes())
 
-app.on('info', console.log)
-app.on('error', console.error)
+let server: Server
 
-app.listen(3000)
-adminApi.listen()
+export const gracefulShutdown = async () => {
+  logger.info('shutting down.')
+  adminApi.shutdown()
+  if (server) {
+    return new Promise((resolve, reject) => {
+      server.close((err?: Error) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        resolve()
+      })
+    })
+  }
+}
+export const start = async () => {
+
+  let shuttingDown = false
+  process.on('SIGINT', async () => {
+    try {
+      if (shuttingDown) {
+        logger.warn('received second SIGINT during graceful shutdown, exiting forcefully.')
+        process.exit(1)
+        return
+      }
+
+      shuttingDown = true
+
+      // Graceful shutdown
+      await gracefulShutdown()
+      logger.info('completed graceful shutdown.')
+    } catch (err) {
+      const errInfo = (err && typeof err === 'object' && err.stack) ? err.stack : err
+      logger.error('error while shutting down. error=%s', errInfo)
+      process.exit(1)
+    }
+  })
+
+  logger.info('🚀 the 🐒')
+  server = app.listen(PORT)
+  adminApi.listen()
+  logger.info('🐒 has 🚀. Get ready for 🍌🍌🍌🍌🍌')
+}
+
+// If this script is run directly, start the server
+if (!module.parent) {
+  start().catch(e => {
+    const errInfo = (e && typeof e === 'object' && e.stack) ? e.stack : e
+    logger.error(errInfo)
+  })
+}

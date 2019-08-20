@@ -26,6 +26,10 @@
   "dependencies": {
     "@interledger/rafiki-admin-api": "^0.1.0",
     "@interledger/rafiki-core": "^0.1.0",
-    "@interledger/rafiki-middleware": "^0.1.0"
+    "@interledger/rafiki-middleware": "^0.1.0",
+    "@types/dotenv": "^6.1.1",
+    "@types/pino": "^5.8.9",
+    "dotenv": "^8.1.0",
+    "pino": "^5.13.2"
   }
 }
