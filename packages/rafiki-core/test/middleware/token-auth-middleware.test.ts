@@ -1,62 +1,29 @@
-import { Context } from 'koa'
+import { createContext } from '@interledger/rafiki-utils'
 import { createTokenAuthMiddleware } from '../../src/middleware'
+import { RafikiContext } from '../../src/rafiki'
 
 describe('Token Auth Middleware', function () {
 
   describe('default behaviour', function () {
     test('returns 401 if there is no authorization header', async () => {
-      const ctx = {
-        request: {
-          header: {}
-        },
-        state: {},
-        assert: (value: any, errorCode: number, errorMessage: string) => {
-          if (!value) {
-            expect(errorCode).toBe(401)
-            throw new Error(errorMessage)
-          }
-        }
-      } as Context
+      const ctx = createContext<RafikiContext>({ req: { headers: { 'content-type': 'application/octet-stream' } } })
+
       const authMiddleware = createTokenAuthMiddleware()
 
       await expect(authMiddleware(ctx, async () => { return })).rejects.toThrow('Bearer token required in Authorization header')
     })
 
     test('returns 401 if bearer token is malformed', async () => {
-      const ctx = {
-        request: {
-          header: {
-            'authorization': 'Bearer'
-          }
-        },
-        state: {},
-        assert: (value: any, errorCode: number, errorMessage: string) => {
-          if (!value) {
-            expect(errorCode).toBe(401)
-            throw new Error(errorMessage)
-          }
-        }
-      } as Context
+      const ctx = createContext<RafikiContext>({ req: { headers: { 'content-type': 'application/octet-stream', 'authorization': 'Bearer' } } })
+
       const authMiddleware = createTokenAuthMiddleware()
 
       await expect(authMiddleware(ctx, async () => { return })).rejects.toThrow('Bearer token required in Authorization header')
     })
 
     test('default authentication fails if introspected token is not active', async () => {
-      const ctx = {
-        request: {
-          header: {
-            'authorization': 'Bearer asd123'
-          }
-        },
-        state: {},
-        assert: (value: any, errorCode: number, errorMessage: string) => {
-          if (!value) {
-            expect(errorCode).toBe(401)
-            throw new Error(errorMessage)
-          }
-        }
-      } as Context
+      const ctx = createContext<RafikiContext>({ req: { headers: { 'content-type': 'application/octet-stream', 'authorization': 'Bearer asd123' } } })
+
       const authMiddleware = createTokenAuthMiddleware({
         introspect: (id: string) => {
           return Promise.resolve({active: false })
@@ -67,20 +34,8 @@ describe('Token Auth Middleware', function () {
     })
 
     test('returns 401 if introspected token does not have a subject', async () => {
-      const ctx = {
-        request: {
-          header: {
-            'authorization': 'Bearer asd123'
-          }
-        },
-        state: {},
-        assert: (value: any, errorCode: number, errorMessage: string) => {
-          if (!value) {
-            expect(errorCode).toBe(401)
-            throw new Error(errorMessage)
-          }
-        }
-      } as Context
+      const ctx = createContext<RafikiContext>({ req: { headers: { 'content-type': 'application/octet-stream', 'authorization': 'Bearer asd123' } } })
+
       const authMiddleware = createTokenAuthMiddleware({
         introspect: (id: string) => {
           return Promise.resolve({ active: true })
@@ -91,20 +46,8 @@ describe('Token Auth Middleware', function () {
     })
 
     test('succeeds for valid token and binds data to context', async () => {
-      const ctx = {
-        request: {
-          header: {
-            'authorization': 'Bearer asd123'
-          }
-        },
-        state: {},
-        assert: (value: any, errorCode: number, errorMessage: string) => {
-          if (!value) {
-            expect(errorCode).toBe(401)
-            throw new Error(errorMessage)
-          }
-        }
-      } as Context
+      const ctx = createContext<RafikiContext>({ req: { headers: { 'content-type': 'application/octet-stream', 'authorization': 'Bearer asd123' } } })
+
       const authMiddleware = createTokenAuthMiddleware({
         introspect: (id: string) => {
           return Promise.resolve({ active: true, sub: 'alice' })

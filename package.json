@@ -8,6 +8,9 @@
   "scripts": {
     "bootstrap": "lerna bootstrap",
     "build": "lerna run build --sort --concurrency=1 --stream",
+    "clean": "yarn clean:artifacts && yarn clean:packages",
+    "clean:artifacts": "lerna run clean --parallel",
+    "clean:packages": "lerna clean --yes",
     "test": "lerna run test --concurrency=1 --stream"
   },
   "devDependencies": {
