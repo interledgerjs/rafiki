@@ -26,7 +26,7 @@ describe('Token Auth Middleware', function () {
 
       const authMiddleware = createTokenAuthMiddleware({
         introspect: (id: string) => {
-          return Promise.resolve({active: false })
+          return Promise.resolve({ active: false })
         }
       })
 

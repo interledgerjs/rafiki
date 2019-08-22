@@ -1,9 +1,8 @@
 import { createContext } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../../src/rafiki'
-import { Logger } from '../../src/types'
+import { InMemoryPeers } from '../../src/services'
 import { TestLoggerFactory } from '../factories/test-logger'
 import { createIncomingErrorHandlerMiddleware } from '../../src/middleware/error-handler'
-import { InMemoryPeers } from '../../src/services';
 import { PeerInfoFactory } from '../factories/peerInfo'
 import { RafikiServicesFactory } from '../factories/rafiki-services'
 import { SELF_PEER_ID } from '../../src/constants'
@@ -19,8 +18,8 @@ describe('Error Handler Middleware', () => {
   })
 
   test('catches errors and converts into ilp reject', async () => {
-    const ctx = createContext<any, RafikiContext>();
-    (ctx.log as Logger) = TestLoggerFactory.build()
+    const ctx = createContext<any, RafikiContext>()
+    ctx.services.logger = TestLoggerFactory.build()
     const errorToBeThrown = new Error('Test Error')
     const next = jest.fn().mockImplementation(() => {
       throw errorToBeThrown
@@ -35,8 +34,8 @@ describe('Error Handler Middleware', () => {
   })
 
   test('sets triggeredBy to own address if error is thrown in next', async () => {
-    const ctx = createContext<any, RafikiContext>();
-    (ctx.log as Logger) = TestLoggerFactory.build()
+    const ctx = createContext<any, RafikiContext>()
+    ctx.services.logger = TestLoggerFactory.build()
     const errorToBeThrown = new Error('Test Error')
     const next = jest.fn().mockImplementation(() => {
       throw errorToBeThrown
@@ -51,8 +50,8 @@ describe('Error Handler Middleware', () => {
   })
 
   test('creates reject if reply is not set in next', async () => {
-    const ctx = createContext<any, RafikiContext>();
-    (ctx.log as Logger) = TestLoggerFactory.build()
+    const ctx = createContext<any, RafikiContext>()
+    ctx.services.logger = TestLoggerFactory.build()
     const next = jest.fn().mockImplementation(() => {
       // don't set reply
     })

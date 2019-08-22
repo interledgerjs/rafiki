@@ -251,7 +251,7 @@ describe('ILP Packet Middleware', () => {
     const ctx = createContext<any, RafikiContext>({ req: options })
     const getRawBody = async (req: Readable) => serializeIlpPrepare(prepare)
     const next = jest.fn().mockImplementation(() => {
-      ctx.response.rawFulfill = serializeIlpFulfill(IlpFulfillFactory.build()) 
+      ctx.response.rawFulfill = serializeIlpFulfill(IlpFulfillFactory.build())
     })
     const middleware = createIlpPacketMiddleware({ getRawBody })
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
