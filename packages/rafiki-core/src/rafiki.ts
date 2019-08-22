@@ -51,7 +51,6 @@ export type RafikiContextMixin = {
     readonly incoming: Promise<Peer>
     readonly outgoing: Promise<Peer>
   }
-  log: LoggingService
   request: RafikiRequest
   response: RafikiResponse
   req: IncomingMessage & RafikiRequestMixin
@@ -66,7 +65,6 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
   private _router?: Router
   private _peers?: PeersService
   private _accounts?: AccountsService
-  private _logger: LoggingService
   constructor (config?: Partial<RafikiServices>) {
     super()
 

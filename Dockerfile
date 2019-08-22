@@ -1,4 +1,15 @@
-FROM node:lts-slim
+from node:alpine
+
+RUN apk add --no-cache --virtual .build-deps \
+    ca-certificates \
+    wget \
+    tar && \
+    cd /usr/local/bin && \
+    wget https://yarnpkg.com/latest.tar.gz && \
+    tar zvxf latest.tar.gz && \
+    ln -s /usr/local/bin/dist/bin/yarn.js /usr/local/bin/yarn.js && \
+    apk del .build-deps
+
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -8,13 +19,19 @@ WORKDIR /usr/src/app
 # where available (npm@5+)
 COPY package*.json ./
 
-RUN npm install
-# If you are building your code for production
-# RUN npm install --only=production
+RUN yarn install
 
-# Bundle app source
-COPY . .
+COPY packages/rafiki-benchmark packages/rafiki-benchmark
+COPY packages/rafiki-core packages/rafiki-core
+COPY packages/rafiki-utils packages/rafiki-utils
+COPY packages/rafiki-middleware packages/rafiki-middleware
+COPY packages/rafiki-logger-pino packages/rafiki-logger-pino
 
-RUN chmod +x ./wait-for-it.sh && npm run build
+COPY lerna.json .
+COPY tsconfig.json .
+COPY tslint.json .
+RUN yarn bootstrap
 
-ENTRYPOINT ["./Entrypoint.sh"]
+RUN yarn build
+
+CMD ["yarn", "--cwd", "packages/rafiki-benchmark", "start"]

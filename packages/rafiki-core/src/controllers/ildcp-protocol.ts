@@ -7,7 +7,7 @@ import { RafikiContext } from '../rafiki'
  */
 export function createIldcpProtocolController () {
   return async function ildcp (ctx: RafikiContext) {
-    const { services: { logger, router, accounts }, request, response, state: { peers : { incoming } } } = ctx
+    const { services: { logger, router, accounts }, request, response, peers : { incoming } } = ctx
     if (request.prepare.destination === 'peer.config') {
 
       const peer = await incoming

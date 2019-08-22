@@ -1,4 +1,4 @@
-import { IlpPrepareFactory } from "../factories/ilpPacket"
+import { IlpPrepareFactory } from "../factories/ilp-packet"
 import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from "../../src/lib"
 import { serializeIlpPrepare, deserializeIlpPrepare } from "ilp-packet"
 

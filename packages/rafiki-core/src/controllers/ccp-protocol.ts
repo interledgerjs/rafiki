@@ -8,13 +8,13 @@ import { RafikiContext } from '../rafiki'
  * TODO: Should be a controller
  */
 export function createCcpProtocolController () {
-  return async function ccp ({ services: { logger }, request, response, services, state: { peers: { incoming } } }: RafikiContext) {
+  return async function ccp ({ services: { logger, router }, request, response, peers: { incoming } }: RafikiContext) {
     const peer = await incoming
     switch (request.prepare.destination) {
       case 'peer.route.control': {
         logger.trace('received peer.route.control', { request: request.prepare })
         try {
-          await services.router.handleRouteControl(peer.id, deserializeCcpRouteControlRequest(request.rawPrepare))
+          await router.handleRouteControl(peer.id, deserializeCcpRouteControlRequest(request.rawPrepare))
           response.rawReply = serializeCcpResponse()
         } catch (error) {
           throw new TemporaryApplicationError('Unable to handle CCP Route Control', Buffer.from(''))
@@ -22,9 +22,9 @@ export function createCcpProtocolController () {
         break
       }
       case 'peer.route.update': {
-        logger.trace('received peer.route.update', { request })
+        logger.trace('received peer.route.update', { request: request.prepare })
         try {
-          await services.router.handleRouteUpdate(peer.id, deserializeCcpRouteUpdateRequest(request.rawPrepare))
+          await router.handleRouteUpdate(peer.id, deserializeCcpRouteUpdateRequest(request.rawPrepare))
           response.rawReply = serializeCcpResponse()
         } catch (error) {
           throw new TemporaryApplicationError('Unable to handle CCP Route Update', Buffer.from(''))

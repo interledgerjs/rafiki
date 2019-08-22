@@ -1,6 +1,7 @@
 import { Factory } from 'rosie'
 import { RafikiServices } from '../../src/rafiki'
 import { InMemoryPeers, InMemoryRouter, InMemoryAccountsService } from '../../src/services'
+import { TestLoggerFactory } from './test-logger'
 
 export const RafikiServicesFactory = Factory.define<RafikiServices>('PeerInfo')
   .option('peers', new InMemoryPeers())
@@ -13,3 +14,4 @@ export const RafikiServicesFactory = Factory.define<RafikiServices>('PeerInfo')
   .attr('accounts', ['peers'], (peers: InMemoryPeers) => {
     return new InMemoryAccountsService(peers)
   })
+  .attr('logger', TestLoggerFactory.build())

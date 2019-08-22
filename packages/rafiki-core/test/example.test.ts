@@ -1,10 +1,9 @@
-import { IlpPrepareFactory } from './factories/ilpPacket'
-import { PeerInfoFactory } from './factories/peerInfo'
+import { IlpPrepareFactory } from './factories/ilp-packet'
+import { PeerInfoFactory } from './factories/peer-info'
 
 test('Example test', async () => {
   const prepare = IlpPrepareFactory.build({ destination: 'test.rafiki.alice' })
-  const peerInfo = PeerInfoFactory.build({ protocols: { 'ildcp': { name: 'ildcp' } } })
-  
+  const peerInfo = PeerInfoFactory.build()
+
   expect(prepare.destination).toBe('test.rafiki.alice')
-  expect(peerInfo.protocols).toEqual({ 'ildcp': { name: 'ildcp' } })
 })

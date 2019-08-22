@@ -1,10 +1,10 @@
 import { createContext } from '@interledger/rafiki-utils'
 import { createOutgoingExpireMiddleware } from '../../src/middleware/expire'
 import { RafikiContext } from '../../src/rafiki'
-import { IlpPrepareFactory } from '../factories/ilpPacket'
+import { IlpPrepareFactory } from '../factories/ilp-packet'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 import { TransferTimedOutError } from 'ilp-packet/dist/src/errors'
-import { TestLoggerFactory } from '../factories/test-logger'
+import { RafikiServicesFactory } from '../factories/rafiki-services'
 
 describe('Expire Middleware', function () {
 
@@ -14,7 +14,7 @@ describe('Expire Middleware', function () {
     const prepare = IlpPrepareFactory.build({ expiresAt: new Date(Date.now() + 10 * 1000) })
     const ctx = createContext<any, RafikiContext>()
     ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
-    ctx.services.logger = TestLoggerFactory.build()
+    ctx.services = RafikiServicesFactory.build()
     const next = jest.fn().mockImplementation(() => {
       jest.advanceTimersByTime(11 * 1000)
     })

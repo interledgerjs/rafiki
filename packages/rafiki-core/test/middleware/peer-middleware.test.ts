@@ -4,7 +4,7 @@ import { PeerFactory } from '../factories/peer'
 import { RafikiContext } from '../../src/rafiki'
 import { RafikiServicesFactory } from '../factories/rafiki-services'
 import { InMemoryPeers } from '../../src/services'
-import { IlpPrepareFactory } from '../factories/ilpPacket'
+import { IlpPrepareFactory } from '../factories/ilp-packet'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 
 describe('Peer Middleware',() => {
