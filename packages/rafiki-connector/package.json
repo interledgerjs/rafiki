@@ -18,7 +18,6 @@
     "url": "git+https://github.com/interledgerjs/rafiki.git"
   },
   "scripts": {
-    "test": "echo \"Error: run tests from root\" && exit 1"
   },
   "bugs": {
     "url": "https://github.com/interledgerjs/rafiki/issues"

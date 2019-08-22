@@ -19,8 +19,7 @@
     "url": "git+https://github.com/interledgerjs/rafiki.git"
   },
   "scripts": {
-    "build": "tsc -p src/tsconfig.build.json",
-    "test": "echo \"Error: run tests from root\" && exit 1"
+    "build": "tsc -p src/tsconfig.build.json"
   },
   "bugs": {
     "url": "https://github.com/interledgerjs/rafiki/issues"

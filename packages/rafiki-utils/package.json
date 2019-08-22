@@ -18,8 +18,7 @@
     "url": "git+https://github.com/interledgerjs/rafiki.git"
   },
   "scripts": {
-    "build": "tsc -p ./src/tsconfig.build.json",
-    "test": ""
+    "build": "tsc -p ./src/tsconfig.build.json"
   },
   "bugs": {
     "url": "https://github.com/interledgerjs/rafiki/issues"
