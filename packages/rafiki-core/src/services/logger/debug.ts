@@ -1,9 +1,9 @@
-import { Logger } from '../types'
+import { LoggingService } from '.'
 import debug from 'debug'
 /**
  * A logger that emits events via the Koa app
  */
-export class DebugLogger implements Logger {
+export class DebugLogger implements LoggingService {
 
   private _fatal: debug.IDebugger
   private _error: debug.IDebugger

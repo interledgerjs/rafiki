@@ -12,15 +12,16 @@ import { PeersService, Peer } from './services/peers'
 import { AuthState } from './middleware/auth'
 import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
 import { AccountsService } from './services/accounts'
-import { Logger } from './types/logger'
+import { LoggingService } from './services/logger'
 import { IncomingMessage, ServerResponse } from 'http'
 import { IlpReply, IlpReject, IlpFulfill } from 'ilp-packet'
-import debug from 'debug'
+import { DebugLogger } from './services/logger/debug'
 
 export interface RafikiServices {
   router: Router
   peers: PeersService
   accounts: AccountsService
+  logger: LoggingService
 }
 
 export interface RafikiIlpConfig extends IlpPacketMiddlewareOptions, PeerMiddlewareOptions {
@@ -50,7 +51,7 @@ export type RafikiContextMixin = {
     readonly incoming: Promise<Peer>
     readonly outgoing: Promise<Peer>
   }
-  log: Logger
+  log: LoggingService
   request: RafikiRequest
   response: RafikiResponse
   req: IncomingMessage & RafikiRequestMixin
@@ -65,14 +66,14 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
   private _router?: Router
   private _peers?: PeersService
   private _accounts?: AccountsService
-
+  private _logger: LoggingService
   constructor (config?: Partial<RafikiServices>) {
     super()
 
     this._router = (config && config.router) ? config.router : undefined
     this._peers = (config && config.peers) ? config.peers : undefined
     this._accounts = (config && config.accounts) ? config.accounts : undefined
-
+    const logger = (config && config.logger) ? config.logger : new DebugLogger('rafiki')
     const peersOrThrow = () => {
       if (this._peers) return this._peers
       throw new Error('No peers service provided to the app')
@@ -96,20 +97,9 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
       },
       get accounts () {
         return accountsOrThrow()
-      }
+      },
+      logger
     }
-
-    // Default logger is debug, this can be replaced by logging middleware
-    const log = debug('rafiki')
-    this.context.log = {
-      fatal: log,
-      error: log,
-      warn: log,
-      info: log,
-      debug: log,
-      trace: log
-    }
-
   }
 
   public get router () {
@@ -136,6 +126,14 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
     this._accounts = accounts
   }
 
+  public get logger () {
+    return this.context.services.logger
+  }
+
+  public set logger (logger: LoggingService) {
+    this.context.services.logger = logger
+  }
+
   public useIlp (config?: RafikiIlpConfig) {
     this.use(createIlpPacketMiddleware())
     this.use(createPeerMiddleware(config))
@@ -144,15 +142,15 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
 
 interface RafikiCreateAppServices extends RafikiServices {
   auth: RafikiMiddleware<AuthState> | Partial<TokenAuthConfig>
-  logger: RafikiMiddleware<any> | Logger
 }
 
-export function createApp ({ auth, peers, accounts, router }: Partial<RafikiCreateAppServices>) {
+export function createApp ({ auth, peers, accounts, router, logger }: Partial<RafikiCreateAppServices>) {
 
   const app = new Rafiki({
     peers,
     router,
-    accounts
+    accounts,
+    logger
   })
 
   app.use(createAuthMiddleware(auth))

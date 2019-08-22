@@ -1,6 +1,6 @@
 import { IncomingRoute, RouteManager, Router as RoutingTable } from 'ilp-routing'
 import { fetch as ildcpFetch } from 'ilp-protocol-ildcp'
-import { Relation, RelationWeights, PeerInfo, Logger } from '../../types'
+import { Relation, RelationWeights, PeerInfo } from '../../types'
 import { PeerNotFoundError } from '../../errors'
 import { CcpRouteControlRequest, CcpRouteUpdateRequest, CcpRouteControlResponse, CcpRouteUpdateResponse } from 'ilp-protocol-ccp'
 import { CcpSender, CcpSenderService } from './ccp-sender'
@@ -27,7 +27,7 @@ export class InMemoryRouter implements Router {
   private _ccpSenders: CcpSenderService = new CcpSenderService()
   private _ccpReceivers: CcpReceiverService = new CcpReceiverService()
 
-  constructor (private _peers: PeersService, { globalPrefix, ilpAddress }: ImMemoryRouterConfig, log?: Logger) {
+  constructor (private _peers: PeersService, { globalPrefix, ilpAddress }: ImMemoryRouterConfig) {
 
     // Setup the `self` peer
     this._routeManager.addPeer(SELF_PEER_ID, 'local')

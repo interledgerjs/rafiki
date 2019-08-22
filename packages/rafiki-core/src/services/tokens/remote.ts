@@ -1,9 +1,9 @@
 import axios from 'axios'
 import { TokenService, TokenInfo } from '.'
-import { Logger } from '../../types'
+import { LoggingService } from '..'
 
 export class RemoteTokenService implements TokenService {
-  constructor (private _url: string, private _log: Logger) {
+  constructor (private _url: string, private _log: LoggingService) {
   }
 
   public async introspect (token: string): Promise<TokenInfo> {

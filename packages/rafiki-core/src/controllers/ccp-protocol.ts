@@ -8,11 +8,11 @@ import { RafikiContext } from '../rafiki'
  * TODO: Should be a controller
  */
 export function createCcpProtocolController () {
-  return async function ccp ({ log, request, response, services, state: { peers: { incoming } } }: RafikiContext) {
+  return async function ccp ({ services: { logger }, request, response, services, state: { peers: { incoming } } }: RafikiContext) {
     const peer = await incoming
     switch (request.prepare.destination) {
       case 'peer.route.control': {
-        log.trace('received peer.route.control', { request: request.prepare })
+        logger.trace('received peer.route.control', { request: request.prepare })
         try {
           await services.router.handleRouteControl(peer.id, deserializeCcpRouteControlRequest(request.rawPrepare))
           response.rawReply = serializeCcpResponse()
@@ -22,7 +22,7 @@ export function createCcpProtocolController () {
         break
       }
       case 'peer.route.update': {
-        log.trace('received peer.route.update', { request })
+        logger.trace('received peer.route.update', { request })
         try {
           await services.router.handleRouteUpdate(peer.id, deserializeCcpRouteUpdateRequest(request.rawPrepare))
           response.rawReply = serializeCcpResponse()

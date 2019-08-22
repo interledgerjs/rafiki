@@ -1,5 +1,5 @@
 import { IlpPrepare, Errors } from 'ilp-packet'
-import { RafikiContext, Logger, RafikiMiddleware } from '@interledger/rafiki-core'
+import { RafikiContext, LoggingService, RafikiMiddleware } from '@interledger/rafiki-core'
 const { InsufficientTimeoutError } = Errors
 
 /**
@@ -18,10 +18,10 @@ export function createIncomingReduceExpiryMiddleware (): RafikiMiddleware {
 }
 
 export function createOutgoingReduceExpiryMiddleware (): RafikiMiddleware {
-  return async ({ log, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ services: { logger } , request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
     const { minOutgoingExpirationWindow, maxHoldWindow } = await peers.outgoing
     // TODO: These values should not be undefined. The defaults should be set in the service
-    prepare.expiresAt = getDestinationExpiry(prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, log)
+    prepare.expiresAt = getDestinationExpiry(prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, logger)
     await next()
   }
 }
@@ -33,7 +33,7 @@ export function createOutgoingReduceExpiryMiddleware (): RafikiMiddleware {
  * @param maxHoldWindow The maximum time window (in milliseconds) that the connector is willing to place funds on hold while waiting for the outcome of a transaction
  * @throws {InsufficientTimeoutError} Throws if the new expiry time is less than the minimum expiration time window or the prepare has already expired.
  */
-function getDestinationExpiry (request: IlpPrepare, minExpirationWindow: number, maxHoldWindow: number, log: Logger): Date {
+function getDestinationExpiry (request: IlpPrepare, minExpirationWindow: number, maxHoldWindow: number, log: LoggingService): Date {
   const sourceExpiryTime = request.expiresAt.getTime()
 
   if (sourceExpiryTime < Date.now()) {

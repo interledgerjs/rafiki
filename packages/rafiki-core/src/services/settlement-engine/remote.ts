@@ -2,12 +2,12 @@ import axios from 'axios'
 import { IlpPrepare, IlpReply, IlpFulfill, IlpReject } from 'ilp-packet'
 import { STATIC_FULFILLMENT } from '../../constants'
 import { SettlementEngine } from '.'
-import { Logger } from '../../types'
-import { DebugLogger } from '../../lib/debug-logger'
+import { LoggingService } from '..'
+import { DebugLogger } from '../logger/debug'
 
 export class RemoteSettlementEngine implements SettlementEngine {
-  private _log: Logger
-  constructor (private _url: string, private log: Logger) {
+  private _log: LoggingService
+  constructor (private _url: string, log?: LoggingService) {
     this._log = log || new DebugLogger('InMemoryRouter')
   }
 

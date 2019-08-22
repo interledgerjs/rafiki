@@ -11,7 +11,7 @@ const ECHO_DATA_PREFIX = Buffer.from('ECHOECHOECHOECHO', 'ascii')
  * Intercepts and handles messages addressed to the connector otherwise forwards it onto next.
  */
 export function createEchoProtocolController (minMessageWindow: number) {
-  return async function echo ({ log, request, response, state: { peers: { outgoing } } }: RafikiContext) {
+  return async function echo ({ services: { logger }, request, response, state: { peers: { outgoing } } }: RafikiContext) {
 
     const { data, amount, expiresAt, executionCondition } = request.prepare
     if (data.length < MINIMUM_ECHO_PACKET_DATA_LENGTH) throw new InvalidPacketError('packet data too short for echo request. length=' + data.length)
@@ -27,7 +27,7 @@ export function createEchoProtocolController (minMessageWindow: number) {
       writer.write(ECHO_DATA_PREFIX)
       writer.writeUInt8(0x01)
 
-      log.debug('responding to echo packet', { sourceAddress })
+      logger.debug('responding to echo packet', { sourceAddress })
 
       response.rawReply = await sendToPeer(await outgoing, serializeIlpPrepare({
         amount: amount,
@@ -37,7 +37,7 @@ export function createEchoProtocolController (minMessageWindow: number) {
         data: writer.getBuffer()
       }))
     } else {
-      log.error('received unexpected echo response.')
+      logger.error('received unexpected echo response.')
       throw new Error('received unexpected echo response.')
     }
   }

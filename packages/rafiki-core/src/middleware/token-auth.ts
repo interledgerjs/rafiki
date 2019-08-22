@@ -18,8 +18,8 @@ const defaultAuthenticate = (tokenInfo: TokenInfo): boolean => {
 }
 
 const defaultIntrospect: IntrospectFunction = async (token: string) => {
-  const decodedToken = await verify(token, 'SECRET')
-  // TODO fix
+  const decodedToken = verify(token, 'SECRET')
+  // TODO Ensure token is actually TokenInfo
   return decodedToken as TokenInfo
 }
 

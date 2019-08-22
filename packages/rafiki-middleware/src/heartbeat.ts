@@ -15,10 +15,10 @@ export interface HeartbeatRuleServices {
  * TODO: Should be a controller
  */
 export function createIncomingHeartbeatMiddleware (config: HeartbeatRuleServices): RafikiMiddleware {
-  return async ({ log, request, response }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ services: { logger }, request, response }: RafikiContext, next: () => Promise<any>) => {
     const { destination, data } = request.prepare
     if (destination === 'peer.heartbeat') {
-      log.debug('received incoming heartbeat')
+      logger.debug('received incoming heartbeat')
       response.fulfill = {
         fulfillment: data.slice(0, 32),
         data
