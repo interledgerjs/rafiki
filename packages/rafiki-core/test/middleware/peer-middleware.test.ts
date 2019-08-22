@@ -1,14 +1,13 @@
-import { createContext, MockIncomingMessageOptions } from '@interledger/rafiki-utils'
+import { createContext } from '@interledger/rafiki-utils'
 import { createPeerMiddleware } from '../../src/middleware/peer'
-import { PeerInfoFactory } from '../factories/peerInfo'
 import { PeerFactory } from '../factories/peer'
-import { RafikiContext, RafikiServices } from '../../src/rafiki'
+import { RafikiContext } from '../../src/rafiki'
 import { RafikiServicesFactory } from '../factories/rafiki-services'
 import { InMemoryPeers } from '../../src/services'
-import { IlpPrepareFactory } from '../factories/ilpPacket';
-import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet';
+import { IlpPrepareFactory } from '../factories/ilpPacket'
+import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 
-describe('Peer Middleware Test',() => {
+describe('Peer Middleware',() => {
 
   const incomingPeerInfo = PeerFactory.build({ id: 'incomingPeer' })
   const outgoingPeerInfo = PeerFactory.build({ id: 'outgoingPeer' })

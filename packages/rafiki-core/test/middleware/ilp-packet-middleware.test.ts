@@ -5,7 +5,7 @@ import { Readable } from 'stream'
 import { serializeIlpPrepare, serializeIlpFulfill, deserializeIlpFulfill, serializeIlpReject, deserializeIlpReject } from 'ilp-packet'
 import { RafikiContext } from '../../src/rafiki'
 
-describe('Koa: ILP Packet Middleware', () => {
+describe('ILP Packet Middleware', () => {
 
   test('attaches the ilp prepare to the req object', async () => {
     const prepare = IlpPrepareFactory.build()
