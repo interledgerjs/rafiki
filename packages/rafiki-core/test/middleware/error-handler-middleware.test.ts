@@ -1,9 +1,7 @@
 import { createContext } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../../src/rafiki'
-import { TestLoggerFactory } from '../factories/test-logger'
+import { PeerInfoFactory, RafikiServicesFactory } from '../../src'
 import { createIncomingErrorHandlerMiddleware } from '../../src/middleware/error-handler'
-import { PeerInfoFactory } from '../factories/peer-info'
-import { RafikiServicesFactory } from '../factories/rafiki-services'
 import { SELF_PEER_ID } from '../../src/constants'
 import { InMemoryPeers } from '../../src/services'
 
