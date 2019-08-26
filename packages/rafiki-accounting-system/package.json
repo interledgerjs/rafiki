@@ -1,7 +1,7 @@
 {
-  "name": "@interledger/rafiki-accounting-system-api",
+  "name": "@interledger/rafiki-accounting-system",
   "version": "0.1.0",
-  "description": "Implementation of the ILP Settlement API",
+  "description": "Implementation of the ILP Accounting System",
   "keywords": [
     "rafiki",
     "interledger",
@@ -12,9 +12,6 @@
   "license": "Apache-2.0",
   "main": "build/index.js",
   "types": "build/index.d.ts",
-  "bin": {
-    "rafiki": "build/start.js"
-  },
   "files": [
     "build/**/*.json",
     "build/**/*.js",

@@ -12,6 +12,6 @@ export const RafikiServicesFactory = Factory.define<RafikiServices>('PeerInfo')
     return new InMemoryRouter(peers, {})
   })
   .attr('accounts', ['peers'], (peers: InMemoryPeers) => {
-    return new InMemoryAccountsService(peers)
+    return new InMemoryAccountsService()
   })
   .attr('logger', TestLoggerFactory.build())

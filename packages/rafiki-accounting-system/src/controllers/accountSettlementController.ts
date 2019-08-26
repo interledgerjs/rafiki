@@ -1,6 +1,7 @@
-import { PeerNotFoundError, AccountNotFoundError, RafikiContext, AccountSnapshot } from '@interledger/rafiki-core'
+import { PeerNotFoundError, AccountNotFoundError, AccountSnapshot } from '@interledger/rafiki-core'
+import { AccountingSystemContext } from '../index'
 
-export async function create ({ services: { accounts, peers }, request: { params, body }, response }: RafikiContext) {
+export async function create ({ services: { accounts }, request: { params, body }, response }: AccountingSystemContext) {
 
   const peerId = params['peerId']
   const amount = -BigInt(body['amount'])
@@ -20,7 +21,9 @@ export async function create ({ services: { accounts, peers }, request: { params
     const scaleRatio = Math.pow(10, scaleDiff)
     const scaledAmountDiff = amount * BigInt(scaleRatio)
 
-    await accounts.adjustBalance(scaledAmountDiff, account.peerId, account.id)
+    await accounts.adjustBalanceReceivable(scaledAmountDiff, account.id, async ({ commit }) => {
+      await commit()
+    })
     response.status = 200
 
   } catch (error) {

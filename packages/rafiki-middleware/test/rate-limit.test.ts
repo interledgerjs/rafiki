@@ -6,7 +6,7 @@
 // import {createRateLimitBucketForPeer, RateLimitRule} from '../src/rate-limit'
 // import {Stats} from '../../src/services/stats'
 // import {PeerInfo} from '../../rafiki-core/src/types/peer'
-// import {TokenBucket} from '../../src/lib/token-bucket'
+// import {TokenBucket} from '../../src/src/token-bucket'
 // import {setPipelineReader} from '../../src/types/rule'
 
 // Chai.use(chaiAsPromised)
@@ -27,7 +27,7 @@
 //     rules: [
 //       {
 //         name: 'rateLimit',
-//         refillCount: 3n, 
+//         refillCount: 3n,
 //         capacity: 3n
 //       }
 //     ],
@@ -52,7 +52,7 @@
 //   })
 
 //   it('rejects when payments arrive too quickly', async function () {
-    
+
 //     const sendIncoming = setPipelineReader('incoming', rateLimitRule, async () => fulfillPacket)
 
 //     // Empty the token buffer
@@ -62,7 +62,7 @@
 
 //     try {
 //       const reply = await sendIncoming(preparePacket)
-//     } catch (err) { 
+//     } catch (err) {
 //       if(err instanceof RateLimitedError){
 //         return
 //       }

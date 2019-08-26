@@ -1,9 +1,8 @@
-import { AccountInfo} from '../../types'
+import { AccountInfo } from '../../types'
 import { Subject } from 'rxjs'
-import { PeerNotFoundError, AccountNotFoundError } from '../../errors'
+import { AccountNotFoundError } from '../../errors'
 import { Errors } from 'ilp-packet'
-import { AccountsService, AccountSnapshot } from '.'
-import { PeersService } from '../peers'
+import { AccountsService, AccountSnapshot, Transaction } from '.'
 import debug from 'debug'
 const { InsufficientLiquidityError } = Errors
 
@@ -13,16 +12,19 @@ const log = debug('rafiki:in-memory-accounts-service')
 /**
  * An in-memory account service for development and testing purposes.
  */
-interface InMemoryAccount extends AccountInfo {
-  balance: bigint
+interface InMemoryAccount extends AccountSnapshot {
+  balancePayableInflight: bigint
+  balancePayable: bigint,
+  balanceReceivable: bigint
+  balanceReceivableInflight: bigint
 }
 
 export class InMemoryAccountsService implements AccountsService {
 
   private _updatedAccounts: Subject<AccountSnapshot>
-  private _accounts = new Map<string, InMemoryAccount[]>()
+  private _accounts = new Map<string, InMemoryAccount>()
 
-  constructor (private _peers: PeersService) {
+  constructor () {
     this._updatedAccounts = new Subject<AccountSnapshot>()
   }
 
@@ -30,33 +32,145 @@ export class InMemoryAccountsService implements AccountsService {
     return this._updatedAccounts.asObservable()
   }
 
-  public async get (peerId: string, accountId?: string): Promise<AccountSnapshot> {
-    const accounts = this._accounts.get(peerId)
-    if (!accounts) throw new PeerNotFoundError(peerId)
-    const id = accountId || (await this._peers.get(peerId)).defaultAccountId || peerId
-    const account = accounts.find(account => account.id === id)
-    if (!account) throw new AccountNotFoundError(id, peerId)
-    return Object.assign({}, account)
+  async get (id: string): Promise<InMemoryAccount> {
+    const account = this._accounts.get(id)
+    if (!account) {
+      throw new AccountNotFoundError(id)
+    }
+    return account
   }
 
-  public async adjustBalance (amount: bigint, peerId: string, accountId?: string | undefined): Promise<AccountSnapshot> {
+  add (accountInfo: AccountInfo) {
+    const account: InMemoryAccount = {
+      ...accountInfo,
+      balancePayableInflight: 0n,
+      balancePayable: 0n,
+      balanceReceivable: 0n,
+      balanceReceivableInflight: 0n
+    }
+    this._accounts.set(account.id, account)
+  }
 
-    const account = await this.get(peerId, accountId) as InMemoryAccount
-    const newBalance = account.balance + amount
+  update (accountInfo: AccountInfo) {
+    const account = this.get(accountInfo.id)
+    Object.assign(account, accountInfo)
+  }
 
-    if (newBalance > account.maximumBalance) {
-      log(`exceeded maximum balance. proposedBalance=${newBalance.toString()} maximum balance=${account.maximumBalance.toString()}`)
-      throw new InsufficientLiquidityError('exceeded maximum balance.')
+  remove (id: string) {
+    this._accounts.delete(id)
+  }
+
+  // Adjust amount the we owe
+  // As this is called after we have got the fulfillment. It doesn't actually make much sense
+  public async adjustBalancePayable (amount: bigint, accountId: string, callback: (trx: Transaction) => Promise<any>): Promise<AccountSnapshot> {
+
+    const account = await this.get(accountId)
+
+    // Need to ensure these are actually called
+    const transaction: Transaction = {
+      commit: async () => {
+        account.balancePayableInflight -= amount
+        account.balancePayable += amount
+      },
+      rollback: async () => {
+        account.balancePayableInflight -= amount
+      }
     }
 
-    if (newBalance < account.minimumBalance) {
-      log(`insufficient funds. oldBalance=${account.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${account.minimumBalance.toString()}`)
-      throw new Error(`insufficient funds. oldBalance=${account.balance.toString()} proposedBalance=${newBalance.toString()} minimum balance=${account.minimumBalance.toString()}`)
+    try {
+
+      // Maybe doing the adjustment must occur before the liquidity check + how to handle atomicity
+      account.balancePayableInflight += amount
+      if ((account.balancePayableInflight + account.balancePayable) > account.maximumPayable) {
+        throw new InsufficientLiquidityError('')
+      }
+
+      await callback(transaction)
+      // TODO Need to check if commit/rollback was called else throw
+
+      return {
+        balanceReceivable: account.balanceReceivable,
+        balancePayable: account.balancePayable
+      } as AccountSnapshot
+    } catch (error) {
+      // Should this rethrow the the error?
+      account.balancePayableInflight -= amount
+      throw error(error)
+    }
+  }
+
+  public async adjustBalanceReceivable (amount: bigint, accountId: string, callback: (trx: Transaction) => Promise<any>): Promise<AccountSnapshot> {
+
+    const account = await this.get(accountId)
+    const transaction: Transaction = {
+      commit: async () => {
+        account.balanceReceivableInflight -= amount
+        account.balanceReceivable += amount
+      },
+      rollback: async () => {
+        account.balanceReceivableInflight -= amount
+      }
     }
 
-    account.balance = newBalance
-    const a = Object.assign({}, account)
-    this._updatedAccounts.next(a)
-    return a
+    // Try commit or catch and rollback
+    try {
+
+      // Maybe doing the adjustment must occur before the liquidity check + how to handle atomicity
+      account.balanceReceivableInflight += amount
+      if ((account.balanceReceivableInflight + account.balanceReceivable) > account.maximumReceivable) {
+        throw new InsufficientLiquidityError('')
+      }
+
+      await callback(transaction)
+
+      // TODO Need to check if commit/rollback was called else throw
+
+      return {
+        balanceReceivable: account.balanceReceivable,
+        balancePayable: account.balancePayable
+      } as AccountSnapshot
+    } catch (error) {
+      // Should this rethrow the the error?
+      account.balanceReceivableInflight -= amount
+      throw error(error)
+    }
+  }
+
+  public sendSettlement (amount: BigInt, account: InMemoryAccount) {
+
+  }
+
+  // Can take money from payable and transfer to receivables
+  public async maybeSettle (account: InMemoryAccount) {
+
+    // // First potentially net.
+    // // if payable_balance > 0 && receivable_balance > 0 {
+    // //   let amount_to_net = min(payable_balance, receivable_balance);
+    // //   payable_balance = payable_balance - amount_to_net;
+    // //   receivable_balance = receivable_balance - amount_to_net;
+    // // }
+    //
+    // // Then try settle
+    // // if (!settlement || !settlementEngine) {
+    // //   logger.debug('Not deciding whether to settle for accountId=' + peer.id + '. No settlement engine configured.')
+    // //   return
+    // // }
+    //
+    // const settleTo = account.settleTo
+    // const settleThreshold = account.settlementThreshold
+    // // logger.debug('deciding whether to settle for accountId=' + peer.id, { balance: balance.getValue().toString(), bnSettleThreshold: settleThreshold ? settleThreshold.toString() : 'undefined' })
+    // const settle = settleThreshold && settleThreshold > account.balancePayable
+    // if (!settle || !settleTo) return
+    //
+    // const settleAmount = settleTo - account.balancePayable
+    // logger.debug('settlement triggered for accountId=' + peer.id, { balance: balance.getValue().toString(), settleAmount: settleAmount.toString() })
+    //
+    // try {
+    //   const settlement = await settlementEngine.sendSettlement(peer.id, settleAmount, peer.assetScale)
+    //   balance.adjust(settleAmount)
+    //   logger.debug('balance for accountId=' + peer.id + ' increased due to outgoing settlement', { settleAmount: settleAmount.toString(), newBalance: balance.getValue().toString() })
+    // } catch (error) {
+    //   logger.error('Could not complete settlement for accountId=' + peer.id, { scale: peer.assetScale, balance: balance.getValue().toString(), settleAmount: settleAmount.toString(), error: error.message })
+    // }
   }
 }

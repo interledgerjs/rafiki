@@ -2,22 +2,32 @@ import { AccountInfo } from '../../types'
 import { Observable } from 'rxjs'
 
 export interface AccountSnapshot extends Readonly<AccountInfo> {
-  readonly balance: bigint
+  readonly balancePayable: bigint
+  readonly balanceReceivable: bigint
+}
+
+export interface Transaction {
+  commit: () => Promise<any>
+  rollback: () => Promise<any>
 }
 
 export interface AccountsService {
   readonly updated: Observable<AccountSnapshot>
 
   /**
-   * Load an account. Throws if the account cannot be loaded.
+   * Get an account. Throws if the account cannot be loaded.
    */
-  get: (peerId: string, accountId?: string) => Promise<AccountSnapshot>
+  get: (accountId: string) => Promise<AccountSnapshot>
 
   /**
-   * Adjust the balance on a peer's account and return a snapshot of the account after the adjustment
+   * Adjust the balance on a peer's payable account and return a snapshot of the account after the adjustment
    */
-  adjustBalance: (amount: bigint, peerId: string, accountId?: string) => Promise<AccountSnapshot>
+  adjustBalancePayable: (amount: bigint, accountId: string, callback: (trx: Transaction) => Promise<any>) => Promise<AccountSnapshot>
 
+  /**
+   * Adjust the balance on a peer's receivable account and return a snapshot of the account after the adjustment
+   */
+  adjustBalanceReceivable: (amount: bigint, accountId: string, callback: (trx: Transaction) => Promise<any>) => Promise<AccountSnapshot>
 }
 
 export * from './in-memory'

@@ -64,3 +64,5 @@ export interface LogFn {
   (msg: string, ...args: any[]): void
   (obj: object, msg?: string, ...args: any[]): void
 }
+
+export * from './debug'

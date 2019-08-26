@@ -1,7 +1,8 @@
-import { PeerNotFoundError, STATIC_CONDITION, RafikiContext, sendToPeer } from '@interledger/rafiki-core'
+import { PeerNotFoundError, STATIC_CONDITION, sendToPeer } from '@interledger/rafiki-core'
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
+import { AccountingSystemContext } from '../index'
 
-export async function create (ctx: RafikiContext) {
+export async function create (ctx: AccountingSystemContext) {
   const peerId = ctx.request.params['peerId']
   try {
 

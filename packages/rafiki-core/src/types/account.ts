@@ -4,6 +4,9 @@ export interface AccountInfo {
   peerId: string
   assetCode: string,
   assetScale: number,
-  maximumBalance: bigint
-  minimumBalance: bigint
+  maximumPayable: bigint
+  maximumReceivable: bigint
+  settleTo?: bigint
+  settlementThreshold?: bigint,
+  settlementEngine?: string,
 }

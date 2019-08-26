@@ -43,7 +43,7 @@ const ILP_ADDRESS = process.env.ILP_ADDRESS || undefined
 const PORT = parseInt(process.env.ADMIN_API_PORT || '3000', 10)
 
 const peerService = new InMemoryPeers()
-const accountsService = new InMemoryAccountsService(peerService)
+const accountsService = new InMemoryAccountsService()
 const router = new InMemoryRouter(peerService, {
   globalPrefix: PREFIX,
   ilpAddress: ILP_ADDRESS

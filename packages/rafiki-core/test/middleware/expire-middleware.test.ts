@@ -5,6 +5,8 @@ import { IlpPrepareFactory } from '../factories/ilp-packet'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 import { TransferTimedOutError } from 'ilp-packet/dist/src/errors'
 import { RafikiServicesFactory } from '../factories/rafiki-services'
+import compose = require('koa-compose')
+import {createOutgoingBalanceMiddleware} from '../../src/middleware'
 
 describe('Expire Middleware', function () {
 

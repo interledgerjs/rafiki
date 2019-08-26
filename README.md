@@ -22,11 +22,14 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
  - [ ] Add TESTS
  - [ ] Admin API cleanup and being semantically correct 
  - [ ] Fix path matching for letting connector listen on non standard ilp path
+ - [ ] Change account service to use two balances
+ - [ ] Move expiry logic and validate fulfillment into the outgoing client logic
  
 *Cleanup*:
  - [ ] Thorough code review 😬
  - [ ] CI/CD and some automation around commit checks
  - [ ] Check each package dependency and remove unnecessary ones
+ - [ ] Check package.json files and update
  
 *Documentation*:
  - [ ] Documentation

@@ -1,9 +1,7 @@
 import axios from 'axios'
 import { IlpPrepare, IlpReply, IlpFulfill, IlpReject } from 'ilp-packet'
-import { STATIC_FULFILLMENT } from '../../constants'
-import { SettlementEngine } from '.'
-import { LoggingService } from '..'
-import { DebugLogger } from '../logger/debug'
+import { LoggingService, STATIC_FULFILLMENT, DebugLogger } from '@interledger/rafiki-core'
+import { SettlementEngine, SettlementResponse } from '.'
 
 export class RemoteSettlementEngine implements SettlementEngine {
   private _log: LoggingService
@@ -14,14 +12,14 @@ export class RemoteSettlementEngine implements SettlementEngine {
   async addAccount (accountId: string) {
     this._log.info('Creating account on settlement engine for peer=' + accountId + ' endpoint:' + `${this._url}/accounts`)
     await axios.post(`${this._url}/accounts`, { accountId })
-    .then(response => {
-      this._log.info('Created account on settlement engine', { response: response.status })
-    })
-    .catch(error => {
-      this._log.error('Failed to create account on settlement engine. Retrying in 5s', { accountId, responseStatus: error.response.status })
-      const timeout = setTimeout(() => this.addAccount(accountId), 5000)
-      timeout.unref()
-    })
+      .then(response => {
+        this._log.info('Created account on settlement engine', { response: response.status })
+      })
+      .catch(error => {
+        this._log.error('Failed to create account on settlement engine. Retrying in 5s', { accountId, responseStatus: error.response.status })
+        const timeout = setTimeout(() => this.addAccount(accountId), 5000)
+        timeout.unref()
+      })
   }
 
   async removeAccount (accountId: string) {
@@ -55,14 +53,12 @@ export class RemoteSettlementEngine implements SettlementEngine {
     }
   }
 
-  async sendSettlement (accountId: string, amount: bigint, scale: number): Promise<void> {
+  async sendSettlement (accountId: string, amount: bigint, scale: number): Promise<SettlementResponse> {
     this._log.debug('requesting SE to do settlement', { accountId, amount: amount.toString(), scale })
     const message = {
       amount: amount.toString(),
       scale
     }
-    await axios.post(`${this._url}/accounts/${accountId}/settlement`, message)
-
-    // TODO: Check for 2xx response
+    return axios.post(`${this._url}/accounts/${accountId}/settlement`, message).then(resp => resp.data)
   }
 }
