@@ -1,77 +1,52 @@
-// import 'mocha'
-// import * as sinon from 'sinon'
-// import * as Chai from 'chai'
-// import chaiAsPromised from 'chai-as-promised'
-// import {Errors, IlpFulfill, IlpPrepare, isFulfill} from 'ilp-packet'
-// import {createRateLimitBucketForPeer, RateLimitRule} from '../src/rate-limit'
-// import {Stats} from '../../src/services/stats'
-// import {PeerInfo} from '../../rafiki-core/src/types/peer'
-// import {TokenBucket} from '../../src/lib/token-bucket'
-// import {setPipelineReader} from '../../src/types/rule'
+import { Errors } from 'ilp-packet'
+import { createContext, TokenBucket } from '@interledger/rafiki-utils'
+import { RafikiContext, RafikiServicesFactory, PeerFactory, IlpPrepareFactory, ZeroCopyIlpPrepare } from '@interledger/rafiki-core'
+import { createIncomingRateLimitMiddleware } from '../src/rate-limit'
+const { RateLimitedError } = Errors
 
-// Chai.use(chaiAsPromised)
-// const assert = Object.assign(Chai.assert, sinon.assert)
-// const { RateLimitedError } = Errors
+describe('Rate Limit Middleware', function () {
+  const services = RafikiServicesFactory.build()
+  const alice = PeerFactory.build({ id: 'alice', rateLimitCapacity: BigInt(1) }) // bucket that has initial capacity of 1 and refills 10 000 every minute
+  const bob = PeerFactory.build({ id: 'bob', rateLimitCapacity: BigInt(0) }) // bucket that has initial capacity of 0 and refills 10 000 every minute
+  const ctx = createContext<any, RafikiContext>()
+  ctx.services = services
+  const middleware = createIncomingRateLimitMiddleware()
 
-// const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
+  test('throws RateLimitedError when payments arrive too quickly', async () => {
+    const bucketTakeSpy = jest.spyOn(TokenBucket.prototype, 'take')
+    ctx.peers = {
+      get incoming () {
+        return Promise.resolve(bob)
+      },
+      get outgoing () {
+        return Promise.resolve(alice)
+      }
+    }
+    const prepare = IlpPrepareFactory.build()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const next = jest.fn()
 
-// describe('Rate Limit Rule', function () {
-//   let stats: Stats
-//   let bucket: TokenBucket
-//   let rateLimitRule: RateLimitRule
-//   let peerInfo: PeerInfo = {
-//     id: 'harry',
-//     relation: 'peer',
-//     assetScale: 9,
-//     assetCode: 'XRP',
-//     rules: [
-//       {
-//         name: 'rateLimit',
-//         refillCount: 3n, 
-//         capacity: 3n
-//       }
-//     ],
-//     protocols: []
-//   }
-//   const preparePacket: IlpPrepare = {
-//     amount: '49',
-//     executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
-//     expiresAt: new Date(START_DATE + 2000),
-//     destination: 'mock.test1.bob',
-//     data: Buffer.alloc(0)
-//   }
-//   const fulfillPacket: IlpFulfill = {
-//     fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
-//     data: Buffer.alloc(0)
-//   }
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(RateLimitedError)
 
-//   beforeEach(async function () {
-//     stats = new Stats()
-//     bucket = createRateLimitBucketForPeer(peerInfo)
-//     rateLimitRule = new RateLimitRule({ peerInfo, stats, bucket })
-//   })
+    expect(bucketTakeSpy).toHaveBeenCalled()
+  })
 
-//   it('rejects when payments arrive too quickly', async function () {
-    
-//     const sendIncoming = setPipelineReader('incoming', rateLimitRule, async () => fulfillPacket)
+  test('does not throw error if rate limit is not exceeded', async () => {
+    const bucketTakeSpy = jest.spyOn(TokenBucket.prototype, 'take')
+    ctx.peers = {
+      get incoming () {
+        return Promise.resolve(alice)
+      },
+      get outgoing () {
+        return Promise.resolve(bob)
+      }
+    }
+    const prepare = IlpPrepareFactory.build()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const next = jest.fn()
 
-//     // Empty the token buffer
-//     for (let i = 0; i < 3; i++) {
-//       await sendIncoming(preparePacket)
-//     }
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//     try {
-//       const reply = await sendIncoming(preparePacket)
-//     } catch (err) { 
-//       if(err instanceof RateLimitedError){
-//         return
-//       }
-//      }
-//   })
-
-//   it('does not reject when payments arrive fine', async function () {
-//     const sendIncoming = setPipelineReader('incoming', rateLimitRule, async () => fulfillPacket)
-//     const reply = await sendIncoming(preparePacket)
-//     assert.isTrue(isFulfill(reply))
-//   })
-// })
+    expect(bucketTakeSpy).toHaveBeenCalled()
+  })
+})

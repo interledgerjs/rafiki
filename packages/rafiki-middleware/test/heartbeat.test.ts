@@ -9,7 +9,7 @@
 
 // Chai.use(chaiAsPromised)
 // const assert = Object.assign(Chai.assert, sinon.assert)
-
+test.todo('heartbeat test')
 // describe('Heartbeat Rule', function () {
 //   const heartbeatPacket: IlpPrepare = {
 //     amount: '52',

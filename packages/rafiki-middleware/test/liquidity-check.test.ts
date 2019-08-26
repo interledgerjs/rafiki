@@ -1,77 +1,76 @@
-// import 'mocha'
-// import * as sinon from 'sinon'
-// import * as Chai from 'chai'
-// import chaiAsPromised from 'chai-as-promised'
-// import {IlpFulfill, IlpPrepare, IlpReject} from 'ilp-packet'
-// import {AlertRule, Alerts} from '../src/liquidity-check'
-// import {PeerInfo} from '@interledger/rafiki-core/src/types/peer'
-// import {setPipelineReader} from '../../src/types/rule'
+import { Errors } from 'ilp-packet'
+import { createContext } from '@interledger/rafiki-utils'
+import { RafikiContext, IlpRejectFactory, RafikiServicesFactory, IlpFulfillFactory } from '@interledger/rafiki-core'
+import { createOutgoingLiquidityCheckMiddleware } from '../src/liquidity-check'
+import { PeerFactory } from '@interledger/rafiki-core/src'
+const { T04_INSUFFICIENT_LIQUIDITY } = Errors.codes
 
-// Chai.use(chaiAsPromised)
-// const assert = Object.assign(Chai.assert, sinon.assert)
+describe('Liquidity Check Middleware', function () {
 
-// const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
+  const services = RafikiServicesFactory.build()
+  const alice = PeerFactory.build({ id: 'alice' })
+  const bob = PeerFactory.build({ id: 'bob' })
+  const ctx = createContext<any, RafikiContext>()
+  ctx.services = services
+  ctx.peers = {
+    get incoming () {
+      return Promise.resolve(alice)
+    },
+    get outgoing () {
+      return Promise.resolve(bob)
+    }
+  }
+  const middleware = createOutgoingLiquidityCheckMiddleware()
 
-// describe('Alert Rule', function () {
-//     let alertRule: AlertRule
-//     let alerts: Alerts
+  beforeEach(() => {
+    ctx.response.reject = undefined
+    ctx.response.fulfill = undefined
+  })
 
-//     const peerInfo: PeerInfo = {
-//       id: 'harry',
-//       relation: 'peer',
-//       assetScale: 9,
-//       assetCode: 'XRP',
-//       rules: [],
-//       protocols: []
-//     } 
+  test('logs error for T04 rejects that are due to maximum balance exceeded', async () => {
+    const T04Reject = IlpRejectFactory.build({ code: T04_INSUFFICIENT_LIQUIDITY, message: 'exceeded maximum balance.', triggeredBy: 'test.rafiki.bob' })
+    const next = jest.fn().mockImplementation(async () => {
+      ctx.response.reject = T04Reject
+    })
 
-//     beforeEach( async function () {
-//       alerts = new Alerts()
-//       alertRule = new AlertRule({
-//         createAlert: (triggeredBy: string, message: string) => {
-//           return alerts.createAlert('harry', triggeredBy, message)
-//         }
-//       })
-//     })
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//     it('adds an alert for insufficient liquidity', async function () {
-//       const preparePacket: IlpPrepare = {
-//         amount: '49',
-//         executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
-//         expiresAt: new Date(START_DATE + 2000),
-//         destination: 'mock.test1',
-//         data: Buffer.alloc(0)
-//       }
+    expect(services.logger.error).toHaveBeenCalledWith('Liquidity Check Error', {
+      peerId: 'bob',
+      triggerBy: 'test.rafiki.bob',
+      message: 'exceeded maximum balance.'
+    })
+  })
 
-//       const replyPacket: IlpReject = {
-//         code: 'T04',
-//         triggeredBy: 'mock.test1',
-//         message: 'exceeded maximum balance.',
-//         data: Buffer.alloc(0)
-//       }
+  test('does not log error for T04 rejects that are not due to maximum balance exceeded', async () => {
+    const T04Reject = IlpRejectFactory.build({ code: T04_INSUFFICIENT_LIQUIDITY, message: 'not a max balance error', triggeredBy: 'test.rafiki.bob' })
+    const next = jest.fn().mockImplementation(async () => {
+      ctx.response.reject = T04Reject
+    })
 
-//       const sendOutgoing = setPipelineReader('outgoing', alertRule, async () => replyPacket)
-//       assert.isEmpty(alerts.getAlerts())
-//       const reply = await sendOutgoing(preparePacket)
-//       assert.isNotEmpty(alerts.getAlerts())
-//     })
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//     it('does not add an alert for normal packet', async function () {
-//       const preparePacket: IlpPrepare = {
-//         amount: '49',
-//         executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
-//         expiresAt: new Date(START_DATE + 2000),
-//         destination: 'mock.test1',
-//         data: Buffer.alloc(0)
-//       }
-//       const fulfillPacket: IlpFulfill = {
-//         fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
-//         data: Buffer.alloc(0)
-//       }
-//       const sendOutgoing = setPipelineReader('outgoing', alertRule, async () => fulfillPacket)
-//       assert.isEmpty(alerts.getAlerts())
-//       await sendOutgoing(preparePacket)
-//       assert.isEmpty(alerts.getAlerts())
-//     })
+    expect(services.logger.error).toBeCalledTimes(0)
+  })
 
-// })
+  test('does not log error if response is a fulfill', async () => {
+    const fulfill = IlpFulfillFactory.build()
+    const next = jest.fn().mockImplementation(async () => {
+      ctx.response.fulfill = fulfill
+    })
+
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+    expect(services.logger.error).toBeCalledTimes(0)
+  })
+  test('does not log error if response is a not a T04 reject', async () => {
+    const T04Reject = IlpRejectFactory.build({ code: 'F01', message: 'peer unreachable.', triggeredBy: 'test.rafiki.bob' })
+    const next = jest.fn().mockImplementation(async () => {
+      ctx.response.reject = T04Reject
+    })
+
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+    expect(services.logger.error).toBeCalledTimes(0)
+  })
+})

@@ -4,6 +4,7 @@ import { AxiosClient } from '../client/axios'
 import { Subject } from 'rxjs'
 import { PeerNotFoundError } from '../../errors'
 import debug from 'debug'
+import { AxiosRequestConfig } from 'axios'
 // Implementations SHOULD use a better logger than debug for production services
 const log = debug('rafiki:in-memory-peers-service')
 
@@ -27,7 +28,7 @@ class InMemoryPeer implements Peer {
     Object.assign(this, info)
 
     if (this.url) {
-      const axiosConfig = { responseType: 'arraybuffer', headers: {} }
+      const axiosConfig: AxiosRequestConfig = { responseType: 'arraybuffer', headers: {} }
       if (this.authToken) axiosConfig.headers = { 'Authorization': `Bearer ${this.authToken}` }
       this.axiosClient = new AxiosClient(this.url, axiosConfig)
     }
