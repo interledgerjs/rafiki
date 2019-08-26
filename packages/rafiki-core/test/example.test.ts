@@ -1,5 +1,4 @@
-import { IlpPrepareFactory } from './factories/ilp-packet'
-import { PeerInfoFactory } from './factories/peer-info'
+import { IlpPrepareFactory, PeerInfoFactory } from '../src'
 
 test('Example test', async () => {
   const prepare = IlpPrepareFactory.build({ destination: 'test.rafiki.alice' })

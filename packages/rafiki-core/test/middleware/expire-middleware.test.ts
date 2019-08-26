@@ -1,12 +1,9 @@
 import { createContext } from '@interledger/rafiki-utils'
 import { createOutgoingExpireMiddleware } from '../../src/middleware/expire'
 import { RafikiContext } from '../../src/rafiki'
-import { IlpPrepareFactory } from '../factories/ilp-packet'
+import { IlpPrepareFactory, RafikiServicesFactory } from '../../src'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 import { TransferTimedOutError } from 'ilp-packet/dist/src/errors'
-import { RafikiServicesFactory } from '../factories/rafiki-services'
-import compose = require('koa-compose')
-import {createOutgoingBalanceMiddleware} from '../../src/middleware'
 
 describe('Expire Middleware', function () {
 

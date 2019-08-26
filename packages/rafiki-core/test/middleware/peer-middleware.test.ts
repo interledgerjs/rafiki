@@ -1,10 +1,8 @@
 import { createContext } from '@interledger/rafiki-utils'
 import { createPeerMiddleware } from '../../src/middleware/peer'
-import { PeerFactory } from '../factories/peer'
+import { PeerFactory, IlpPrepareFactory, RafikiServicesFactory } from '../../src'
 import { RafikiContext } from '../../src/rafiki'
-import { RafikiServicesFactory } from '../factories/rafiki-services'
 import { InMemoryPeers } from '../../src/services'
-import { IlpPrepareFactory } from '../factories/ilp-packet'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 
 describe('Peer Middleware',() => {

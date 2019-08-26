@@ -1,10 +1,9 @@
+import { Writer } from 'oer-utils'
+import { IlpPrepare, serializeIlpPrepare } from 'ilp-packet'
 import { createContext } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../../src/rafiki'
 import { createEchoProtocolController } from '../../src/controllers/echo-protocol'
-import { IlpPrepare, serializeIlpPrepare } from 'ilp-packet'
-import { Writer } from 'oer-utils'
-import { PeerFactory } from '../factories/peer';
-import { RafikiServicesFactory } from '../factories/rafiki-services'
+import { PeerFactory, RafikiServicesFactory } from '../../src'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 
 const ECHO_DATA_PREFIX = Buffer.from('ECHOECHOECHOECHO', 'ascii')

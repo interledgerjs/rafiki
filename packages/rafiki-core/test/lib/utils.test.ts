@@ -1,6 +1,6 @@
-import { IlpPrepareFactory } from "../factories/ilp-packet"
-import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from "../../src/lib"
-import { serializeIlpPrepare, deserializeIlpPrepare } from "ilp-packet"
+import { serializeIlpPrepare, deserializeIlpPrepare } from 'ilp-packet'
+import { IlpPrepareFactory } from '../../src'
+import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from '../../src/lib'
 
 describe('modifySerializedIlpPrepareAmount', () => {
   it('can modify the amount for a length indicator that is not longer than 1 byte', async () => {
