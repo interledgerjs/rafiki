@@ -20,34 +20,30 @@ jobs:
       - restore_cache:
           keys: 
             # when lock file changes, use increasingly general patterns to restore cache
-            - "node-v1-{{ .Branch }}-{{ checksum \"package-lock.json\" }}"
+            - "node-v1-{{ .Branch }}-{{ checksum \"yarn.lock\" }}"
             - "node-v1-{{ .Branch }}-"
             - "node-v1-"
           
       - run:
           name: Install
-          command: npm install
-     
+          command: yarn install
+
       - run:
-          name: Lint
-          command: npm run lint
+          name: Bootstrap
+          command: yarn bootstrap
      
       - run:
           name: Build
-          command: npm run build
+          command: yarn build
      
       - run:
           name: Test
-          command: npm test
-     
-      - run: 
-          name: Upload Test Coverage to codecov.io
-          command: npm run codecov
+          command: yarn test
 
       - save_cache:
           paths:
             - node_modules
-          key: node-v1-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          key: node-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
 
       - persist_to_workspace:
           root: ~/repo
@@ -62,7 +58,7 @@ jobs:
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/repo/.npmrc
       - run:
           name: Publish package
-          command: npm publish --access public
+          command: yarn publish
             
 workflows:
   version: 2
