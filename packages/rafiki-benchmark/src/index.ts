@@ -11,7 +11,6 @@ import {
 import {
   createIncomingMaxPacketAmountMiddleware,
   createIncomingRateLimitMiddleware,
-  createIncomingReduceExpiryMiddleware,
   createIncomingThroughputMiddleware,
   createOutgoingReduceExpiryMiddleware,
   createOutgoingThroughputMiddleware,
@@ -36,8 +35,7 @@ const incoming = compose([
   createIncomingErrorHandlerMiddleware(),
   createIncomingMaxPacketAmountMiddleware(),
   createIncomingRateLimitMiddleware(),
-  createIncomingThroughputMiddleware(),
-  createIncomingReduceExpiryMiddleware(),
+  createIncomingThroughputMiddleware()
   // createIncomingBalanceMiddleware()
 ])
 

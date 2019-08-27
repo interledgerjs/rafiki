@@ -1,4 +1,4 @@
-export * from './heartbeat'
+// export * from './heartbeat' //TODO: is this still being supported?
 export * from './liquidity-check'
 export * from './max-packet-amount'
 export * from './rate-limit'

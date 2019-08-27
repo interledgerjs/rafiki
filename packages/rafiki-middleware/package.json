@@ -19,7 +19,8 @@
     "url": "git+https://github.com/interledgerjs/rafiki.git"
   },
   "scripts": {
-    "build": "tsc -p src/tsconfig.build.json"
+    "build": "tsc -p src/tsconfig.build.json",
+    "test": "jest --bail --runInBand"
   },
   "bugs": {
     "url": "https://github.com/interledgerjs/rafiki/issues"
@@ -27,5 +28,25 @@
   "dependencies": {
     "@interledger/rafiki-core": "^0.1.0",
     "@interledger/rafiki-utils": "^0.1.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    },
+    "coverageReporters": [
+      "json",
+      "lcov"
+    ],
+    "coverageDirectory": "./coverage",
+    "setupFiles": [
+
+    ],
+    "clearMocks": true
   }
 }

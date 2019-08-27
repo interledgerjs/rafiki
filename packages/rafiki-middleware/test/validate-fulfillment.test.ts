@@ -1,64 +1,57 @@
-// import 'mocha'
-// import * as sinon from 'sinon'
-// import * as Chai from 'chai'
-// import chaiAsPromised from 'chai-as-promised'
-// import {ValidateFulfillmentRule} from '../../src/rules'
-// import {setPipelineReader} from '../../rafiki-core/src/types'
+import { Errors } from 'ilp-packet'
+import { RafikiContext, RafikiServicesFactory, IlpPrepareFactory } from '@interledger/rafiki-core'
+import { createContext } from '@interledger/rafiki-utils'
+import { createOutgoingValidateFulfillmentMiddleware } from '../src/validate-fulfillment'
+import { ZeroCopyIlpPrepare, IlpFulfillFactory, IlpRejectFactory } from '@interledger/rafiki-core/src'
 
-// Chai.use(chaiAsPromised)
-// const assert = Object.assign(Chai.assert, sinon.assert)
-// const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
+const { WrongConditionError } = Errors
 
-// describe('Validate fulfillment Middlware', function () {
+describe('Validate Fulfillment Middleware', function () {
+  const services = RafikiServicesFactory.build()
+  const ctx = createContext<any, RafikiContext>()
+  ctx.services = services
+  const middleware = createOutgoingValidateFulfillmentMiddleware()
 
-//   let validateFulfillmentRule: ValidateFulfillmentRule
+  beforeEach(() => {
+    ctx.response.fulfill = undefined
+    ctx.response.reject = undefined
+  })
 
-//   const preparePacket = {
-//     amount: '52',
-//     executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
-//     expiresAt: new Date(START_DATE + 2000),
-//     destination: 'mock.test3.bob',
-//     data: Buffer.alloc(0)
-//   }
+  test('throws wrong condition error if fulfillment is incorrect', async () => {
+    const prepare = IlpPrepareFactory.build({ executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64') })
+    const incorrectFulfill = IlpFulfillFactory.build({ fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs') })
+    const next = jest.fn().mockImplementation(() => {
+      ctx.response.fulfill = incorrectFulfill
+    })
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
 
-//   beforeEach(async function () {
-//     validateFulfillmentRule = new ValidateFulfillmentRule()
-//   })
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(WrongConditionError)
+    expect(ctx.services.logger.warn).toHaveBeenCalled()
+  })
 
-//   it('throws wrong condition error if fulfill has incorrect condition', async function () {
-//     const fulfillPacket = {
-//       fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs'),
-//       data: Buffer.alloc(0)
-//     }
-//     const sendOutgoing = setPipelineReader('outgoing', validateFulfillmentRule, async () => fulfillPacket)
-//     try{
-//       await sendOutgoing(preparePacket)
-//     } catch (e) {
-//       return
-//     }
-//     assert.fail()
-//   })
+  test('forwards fulfills with correct fullfillment', async () => {
+    const prepare = IlpPrepareFactory.build()
+    const fulfill = IlpFulfillFactory.build()
+    const next = jest.fn().mockImplementation(() => {
+      ctx.response.fulfill = fulfill
+    })
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
 
-//   it('returns fulfill response that has correct fulfillment condition', async function () {
-//     const fulfillPacket = {
-//       fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
-//       data: Buffer.alloc(0)
-//     }
-//     const sendOutgoing = setPipelineReader('outgoing', validateFulfillmentRule, async () => fulfillPacket)
-//     const reply = await sendOutgoing(preparePacket)
-//     assert.strictEqual(reply, fulfillPacket)
-//   })
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//   it('returns reject responses', async function () {
-//     const rejectPacket = {
-//       code: 'T04',
-//       triggeredBy: 'mock.test1',
-//       message: 'exceeded maximum balance.',
-//       data: Buffer.alloc(0)
-//     }
-//     const sendOutgoing = setPipelineReader('outgoing', validateFulfillmentRule, async () => rejectPacket)
-//     const reply = await sendOutgoing(preparePacket)
+    expect(ctx.response.fulfill).toEqual(fulfill)
+  })
 
-//     assert.strictEqual(reply, rejectPacket)
-//   })
-// })
+  test('forwards reject packets', async () => {
+    const prepare = IlpPrepareFactory.build()
+    const reject = IlpRejectFactory.build()
+    const next = jest.fn().mockImplementation(() => {
+      ctx.response.reject = reject
+    })
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+    expect(ctx.response.reject).toEqual(reject)
+  })
+})

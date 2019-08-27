@@ -1,174 +1,78 @@
-// import 'mocha'
-// import * as sinon from 'sinon'
-// import * as Chai from 'chai'
-// import chaiAsPromised from 'chai-as-promised'
-// import {Errors, IlpPrepare} from 'ilp-packet'
-// import {setPipelineReader} from '../../src/types/rule'
-// import {ReduceExpiryRule} from '../src/reduce-expiry'
+import { Errors } from 'ilp-packet'
+import { PeerFactory, RafikiContext, RafikiServicesFactory, IlpPrepareFactory } from '@interledger/rafiki-core'
+import { createContext } from '@interledger/rafiki-utils'
+import { createOutgoingReduceExpiryMiddleware } from '../src/reduce-expiry'
+import { ZeroCopyIlpPrepare } from '@interledger/rafiki-core/src'
 
-// Chai.use(chaiAsPromised)
-// const assert = Object.assign(Chai.assert, sinon.assert)
-// const { InsufficientTimeoutError } = Errors
-// const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
-// const minExpirationWindow = 1000
-// const maxHoldTime = 3000
+const { InsufficientTimeoutError } = Errors
+Date.now = jest.fn(() => 1434412800000) // June 16, 2015 00:00:00 GMT
 
-// const mockFulfill = {
-//   fulfillment: Buffer.alloc(32),
-//   data: Buffer.from('')
-// }
+describe('Outgoing Reduce Expiry Middleware', function () {
+  const now = Date.now()
+  const services = RafikiServicesFactory.build()
+  const alice = PeerFactory.build({ id: 'alice' })
+  const bob = PeerFactory.build({ id: 'bob', minExpirationWindow: 3000, maxHoldWindow: 31000 })
+  const ctx = createContext<any, RafikiContext>()
+  ctx.services = services
+  ctx.peers = {
+    get incoming () {
+      return Promise.resolve(alice)
+    },
+    get outgoing () {
+      return Promise.resolve(bob)
+    }
+  }
+  const middleware = createOutgoingReduceExpiryMiddleware()
+  test('reduces the expiry time by the minOutgoingExpirationWindow', async () => {
+    const originalExpiry = now + 6000
+    const prepare = IlpPrepareFactory.build({ expiresAt: new Date(originalExpiry) })
+    const next = jest.fn()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
 
-// describe('Reduce Expiry Middlware ', function () {
-//   let reduceExpiryRule: ReduceExpiryRule
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//   beforeEach(function () {
-//     this.clock = sinon.useFakeTimers(new Date(START_DATE).getTime())
-//     reduceExpiryRule = new ReduceExpiryRule({ minIncomingExpirationWindow: minExpirationWindow, minOutgoingExpirationWindow: minExpirationWindow, maxHoldWindow: maxHoldTime })
-//   })
+    expect(ctx.request.prepare.expiresAt).toEqual(new Date(originalExpiry - bob.minExpirationWindow!))
+  })
 
-//   afterEach(function () {
-//     this.clock.restore()
-//   })
+  test('caps expiry to max hold time', async () => {
+    const originalExpiry = now + 60000
+    const prepare = IlpPrepareFactory.build({ expiresAt: new Date(originalExpiry) })
+    const next = jest.fn()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const destinationExpiry = originalExpiry - bob.minExpirationWindow!
+    expect(destinationExpiry - now).toBeGreaterThan(bob.maxHoldWindow!)
 
-//   it('reduces the expiry time of incoming and outgoing packets by the configured time', async function () {
-//     let outgoingPacketDestinationExpiry = new Date()
-//     let incomingDestinationExpiry = new Date()
-//     const outgoingPipeline = setPipelineReader('outgoing', reduceExpiryRule, async (packet: IlpPrepare) => {
-//       outgoingPacketDestinationExpiry = packet.expiresAt
-//       return mockFulfill
-//     })
-//     const incomingPipeline = setPipelineReader('incoming', reduceExpiryRule, async (packet: IlpPrepare) => {
-//       incomingDestinationExpiry = packet.expiresAt
-//       return mockFulfill
-//     })
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//     await incomingPipeline({
-//       amount: '50',
-//       destination: 'test.connie.alice',
-//       executionCondition: Buffer.alloc(32),
-//       expiresAt: new Date(START_DATE + 2500),
-//       data: Buffer.from('test data')
-//     })
-//     await outgoingPipeline({
-//       amount: '50',
-//       destination: 'test.connie.alice',
-//       executionCondition: Buffer.alloc(32),
-//       expiresAt: new Date(START_DATE + 2500),
-//       data: Buffer.from('test data')
-//     })
+    expect(ctx.request.prepare.expiresAt.getTime()).toEqual(new Date(now + bob.maxHoldWindow!).getTime())
+  })
 
-//     assert.deepEqual(outgoingPacketDestinationExpiry, new Date(START_DATE + 1500))
-//     assert.deepEqual(incomingDestinationExpiry, new Date(START_DATE + 1500))
-//   })
+  test('throws error if packet has already expired', async () => {
+    const prepare = IlpPrepareFactory.build({ expiresAt: new Date(now - 1000) })
+    const next = jest.fn()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
 
-//   it('caps expiry to max hold time for incoming and outgoing packets', async function () {
-//     let outgoingPacketDestinationExpiry = new Date()
-//     let incomingDestinationExpiry = new Date()
-//     const outgoingPipeline = setPipelineReader('outgoing', reduceExpiryRule, async (packet: IlpPrepare) => {
-//       outgoingPacketDestinationExpiry = packet.expiresAt
-//       return mockFulfill
-//     })
-//     const incomingPipeline = setPipelineReader('incoming', reduceExpiryRule, async (packet: IlpPrepare) => {
-//       incomingDestinationExpiry = packet.expiresAt
-//       return mockFulfill
-//     })
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientTimeoutError)
+  })
 
-//     await incomingPipeline({
-//       amount: '50',
-//       destination: 'test.connie.alice',
-//       executionCondition: Buffer.alloc(32),
-//       expiresAt: new Date(START_DATE + 8000),
-//       data: Buffer.from('test data')
-//     })
-//     await outgoingPipeline({
-//       amount: '50',
-//       destination: 'test.connie.alice',
-//       executionCondition: Buffer.alloc(32),
-//       expiresAt: new Date(START_DATE + 8000),
-//       data: Buffer.from('test data')
-//     })
+  test('throws error if maxHoldWindow is less than the minOutgoingExpirationWindow', async () => {
+    const originalExpiry = now + 60000
+    const prepare = IlpPrepareFactory.build({ expiresAt: new Date(originalExpiry) })
+    const next = jest.fn()
+    const fred = PeerFactory.build({ id: 'fred', minExpirationWindow: 6000, maxHoldWindow: 5000 })
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    ctx.peers = {
+      get incoming () {
+        return Promise.resolve(alice)
+      },
+      get outgoing () {
+        return Promise.resolve(fred)
+      }
+    }
+    const destinationExpiry = originalExpiry - fred.minExpirationWindow!
+    expect(destinationExpiry - now).toBeGreaterThan(fred.maxHoldWindow!) // ensures expiry is capped to maxHoldWindow
 
-//     assert.deepEqual(outgoingPacketDestinationExpiry, new Date(START_DATE + maxHoldTime))
-//     assert.deepEqual(incomingDestinationExpiry, new Date(START_DATE + maxHoldTime))
-//   })
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientTimeoutError)
+  })
 
-//   it('throws InsufficientTimeoutError if source has already expired for outgoing packets', async function () {
-//     const outgoingPipeline = setPipelineReader('outgoing', reduceExpiryRule, async (packet: IlpPrepare) => mockFulfill)
-
-//     try {
-//       await outgoingPipeline({
-//         amount: '50',
-//         destination: 'test.connie.alice',
-//         executionCondition: Buffer.alloc(32),
-//         expiresAt: new Date(START_DATE - 1000),
-//         data: Buffer.from('test data')
-//       })
-//     } catch (e) {
-//       assert.isTrue(e instanceof InsufficientTimeoutError)
-//       assert.equal(e.message, "source transfer has already expired. sourceExpiry=2015-06-15T23:59:59.000Z currentTime=2015-06-16T00:00:00.000Z")
-//       return
-//     }
-
-//     assert.fail("Did not throw expected error.")
-//   })
-
-//   it('throws InsufficientTimeoutError if source has already expired for incoming packets', async function () {
-//     const incomingPipeline = setPipelineReader('incoming', reduceExpiryRule, async (packet: IlpPrepare) => mockFulfill)
-
-//     try {
-//       await incomingPipeline({
-//         amount: '50',
-//         destination: 'test.connie.alice',
-//         executionCondition: Buffer.alloc(32),
-//         expiresAt: new Date(START_DATE - 1000),
-//         data: Buffer.from('test data')
-//       })
-//     } catch (e) {
-//       assert.isTrue(e instanceof InsufficientTimeoutError)
-//       assert.equal(e.message, "source transfer has already expired. sourceExpiry=2015-06-15T23:59:59.000Z currentTime=2015-06-16T00:00:00.000Z")
-//       return
-//     }
-
-//     assert.fail("Did not throw expected error.")
-//   })
-
-//   it("throws InsufficientTimeoutError if the destination expiry window is less than the specified minimum expiration window for incoming packets", async function () {
-//     const incomingPipeline = setPipelineReader('incoming', reduceExpiryRule, async (packet: IlpPrepare) => mockFulfill)
-
-//     try {
-//       await incomingPipeline({
-//         amount: '50',
-//         destination: 'test.connie.alice',
-//         executionCondition: Buffer.alloc(32),
-//         expiresAt: new Date(START_DATE + 1500),
-//         data: Buffer.from('test data')
-//       })
-//     } catch (e) {
-//       assert.isTrue(e instanceof InsufficientTimeoutError)
-//       assert.equal(e.message, 'source transfer expires too soon to complete payment. actualSourceExpiry=2015-06-16T00:00:01.500Z requiredSourceExpiry=2015-06-16T00:00:02.000Z currentTime=2015-06-16T00:00:00.000Z')
-//       return
-//     }
-
-//     assert.fail("Did not throw expected error.")
-//   })
-
-//   it("throws InsufficientTimeoutError if the destination expiry window is less than the specified minimum expiration window for outgoing packets", async function () {
-//     const outgoingPipeline = setPipelineReader('outgoing', reduceExpiryRule, async (packet: IlpPrepare) => mockFulfill)
-
-//     try {
-//       await outgoingPipeline({
-//         amount: '50',
-//         destination: 'test.connie.alice',
-//         executionCondition: Buffer.alloc(32),
-//         expiresAt: new Date(START_DATE + 1500),
-//         data: Buffer.from('test data')
-//       })
-//     } catch (e) {
-//       assert.isTrue(e instanceof InsufficientTimeoutError)
-//       assert.equal(e.message, 'source transfer expires too soon to complete payment. actualSourceExpiry=2015-06-16T00:00:01.500Z requiredSourceExpiry=2015-06-16T00:00:02.000Z currentTime=2015-06-16T00:00:00.000Z')
-//       return
-//     }
-
-//     assert.fail("Did not throw expected error.")
-//   })
-// })
+})

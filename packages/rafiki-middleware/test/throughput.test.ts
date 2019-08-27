@@ -1,176 +1,139 @@
-// import 'mocha'
-// import * as sinon from 'sinon'
-// import * as Chai from 'chai'
-// import chaiAsPromised from 'chai-as-promised'
-// import {Errors, IlpFulfill, IlpPrepare, isFulfill} from 'ilp-packet'
-// import {createThroughputLimitBucketsForPeer, ThroughputRule} from '../src/throughput'
-// import {setPipelineReader} from '../../src/types/rule'
+import { Errors } from 'ilp-packet'
+import { PeerFactory, RafikiContext, RafikiServicesFactory, IlpPrepareFactory } from '@interledger/rafiki-core'
+import { createContext, TokenBucket } from '@interledger/rafiki-utils'
+import { createIncomingThroughputMiddleware, createOutgoingThroughputMiddleware } from '../src/throughput'
+import { ZeroCopyIlpPrepare } from '@interledger/rafiki-core/src'
 
-// Chai.use(chaiAsPromised)
-// const assert = Object.assign(Chai.assert, sinon.assert)
-// const { InsufficientLiquidityError } = Errors
+const { InsufficientLiquidityError } = Errors
 
-// const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
+describe('Incoming Throughput Middleware', function () {
+  const services = RafikiServicesFactory.build()
+  const alice = PeerFactory.build({ id: 'alice', incomingThroughputLimit: BigInt(10), incomingThroughputLimitRefillPeriod: 10000 })
+  const bob = PeerFactory.build({ id: 'bob' })
+  const ctx = createContext<any, RafikiContext>()
+  ctx.services = services
+  ctx.peers = {
+    get incoming () {
+      return Promise.resolve(alice)
+    },
+    get outgoing () {
+      return Promise.resolve(bob)
+    }
+  }
 
-// describe('Throughput Rule', function () {
-//   let throughputRule: ThroughputRule
-//   const preparePacket: IlpPrepare = {
-//     amount: '49',
-//     executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64'),
-//     expiresAt: new Date(START_DATE + 2000),
-//     destination: 'mock.test1.bob',
-//     data: Buffer.alloc(0)
-//   }
-//   const fulfillPacket: IlpFulfill = {
-//     fulfillment: Buffer.from('HS8e5Ew02XKAglyus2dh2Ohabuqmy3HDM8EXMLz22ok', 'base64'),
-//     data: Buffer.alloc(0)
-//   }
+  test('throws error if throughput limit exceeded', async () => {
+    Date.now = jest.fn(() => 1434412800000) // June 16, 2015 00:00:00 GMT
+    const prepare = IlpPrepareFactory.build({ amount: '100' })
+    const next = jest.fn()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const middleware = createIncomingThroughputMiddleware()
 
-//   describe('incoming', function () {
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientLiquidityError)
+    expect(services.logger.warn).toHaveBeenCalled()
+  })
+  test('allows throughput again after refill period', async () => {
+    const now = 1434412800000
+    // first return value for token bucket constructor, subsequent for prepare packets being sent
+    Date.now = jest.fn().mockReturnValueOnce(now).mockReturnValueOnce(now).mockReturnValueOnce(now + 1000).mockReturnValueOnce(now + 12000) // move time along every time now is called
+    const prepare = IlpPrepareFactory.build({ amount: '10' })
+    const next = jest.fn()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const middleware = createIncomingThroughputMiddleware()
 
-//     beforeEach(async function () {
-//       const buckets = createThroughputLimitBucketsForPeer({
-//         id: 'harry',
-//         relation: 'peer',
-//         assetScale: 9,
-//         assetCode: 'XRP',
-//         rules: [
-//           {
-//             name: 'throughput',
-//             refillPeriod: 100, 
-//             incomingAmount: 100n
-//           }
-//         ],
-//         protocols: []
-//       })
-//       throughputRule = new ThroughputRule(buckets)
-//     })
+    // will use up entire throughput limit
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//     it('doesn\'t allow throughput above threshold through', async function () {
-//       const sendIncoming = setPipelineReader('incoming', throughputRule, async () => fulfillPacket)
-  
-//       // Empty the token buffer
-//       for (let i = 0; i < 2; i++) {
-//         await sendIncoming(preparePacket)
-//       }
+    // time is 1 second after now
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientLiquidityError)
+    expect(services.logger.warn).toHaveBeenCalled()
 
-//       try {
-//         await sendIncoming(preparePacket)
-//       } catch (err) {
-//         assert.instanceOf(err, InsufficientLiquidityError)
-//         return
-//       }
-//       assert.fail("Should have thrown an InsufficientLiquidityError")
-//     })
+    // time is 12 seconds after now
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+  })
+  test('no rate limit bucket is checked if throughput limit is not set', async () => {
+    const prepare = IlpPrepareFactory.build({ amount: '10' })
+    const next = jest.fn()
+    const takeSpy = jest.spyOn(TokenBucket.prototype, 'take')
+    ctx.peers = {
+      get incoming () {
+        return Promise.resolve(bob)
+      },
+      get outgoing () {
+        return Promise.resolve(alice)
+      }
+    }
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const middleware = createIncomingThroughputMiddleware()
 
-//     it('allows throughput again after refill period', async function () {
-//       const sendIncoming = setPipelineReader('incoming', throughputRule, async () => fulfillPacket)
+    // will use up entire throughput limit
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//       // Empty the token buffer
-//       for (let i = 0; i < 2; i++) {
-//         await sendIncoming(preparePacket)
-//       }
+    expect(takeSpy).toHaveBeenCalledTimes(0)
+  })
+})
 
-//       try {
-//         await sendIncoming(preparePacket)
-//         throw new Error("Should have thrown error")
-//       } catch (err) {
-//         assert.instanceOf(err, InsufficientLiquidityError)
-//       }
-      
-//       await new Promise(resolve => setTimeout(resolve, 100))
-//       const reply = await sendIncoming(preparePacket)
-//       assert.isTrue(isFulfill(reply))
-//     })
+describe('Outgoing Throughput Middleware', function () {
+  const services = RafikiServicesFactory.build()
+  const alice = PeerFactory.build({ id: 'alice' })
+  const bob = PeerFactory.build({ id: 'bob', outgoingThroughputLimit: BigInt(10), outgoingThroughputLimitRefillPeriod: 10000 })
+  const ctx = createContext<any, RafikiContext>()
+  ctx.services = services
+  ctx.peers = {
+    get incoming () {
+      return Promise.resolve(alice)
+    },
+    get outgoing () {
+      return Promise.resolve(bob)
+    }
+  }
 
+  test('throws error if throughput limit exceeded', async () => {
+    Date.now = jest.fn(() => 1434412800000) // June 16, 2015 00:00:00 GMT
+    const prepare = IlpPrepareFactory.build({ amount: '100' })
+    const next = jest.fn()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const middleware = createOutgoingThroughputMiddleware()
 
-//   })
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientLiquidityError)
+    expect(services.logger.warn).toHaveBeenCalled()
+  })
+  test('allows throughput again after refill period', async () => {
+    const now = 1434412800000
+    // first return value for token bucket constructor, subsequent for prepare packets being sent
+    Date.now = jest.fn().mockReturnValueOnce(now).mockReturnValueOnce(now).mockReturnValueOnce(now + 1000).mockReturnValueOnce(now + 12000) // move time along every time now is called
+    const prepare = IlpPrepareFactory.build({ amount: '10' })
+    const next = jest.fn()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const middleware = createOutgoingThroughputMiddleware()
 
-//   describe('outgoing', function () {
-//     beforeEach(async function () {
-//       const buckets = createThroughputLimitBucketsForPeer({
-//         id: 'harry',
-//         relation: 'peer',
-//         assetScale: 9,
-//         assetCode: 'XRP',
-//         rules: [
-//           {
-//             name: 'throughput',
-//             refillPeriod: 100, 
-//             outgoingAmount: 100n
-//           }
-//         ],
-//         protocols: []
-//       })
-//       throughputRule = new ThroughputRule(buckets)
-//     })
+    // will use up entire throughput limit
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//     it('doesn\'t allow throughput above threshold throughput through', async function () {
-//       const sendOutgoing = setPipelineReader('outgoing', throughputRule, async () => fulfillPacket)
+    // time is 1 second after now
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientLiquidityError)
+    expect(services.logger.warn).toHaveBeenCalled()
 
-//       // Empty the token buffer
-//       for (let i = 0; i < 2; i++) {
-//         await sendOutgoing(preparePacket)
-//       }
+    // time is 12 seconds after now
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+  })
+  test('no rate limit bucket is checked if throughput limit is not set', async () => {
+    const prepare = IlpPrepareFactory.build({ amount: '10' })
+    const next = jest.fn()
+    const takeSpy = jest.spyOn(TokenBucket.prototype, 'take')
+    ctx.peers = {
+      get incoming () {
+        return Promise.resolve(bob)
+      },
+      get outgoing () {
+        return Promise.resolve(alice)
+      }
+    }
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const middleware = createOutgoingThroughputMiddleware()
 
-//       try {
-//         await sendOutgoing(preparePacket)
-//       } catch (err) {
-//         assert.instanceOf(err, InsufficientLiquidityError)
-//         return
-//       }
-//       assert.fail("Should have thrown an InsufficientLiquidityError")
-//     })
+    // will use up entire throughput limit
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-//     it('allows throughput again after refill period', async function () {
-//       const sendOutgoing = setPipelineReader('outgoing', throughputRule, async () => fulfillPacket)
-
-//       // Empty the token buffer
-//       for (let i = 0; i < 2; i++) {
-//         await sendOutgoing(preparePacket)
-//       }
-
-//       try {
-//         await sendOutgoing(preparePacket)
-//         throw new Error("Should have thrown error")
-//       } catch (err) {
-//         assert.instanceOf(err, InsufficientLiquidityError)
-//       }
-      
-//       await new Promise(resolve => setTimeout(resolve, 100))
-//       const reply = await sendOutgoing(preparePacket)
-//       assert.isTrue(isFulfill(reply))
-//     })
-//   })
-
-//   describe('none', function () {
-
-//     beforeEach(async function () {
-//       const buckets = createThroughputLimitBucketsForPeer({
-//         id: 'harry',
-//         relation: 'peer',
-//         assetScale: 9,
-//         assetCode: 'XRP',
-//         rules: [
-//           {
-//             name: 'throughput'
-//           }
-//         ],
-//         protocols: []
-//       })
-//       throughputRule = new ThroughputRule(buckets)
-//     })
-
-//     it('does not apply any limits', async function () {
-//       const sendOutgoing = setPipelineReader('outgoing', throughputRule, async () => fulfillPacket)
-//       for (let i = 0; i < 100; i++) {
-//         await sendOutgoing(preparePacket)
-//       }
-//       const sendIncoming = setPipelineReader('incoming', throughputRule, async () => fulfillPacket)
-//       for (let i = 0; i < 100; i++) {
-//         await sendIncoming(preparePacket)
-//       }
-//     })
-//   })
-  
-// })
+    expect(takeSpy).toHaveBeenCalledTimes(0)
+  })
+})

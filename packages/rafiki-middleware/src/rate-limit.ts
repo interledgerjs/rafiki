@@ -31,7 +31,7 @@ export function createRateLimitBucketForPeer (peerInfo: PeerInfo) {
   const { rateLimitRefillPeriod, rateLimitRefillCount, rateLimitCapacity } = peerInfo
   const refillPeriod: number = rateLimitRefillPeriod ? rateLimitRefillPeriod : DEFAULT_REFILL_PERIOD
   const refillCount: bigint = rateLimitRefillCount ? rateLimitRefillCount : DEFAULT_REFILL_COUNT
-  const capacity: bigint = rateLimitCapacity ? rateLimitCapacity : refillCount
+  const capacity: bigint = (typeof rateLimitCapacity !== 'undefined') ? rateLimitCapacity : refillCount
 
   // TODO: When we add the ability to update middleware, our state will get
   //   reset every update, which may not be desired.

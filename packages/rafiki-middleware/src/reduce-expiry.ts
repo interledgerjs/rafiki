@@ -3,25 +3,17 @@ import { RafikiContext, LoggingService, RafikiMiddleware } from '@interledger/ra
 const { InsufficientTimeoutError } = Errors
 
 /**
- * Reduces the expiry of the. This is done on the incoming and outgoing pipelines so it can be adjusted per peer.
- * This middleware should be BEFORE the expiry time check.
+ * Reduces the expiry of the prepare packet.
  *
  * // TODO: Should we reduce the expiry on the packet or just expire the packet?
  * // TODO: Maybe this should be combined with the expiry checker and the expiry timeout?
  */
-export function createIncomingReduceExpiryMiddleware (): RafikiMiddleware {
-  return async ({ log, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
-    const { minOutgoingExpirationWindow, maxHoldWindow } = await peers.incoming
-    prepare.expiresAt = getDestinationExpiry(prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, log)
-    await next()
-  }
-}
 
 export function createOutgoingReduceExpiryMiddleware (): RafikiMiddleware {
   return async ({ services: { logger } , request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
-    const { minOutgoingExpirationWindow, maxHoldWindow } = await peers.outgoing
+    const { minExpirationWindow, maxHoldWindow } = await peers.outgoing
     // TODO: These values should not be undefined. The defaults should be set in the service
-    prepare.expiresAt = getDestinationExpiry(prepare, minOutgoingExpirationWindow || 1000, maxHoldWindow || 30000, logger)
+    prepare.expiresAt = getDestinationExpiry(prepare, minExpirationWindow || 1000, maxHoldWindow || 30000, logger)
     await next()
   }
 }

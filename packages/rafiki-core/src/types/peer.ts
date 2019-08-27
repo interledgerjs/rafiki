@@ -17,9 +17,12 @@ export interface PeerInfo {
   rateLimitRefillPeriod?: number
   rateLimitRefillCount?: bigint
   rateLimitCapacity?: bigint
-  minIncomingExpirationWindow?: number
-  minOutgoingExpirationWindow?: number
+  minExpirationWindow?: number
   maxHoldWindow?: number
+  incomingThroughputLimitRefillPeriod?: number
+  incomingThroughputLimit?: bigint
+  outgoingThroughputLimitRefillPeriod?: number
+  outgoingThroughputLimit?: bigint
 }
 
 export enum RelationWeights {
