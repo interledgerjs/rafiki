@@ -1,5 +1,5 @@
 import { AccountInfo } from '../../types'
-import {Observable, Subject} from 'rxjs'
+import { Observable, Subject } from 'rxjs'
 import { AccountNotFoundError } from '../../errors'
 import { Errors } from 'ilp-packet'
 import { AccountsService, AccountSnapshot, Transaction } from '.'
@@ -23,9 +23,10 @@ interface InMemoryAccount extends AccountSnapshot {
 export class InMemoryAccountsService implements AccountsService {
 
   private _updatedAccounts: Subject<AccountSnapshot>
-  private _accounts = new Map<string, InMemoryAccount>()
+  private _accounts: Map<string, InMemoryAccount>
 
   constructor () {
+    this._accounts = new Map<string, InMemoryAccount>()
     this._updatedAccounts = new Subject<AccountSnapshot>()
   }
 
@@ -72,7 +73,6 @@ export class InMemoryAccountsService implements AccountsService {
     // Need to ensure these are actually called
     const transaction: Transaction = {
       commit: async () => {
-        console.log('rolling back')
         account.balancePayableInflight -= amount
         account.balancePayable += amount
       },
