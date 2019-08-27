@@ -67,12 +67,12 @@ workflows:
       - test:
           filters:
             tags:
-              only: /^v.*/
+              only: /[^@]+@[0-9]+(\.[0-9]+)*/
       - deploy:
           requires:
             - test
           filters:
             tags:
-              only: /^v.*/
+              only: /[^@]+@[0-9]+(\.[0-9]+)*/
             branches:
               ignore: /.*/
