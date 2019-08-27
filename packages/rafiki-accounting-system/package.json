@@ -28,7 +28,8 @@
     "doc": "typedoc --options typedoc.js src",
     "codecov": "codecov",
     "preversion": "npm run lint && npm test",
-    "prepublishOnly": "rm -Rf ./build/test && npm run lint && npm test && npm run doc"
+    "prepublishOnly": "rm -Rf ./build/test && npm run lint && npm test && npm run doc",
+    "test": "jest --bail --runInBand"
   },
   "repository": {
     "type": "git",

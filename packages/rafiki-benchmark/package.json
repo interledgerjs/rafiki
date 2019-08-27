@@ -1,6 +1,7 @@
 {
   
   "name": "@interledger/rafiki-benchmark",
+  "private": true,
   "version": "0.1.0",
   "description": "A full connector implementation using Rafiki configured for load testing",
   "author": "Donovan Changfoot <don@coil.com>",

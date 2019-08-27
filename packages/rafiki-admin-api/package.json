@@ -1,6 +1,7 @@
 {
   "name": "@interledger/rafiki-admin-api",
   "version": "0.1.0",
+  "private": true,
   "description": "Admin Api for Rafiki Components",
   "author": "Matt de Haast <matt.dehaast@coil.com>",
   "homepage": "https://github.com/interledgerjs/rafiki#readme",

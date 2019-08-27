@@ -1,5 +1,6 @@
 {
   "name": "@interledger/rafiki-connector",
+  "private": true,
   "version": "0.1.0",
   "description": "A full connector implemented using Rafiki",
   "author": "Matt de Haast <matt.dehaast@coil.com>",

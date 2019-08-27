@@ -1,5 +1,6 @@
 {
   "name": "@interledger/rafiki-logger-pino",
+  "private": true,
   "version": "0.1.0",
   "description": "pino logging rafiki middleware",
   "keywords": [
