@@ -25,12 +25,8 @@ jobs:
             - "node-v1-"
 
       - run:
-          name: Install lerna
-          command: yarn global add lerna
-
-      - run:
-          name: Bootstrap
-          command: lerna bootstrap
+          name: Install lerna and bootstrap
+          command: yarn global add lerna && lerna bootstrap
           
       - run:
           name: Install
