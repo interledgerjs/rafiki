@@ -1,6 +1,6 @@
 {
   "name": "@interledger/rafiki-utils",
-  "version": "0.3.0",
+  "version": "0.1.0",
   "description": "Utils used by Rafiki",
   "author": "Matt de Haast <matt.dehaast@coil.com>",
   "homepage": "https://github.com/interledgerjs/rafiki#readme",
