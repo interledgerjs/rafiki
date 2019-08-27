@@ -1,8 +1,7 @@
 {
-  
   "name": "@interledger/rafiki-benchmark",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A full connector implementation using Rafiki configured for load testing",
   "author": "Donovan Changfoot <don@coil.com>",
   "license": "ISC",
@@ -18,9 +17,9 @@
     "start": "node build/index.js"
   },
   "dependencies": {
-    "@interledger/rafiki-core": "^0.1.0",
-    "@interledger/rafiki-middleware": "^0.1.0",
-    "@interledger/rafiki-logger-pino": "^0.1.0",
+    "@interledger/rafiki-core": "^0.2.0",
+    "@interledger/rafiki-logger-pino": "^0.2.0",
+    "@interledger/rafiki-middleware": "^0.2.0",
     "@types/koa-pino-logger": "^2.1.6",
     "koa-pino-logger": "^2.1.3"
   }

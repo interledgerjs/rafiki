@@ -1,6 +1,6 @@
 {
   "name": "@interledger/rafiki-middleware",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "> TODO: description",
   "author": "Interledger Team <info@interledger.org>",
   "homepage": "https://github.com/interledgerjs/rafiki#readme",
@@ -26,7 +26,7 @@
     "url": "https://github.com/interledgerjs/rafiki/issues"
   },
   "dependencies": {
-    "@interledger/rafiki-core": "^0.1.0",
+    "@interledger/rafiki-core": "^0.2.0",
     "@interledger/rafiki-utils": "^0.1.0"
   },
   "jest": {
@@ -44,9 +44,7 @@
       "lcov"
     ],
     "coverageDirectory": "./coverage",
-    "setupFiles": [
-
-    ],
+    "setupFiles": [],
     "clearMocks": true
   }
 }
