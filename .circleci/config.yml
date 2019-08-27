@@ -23,14 +23,18 @@ jobs:
             - "node-v1-{{ .Branch }}-{{ checksum \"yarn.lock\" }}"
             - "node-v1-{{ .Branch }}-"
             - "node-v1-"
+
+      - run:
+          name: Install lerna
+          command: yarn global add lerna
+
+      - run:
+          name: Bootstrap
+          command: lerna bootstrap
           
       - run:
           name: Install
           command: yarn install
-
-      - run:
-          name: Bootstrap
-          command: yarn bootstrap
      
       - run:
           name: Build
