@@ -70,39 +70,56 @@ export class InMemoryAccountsService implements AccountsService {
 
     const account = await this.get(accountId)
 
-    // Need to ensure these are actually called
-    const transaction: Transaction = {
-      commit: async () => {
-        account.balancePayableInflight -= amount
-        account.balancePayable += amount
-      },
-      rollback: async () => {
-        account.balancePayableInflight -= amount
+    if (amount > 0n) {
+      // Need to ensure these are actually called
+      const transaction: Transaction = {
+        commit: async () => {
+          account.balancePayableInflight -= amount
+          account.balancePayable += amount
+        },
+        rollback: async () => {
+          account.balancePayableInflight -= amount
+        }
       }
-    }
 
-    try {
+      try {
 
-      // Maybe doing the adjustment must occur before the liquidity check + how to handle atomicity
-      account.balancePayableInflight += amount
-      if ((account.balancePayableInflight + account.balancePayable) > account.maximumPayable) {
-        throw new InsufficientLiquidityError(`Max payable exceeded: expected: ${(account.balancePayableInflight + account.balancePayable).toString()} maximum: ${account.maximumPayable.toString()}`)
+        // Maybe doing the adjustment must occur before the liquidity check + how to handle atomicity
+        account.balancePayableInflight += amount
+        if ((account.balancePayableInflight + account.balancePayable) > account.maximumPayable) {
+          throw new InsufficientLiquidityError(`Max payable exceeded: expected: ${(account.balancePayableInflight + account.balancePayable).toString()} maximum: ${account.maximumPayable.toString()}`)
+        }
+
+        await callback(transaction)
+
+        // TODO look at netting
+
+        this._updatedAccounts.next(account)
+
+        return {
+          balanceReceivable: account.balanceReceivable,
+          balancePayable: account.balancePayable
+        } as AccountSnapshot
+      } catch (error) {
+        // Should this rethrow the the error?
+        account.balancePayableInflight -= amount
+        throw error(error)
+      }
+    } else {
+      const transaction: Transaction = {
+        commit: async () => {
+          account.balancePayable += amount
+        },
+        rollback: async () => {
+        }
       }
 
       await callback(transaction)
-
-      // TODO look at netting
-
-      this._updatedAccounts.next(account)
 
       return {
         balanceReceivable: account.balanceReceivable,
         balancePayable: account.balancePayable
       } as AccountSnapshot
-    } catch (error) {
-      // Should this rethrow the the error?
-      account.balancePayableInflight -= amount
-      throw error(error)
     }
   }
 
