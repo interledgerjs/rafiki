@@ -72,6 +72,7 @@ export class InMemoryAccountsService implements AccountsService {
     // Need to ensure these are actually called
     const transaction: Transaction = {
       commit: async () => {
+        console.log('rolling back')
         account.balancePayableInflight -= amount
         account.balancePayable += amount
       },
@@ -85,7 +86,7 @@ export class InMemoryAccountsService implements AccountsService {
       // Maybe doing the adjustment must occur before the liquidity check + how to handle atomicity
       account.balancePayableInflight += amount
       if ((account.balancePayableInflight + account.balancePayable) > account.maximumPayable) {
-        throw new InsufficientLiquidityError('')
+        throw new InsufficientLiquidityError(`Max payable exceeded: expected: ${(account.balancePayableInflight + account.balancePayable).toString()} maximum: ${account.maximumPayable.toString()}`)
       }
 
       await callback(transaction)

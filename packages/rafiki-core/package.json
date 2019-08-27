@@ -39,6 +39,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@interledger/rafiki-utils": "^0.1.0",
+    "@types/debug": "^4.1.5",
     "@types/faker": "^4.1.5",
     "@types/jsonwebtoken": "^8.3.3",
     "@types/koa": "^2.0.48",

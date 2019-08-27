@@ -2,7 +2,7 @@ import { RafikiContext } from '../rafiki'
 import { Transaction } from '../services/accounts'
 
 export function createIncomingBalanceMiddleware () {
-  return async ({ log, request, response, services: { accounts }, peers }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ request, response, services: { accounts, logger }, peers }: RafikiContext, next: () => Promise<any>) => {
     const { amount } = request.prepare
 
     // Ignore zero amount packets
@@ -28,7 +28,7 @@ export function createIncomingBalanceMiddleware () {
 }
 
 export function createOutgoingBalanceMiddleware () {
-  return async ({ log, request, response, services: { accounts }, peers }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ request, response, services: { accounts, logger }, peers }: RafikiContext, next: () => Promise<any>) => {
     const { amount } = request.prepare
 
     // Ignore zero amount packets

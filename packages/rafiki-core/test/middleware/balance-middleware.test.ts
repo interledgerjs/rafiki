@@ -1,17 +1,145 @@
+import { createContext } from '@interledger/rafiki-utils'
+import { RafikiContext } from '../../src/rafiki'
 import { createIncomingBalanceMiddleware, createOutgoingBalanceMiddleware } from '../../src/middleware/balance'
+import { RafikiServicesFactory, InMemoryPeers, InMemoryAccountsService, PeerInfoFactory, AccountInfoFactory, IlpPrepareFactory, IlpFulfillFactory, ZeroCopyIlpPrepare, IlpRejectFactory } from '../../src'
 
-const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
+const peers = new InMemoryPeers()
+const alice = PeerInfoFactory.build({ id: 'alice' })
+const bob = PeerInfoFactory.build({ id: 'bob' })
+// TODO: make one peer to many account relationship
+const aliceAccountInfo = AccountInfoFactory.build({ id: 'alice', peerId: 'alice', maximumPayable: BigInt(1000) })
+const bobAccountInfo = AccountInfoFactory.build({ id: 'bob', peerId: 'bob', maximumReceivable: BigInt(1000) })
+const accounts = new InMemoryAccountsService()
+const services = RafikiServicesFactory.build({ peers, accounts })
+const ctx = createContext<any, RafikiContext>()
+ctx.peers = {
+  get incoming () {
+    return peers.get('alice')
+  },
+  get outgoing () {
+    return peers.get('bob')
+  }
+}
+ctx.services = services
 
-// TODO: waiting for peers and accounts interface to be finalised
-describe.skip('Incoming Balance Middleware', function () {
-  it('successful packet increments the balance')
+beforeAll(async () => {
+  await peers.add(alice)
+  await peers.add(bob)
+})
 
-  it('failed packet does not increment balance')
+beforeEach(() => {
+  ctx.response.fulfill = undefined
+  ctx.response.reject = undefined
+
+  accounts.remove('alice')
+  accounts.remove('bob')
+  accounts.add(aliceAccountInfo)
+  accounts.add(bobAccountInfo)
+})
+
+describe('Incoming Balance Middleware', function () {
+  const middleware = createIncomingBalanceMiddleware()
+  it('fulfill response increments the balanceReceivable for the incoming peer', async () => {
+    const prepare = IlpPrepareFactory.build({ amount: '100' })
+    const fulfill = IlpFulfillFactory.build()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const next = jest.fn().mockImplementation(() => {
+      ctx.response.fulfill = fulfill
+    })
+
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(100))
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+  })
+
+  test('reject response does not adjust the account balances', async () => {
+    const prepare = IlpPrepareFactory.build({ amount: '100' })
+    const reject = IlpRejectFactory.build()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const next = jest.fn().mockImplementation(() => {
+      ctx.response.reject = reject
+    })
+
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+  })
+
+  test('ignores 0 amount packets', async () => {
+    const adjustReceivablesSpy = jest.spyOn(accounts, 'adjustBalanceReceivable')
+    const prepare = IlpPrepareFactory.build({ amount: '0' })
+    const reject = IlpRejectFactory.build()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const next = jest.fn().mockImplementation(() => {
+      ctx.response.reject = reject
+    })
+
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect(adjustReceivablesSpy).toHaveBeenCalledTimes(0)
+  })
 
 })
 
-describe.skip('Outgoing Balance Middleware', function () {
-  it('successful outgoing decrements the balance')
+describe('Outgoing Balance Middleware', function () {
+  const middleware = createOutgoingBalanceMiddleware()
+  it('fulfill response increments the balancePayable for the outgoing peer', async () => {
+    const prepare = IlpPrepareFactory.build({ amount: '100' })
+    const fulfill = IlpFulfillFactory.build()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const next = jest.fn().mockImplementation(() => {
+      ctx.response.fulfill = fulfill
+    })
 
-  it('failed packet does not increment balance')
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(100))
+  })
+
+  it('reject response does not adjust the account balances', async () => {
+    const prepare = IlpPrepareFactory.build({ amount: '100' })
+    const reject = IlpRejectFactory.build()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const next = jest.fn().mockImplementation(() => {
+      ctx.response.reject = reject
+    })
+
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+  })
+
+  test('ignores 0 amount packets', async () => {
+    const adjustPayablesSpy = jest.spyOn(accounts, 'adjustBalancePayable')
+    const prepare = IlpPrepareFactory.build({ amount: '0' })
+    const reject = IlpRejectFactory.build()
+    ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
+    const next = jest.fn().mockImplementation(() => {
+      ctx.response.reject = reject
+    })
+
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect(adjustPayablesSpy).toHaveBeenCalledTimes(0)
+  })
 })

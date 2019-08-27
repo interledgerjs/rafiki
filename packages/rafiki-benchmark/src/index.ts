@@ -24,7 +24,7 @@ import { serializers } from '@interledger/rafiki-logger-pino'
 const VUS = parseInt(process.env.VUS || '1000')
 
 const peerService = new InMemoryPeers()
-const accountsService = new InMemoryAccountsService(peerService)
+const accountsService = new InMemoryAccountsService()
 const router = new InMemoryRouter(peerService, {
   globalPrefix: 'test',
   ilpAddress: 'test.connector'
