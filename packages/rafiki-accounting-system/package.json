@@ -27,10 +27,7 @@
     "test": "jest --bail --runInBand",
     "lintFix": "tslint --project . --fix",
     "doc": "typedoc --options typedoc.js src",
-    "codecov": "codecov",
-    "preversion": "npm run lint && npm test",
-    "prepublishOnly": "rm -Rf ./build/test && npm run lint && npm test && npm run doc",
-    "test": "jest --bail --runInBand"
+    "codecov": "codecov"
   },
   "repository": {
     "type": "git",
