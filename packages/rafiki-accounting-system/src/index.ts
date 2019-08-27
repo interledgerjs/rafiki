@@ -1,5 +1,6 @@
 import bodyParser from 'koa-bodyparser'
 import { Rafiki, PeersService, AccountsService, AccountSnapshot } from '@interledger/rafiki-core'
+import { normalizeAsset } from '@interledger/rafiki-utils'
 import { createSettlementApiRoutes } from './routes'
 import getRawBody = require('raw-body')
 import Koa, { Context } from 'koa'
@@ -94,32 +95,35 @@ export class AccountingSystem {
 
   async sendSettlement (account: AccountSnapshot, amount: bigint, scale: number): Promise<void> {
     const engine = await this.getAccountSettlementEngineOrThrow(account)
+
     const response: SettlementResponse = await engine.sendSettlement(account.id, amount, scale)
 
-    // TODO need to convert to accounts scale
-    // TODO also need to check if the taking works both ways...
+    if (response.scale > scale) {
+      throw new Error('Cant process scale with greater precision than account settings')
+    }
 
-    await this._accountsService.adjustBalancePayable(response.amount, account.id, async ({ commit }) => {
+    const normalizedAmount = normalizeAsset(response.scale, account.assetScale, BigInt(response.amount))
+
+    await this._accountsService.adjustBalancePayable(-normalizedAmount, account.id, async ({ commit }) => {
       await commit()
     })
   }
 
   async maybeSettle (accountSnapshot: AccountSnapshot) {
     // Quick check if must settle based on the snapshot data
-    const settle = accountSnapshot.settlementThreshold && accountSnapshot.settlementThreshold > accountSnapshot.balancePayable
-
+    const settle = accountSnapshot.settlementThreshold && accountSnapshot.balancePayable > accountSnapshot.settlementThreshold
     // Are not required to settle so return
-    if (!settle || !accountSnapshot.settleTo) return
+    if (!settle && typeof accountSnapshot.settleTo !== 'undefined') return
 
     // TODO this needs an optimization if you are settling often (ie every packet)
     // Get account and check using current values! as the snapshot may be out of date
     const account = await this.getAccountOrThrow(accountSnapshot.id)
-    const shouldSettle = account.settlementThreshold && account.settlementThreshold > account.balancePayable
+    const shouldSettle = account.settlementThreshold && account.balancePayable > account.settlementThreshold
 
     // Check using latest data
-    if (!shouldSettle || !account.settleTo) return
+    if (!shouldSettle && typeof account.settleTo !== 'undefined') return
 
-    const settleAmount = account.settleTo - account.balancePayable
+    const settleAmount = account.balancePayable - account.settleTo!
 
     try {
       await this.sendSettlement(account, settleAmount, account.assetScale)
@@ -129,12 +133,16 @@ export class AccountingSystem {
   }
 
   public listen () {
-    this._server = this._app.listen()
+    if (!this._server) {
+      this._server = this._app.listen()
+    }
     this._accountsService.updated.subscribe(this.maybeSettle)
   }
 
   public shutdown () {
-    this._server.close()
+    if (this._server) {
+      this._server.close()
+    }
   }
 
 }

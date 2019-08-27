@@ -1,4 +1,4 @@
-import {RemoteSettlementEngine, SettlementEngine, SettlementEngineService} from '.'
+import { RemoteSettlementEngine, SettlementEngine, SettlementEngineService } from '.'
 
 export class InMemorySettlementEngineService implements SettlementEngineService {
 
@@ -14,9 +14,8 @@ export class InMemorySettlementEngineService implements SettlementEngineService 
     return settlementEngine
   }
 
-  public async add (id: string, url: string) {
+  public async add (id: string, settlementEngine: SettlementEngine) {
     if (this._settlementEngines.get(id)) throw new Error('Settlement Engine already exists')
-    const settlementEngine = new RemoteSettlementEngine(url)
     this._settlementEngines.set(id, settlementEngine)
   }
 

@@ -24,6 +24,7 @@
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
     "build": "tsc -p src/tsconfig.build.json",
     "lint": "tslint --project .",
+    "test": "jest --bail --runInBand",
     "lintFix": "tslint --project . --fix",
     "doc": "typedoc --options typedoc.js src",
     "codecov": "codecov",
