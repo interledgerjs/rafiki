@@ -1,4 +1,6 @@
 import { IlpPrepare, IlpReply } from 'ilp-packet'
+import {Observable} from 'rxjs'
+import {AccountSnapshot, Transaction} from '@interledger/rafiki-core/src'
 
 export interface SettlementEngine {
   addAccount: (accountId: string) => Promise<void>
@@ -12,4 +14,13 @@ export interface SettlementResponse {
   scale: number
 }
 
+export interface SettlementEngineService {
+
+  /**
+   * Get an interface to speak to a settlement engine, throw if can't be found
+   */
+  get: (name: string) => Promise<SettlementEngine>
+}
+
 export * from './remote-se'
+export * from './in-memory'

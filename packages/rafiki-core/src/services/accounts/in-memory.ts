@@ -1,9 +1,10 @@
 import { AccountInfo } from '../../types'
-import { Subject } from 'rxjs'
+import {Observable, Subject} from 'rxjs'
 import { AccountNotFoundError } from '../../errors'
 import { Errors } from 'ilp-packet'
 import { AccountsService, AccountSnapshot, Transaction } from '.'
 import debug from 'debug'
+import { map } from 'rxjs/operators'
 const { InsufficientLiquidityError } = Errors
 
 // Implementations SHOULD use a better logger than debug for production services
@@ -28,8 +29,10 @@ export class InMemoryAccountsService implements AccountsService {
     this._updatedAccounts = new Subject<AccountSnapshot>()
   }
 
-  get updated () {
-    return this._updatedAccounts.asObservable()
+  get updated (): Observable<AccountSnapshot> {
+    return this._updatedAccounts.asObservable().pipe(
+      map(value => Object.assign({}, value))
+    )
   }
 
   async get (id: string): Promise<InMemoryAccount> {
@@ -86,7 +89,10 @@ export class InMemoryAccountsService implements AccountsService {
       }
 
       await callback(transaction)
-      // TODO Need to check if commit/rollback was called else throw
+
+      // TODO look at netting
+
+      this._updatedAccounts.next(account)
 
       return {
         balanceReceivable: account.balanceReceivable,
@@ -136,10 +142,6 @@ export class InMemoryAccountsService implements AccountsService {
     }
   }
 
-  public sendSettlement (amount: BigInt, account: InMemoryAccount) {
-
-  }
-
   // Can take money from payable and transfer to receivables
   public async maybeSettle (account: InMemoryAccount) {
 
@@ -156,21 +158,5 @@ export class InMemoryAccountsService implements AccountsService {
     // //   return
     // // }
     //
-    // const settleTo = account.settleTo
-    // const settleThreshold = account.settlementThreshold
-    // // logger.debug('deciding whether to settle for accountId=' + peer.id, { balance: balance.getValue().toString(), bnSettleThreshold: settleThreshold ? settleThreshold.toString() : 'undefined' })
-    // const settle = settleThreshold && settleThreshold > account.balancePayable
-    // if (!settle || !settleTo) return
-    //
-    // const settleAmount = settleTo - account.balancePayable
-    // logger.debug('settlement triggered for accountId=' + peer.id, { balance: balance.getValue().toString(), settleAmount: settleAmount.toString() })
-    //
-    // try {
-    //   const settlement = await settlementEngine.sendSettlement(peer.id, settleAmount, peer.assetScale)
-    //   balance.adjust(settleAmount)
-    //   logger.debug('balance for accountId=' + peer.id + ' increased due to outgoing settlement', { settleAmount: settleAmount.toString(), newBalance: balance.getValue().toString() })
-    // } catch (error) {
-    //   logger.error('Could not complete settlement for accountId=' + peer.id, { scale: peer.assetScale, balance: balance.getValue().toString(), settleAmount: settleAmount.toString(), error: error.message })
-    // }
   }
 }

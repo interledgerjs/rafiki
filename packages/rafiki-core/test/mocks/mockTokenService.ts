@@ -36,7 +36,7 @@ export class MockTokenService implements TokenService {
   }
   public async create (tokenInfo: TokenInfo) {
     const token = tokenInfo.jti || uuid()
-    this._tokens.set(token, tokenInfo)    
+    this._tokens.set(token, tokenInfo)
     return token
   }
 }

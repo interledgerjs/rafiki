@@ -92,6 +92,7 @@ export class AdminApi {
       handler: async (ctx: Context) => {
         const peerInfo = ctx.request.body
         const peer = await peers.add(peerInfo)
+        // const account = await accounts.set()
         // TODO: Do we create the token automatically
         // await tokenService.create({ sub: peerInfo.id, active: true })
         ctx.response.body = peer
