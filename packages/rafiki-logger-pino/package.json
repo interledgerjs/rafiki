@@ -26,9 +26,7 @@
     "lint": "tslint --project .",
     "lintFix": "tslint --project . --fix",
     "doc": "typedoc --options typedoc.js src",
-    "codecov": "codecov",
-    "preversion": "npm run lint && npm test",
-    "prepublishOnly": "npm run lint && npm test && npm run doc"
+    "codecov": "codecov"
   },
   "author": "Interledger Team <info@interledger.org>",
   "publishConfig": {
