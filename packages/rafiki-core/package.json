@@ -1,21 +1,14 @@
 {
   "name": "@interledger/rafiki-core",
   "version": "0.2.0",
-  "description": "A modular ILP connector with stand-alone settlement engine and router",
+  "description": "Core modules needed to construct a connector.",
   "engines": {
     "node": ">=10.13"
   },
   "main": "build/index.js",
   "types": "build/index.d.ts",
-  "bin": {
-    "rafiki": "build/start.js"
-  },
   "files": [
-    "build/**/*.json",
-    "build/**/*.js",
-    "build/**/*.js.map",
-    "build/**/*.d.ts",
-    "build/doc"
+    "build/"
   ],
   "scripts": {
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
@@ -27,6 +20,9 @@
     "test:list": "jest --listTests",
     "doc": "typedoc --options typedoc.js src",
     "codecov": "codecov"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "repository": {
     "type": "git",
