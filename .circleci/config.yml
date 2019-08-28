@@ -11,7 +11,7 @@ defaults: &defaults
     - image: circleci/node:10.13
 
 jobs:
-  test:
+  test-deploy:
     <<: *defaults  
     steps:
 
@@ -49,34 +49,16 @@ jobs:
             - node_modules
           key: node-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
 
-      - persist_to_workspace:
-          root: ~/repo
-          paths: .
-  deploy:
-    <<: *defaults
-    steps:
-      - attach_workspace:
-          at: ~/repo
       - run:
           name: Authenticate with registry
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/repo/.npmrc
+
       - run:
           name: Publish package
-          command: yarn publish
+          command: lerna publish from-git
             
 workflows:
   version: 2
   test-deploy:
     jobs:
-      - test:
-          filters:
-            tags:
-              only: /[^@]+@[0-9]+(\.[0-9]+)*/
-      - deploy:
-          requires:
-            - test
-          filters:
-            tags:
-              only: /[^@]+@[0-9]+(\.[0-9]+)*/
-            branches:
-              ignore: /.*/
+      - test-deploy
