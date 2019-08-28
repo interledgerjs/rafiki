@@ -1,18 +1,14 @@
 {
   "name": "@interledger/rafiki-middleware",
   "version": "0.2.0",
-  "description": "> TODO: description",
+  "description": "Collection of common ilp middleware.",
   "author": "Interledger Team <info@interledger.org>",
   "homepage": "https://github.com/interledgerjs/rafiki#readme",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "main": "build/index.js",
   "types": "build/index.d.ts",
-  "directories": {
-    "lib": "src",
-    "test": "__tests__"
-  },
   "files": [
-    "src"
+    "build/"
   ],
   "repository": {
     "type": "git",
