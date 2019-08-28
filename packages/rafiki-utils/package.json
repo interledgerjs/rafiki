@@ -4,14 +4,11 @@
   "description": "Utils used by Rafiki",
   "author": "Matt de Haast <matt.dehaast@coil.com>",
   "homepage": "https://github.com/interledgerjs/rafiki#readme",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "main": "build/index.js",
-  "directories": {
-    "lib": "src",
-    "test": "__tests__"
-  },
+  "types": "build/index.d.ts",
   "files": [
-    "src"
+    "build/"
   ],
   "repository": {
     "type": "git",
