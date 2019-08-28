@@ -10,7 +10,6 @@
     "clean": "yarn clean:artifacts && yarn clean:packages",
     "clean:artifacts": "lerna run clean --parallel",
     "clean:packages": "lerna clean --yes",
-    "publish": "lerna publish from-git",
     "test": "lerna run test --stream"
   },
   "devDependencies": {

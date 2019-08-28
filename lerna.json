@@ -1,5 +1,5 @@
 {
-  "commands": {
+  "command": {
     "publish": {
       "message": "chore: release"
     }
