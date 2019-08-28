@@ -13,11 +13,7 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "files": [
-    "build/**/*.json",
-    "build/**/*.js",
-    "build/**/*.js.map",
-    "build/**/*.d.ts",
-    "build/doc"
+    "build/"
   ],
   "scripts": {
     "start": "npm run build && node ./build/start.js",
@@ -28,6 +24,9 @@
     "lintFix": "tslint --project . --fix",
     "doc": "typedoc --options typedoc.js src",
     "codecov": "codecov"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "repository": {
     "type": "git",
