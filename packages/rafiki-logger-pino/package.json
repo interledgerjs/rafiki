@@ -1,7 +1,7 @@
 {
   "name": "@interledger/rafiki-logger-pino",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "pino logging rafiki middleware",
   "keywords": [
     "interledger",
@@ -40,7 +40,7 @@
     "url": "https://github.com/interledgerjs/rafiki/issues"
   },
   "dependencies": {
-    "@interledger/rafiki-core": "^0.2.0",
+    "@interledger/rafiki-core": "^0.2.1",
     "@types/pino": "^5.8.9",
     "@types/pino-std-serializers": "^2.4.0",
     "pino-std-serializers": "^2.4.2"
