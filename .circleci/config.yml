@@ -55,7 +55,7 @@ jobs:
 
       - run:
           name: Publish package
-          command: lerna publish from-git
+          command: lerna publish from-git --yes
             
 workflows:
   version: 2

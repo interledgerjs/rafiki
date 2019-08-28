@@ -1,6 +1,6 @@
 {
   "name": "@interledger/rafiki-middleware",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Collection of common ilp middleware.",
   "author": "Interledger Team <info@interledger.org>",
   "homepage": "https://github.com/interledgerjs/rafiki#readme",
@@ -25,8 +25,8 @@
     "url": "https://github.com/interledgerjs/rafiki/issues"
   },
   "dependencies": {
-    "@interledger/rafiki-core": "^0.2.0",
-    "@interledger/rafiki-utils": "^0.1.0"
+    "@interledger/rafiki-core": "^0.2.1",
+    "@interledger/rafiki-utils": "^0.1.1"
   },
   "jest": {
     "preset": "ts-jest",

@@ -1,6 +1,6 @@
 {
   "name": "@interledger/rafiki-core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Core modules needed to construct a connector.",
   "engines": {
     "node": ">=10.13"
@@ -31,7 +31,7 @@
   "author": "Interledger Team <info@interledger.org>",
   "license": "Apache-2.0",
   "dependencies": {
-    "@interledger/rafiki-utils": "^0.1.0",
+    "@interledger/rafiki-utils": "^0.1.1",
     "@types/debug": "^4.1.5",
     "@types/faker": "^4.1.5",
     "@types/jsonwebtoken": "^8.3.3",
