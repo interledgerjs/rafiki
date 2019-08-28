@@ -21,12 +21,10 @@
     "build/doc"
   ],
   "scripts": {
-    "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
     "build": "tsc -p src/tsconfig.build.json",
-    "lint": "tslint --project .",
-    "lintFix": "tslint --project . --fix",
-    "doc": "typedoc --options typedoc.js src",
-    "codecov": "codecov"
+    "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
+    "codecov": "codecov",
+    "doc": "typedoc --options typedoc.js src"
   },
   "author": "Interledger Team <info@interledger.org>",
   "publishConfig": {

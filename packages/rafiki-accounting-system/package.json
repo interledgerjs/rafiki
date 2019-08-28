@@ -16,14 +16,11 @@
     "build/"
   ],
   "scripts": {
-    "start": "npm run build && node ./build/start.js",
+    "build": "tsc -p src/tsconfig.build.json",    
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "build": "tsc -p src/tsconfig.build.json",
-    "lint": "tslint --project .",
-    "test": "jest --bail --runInBand",
-    "lintFix": "tslint --project . --fix",
+    "codecov": "codecov",
     "doc": "typedoc --options typedoc.js src",
-    "codecov": "codecov"
+    "test": "jest --bail --runInBand"
   },
   "publishConfig": {
     "access": "public"
