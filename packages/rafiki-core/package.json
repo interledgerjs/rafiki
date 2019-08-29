@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "codecov": "codecov --root=../../ -F rafiki-core",
+    "codecov": "codecov --root=../../ -F core",
     "doc": "typedoc --options typedoc.js src",
     "test": "jest --bail --runInBand",
     "test:ci": "jest --bail --runInBand --coverage"
