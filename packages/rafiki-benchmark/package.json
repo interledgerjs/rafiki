@@ -13,7 +13,8 @@
     "src"
   ],
   "scripts": {
-    "build": "tsc -p src/tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
     "start": "node build/index.js"
   },
   "dependencies": {
