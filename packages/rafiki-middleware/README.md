@@ -1,11 +1,3 @@
 # `rafiki-middleware`
 
-> TODO: description
-
-## Usage
-
-```
-const rafikiMiddleware = require('rafiki-middleware');
-
-// TODO: DEMONSTRATE API
-```
+> Collection of common middleware needed for assembling an ILP connector.

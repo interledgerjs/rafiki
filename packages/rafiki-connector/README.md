@@ -1,11 +1,3 @@
 # `rafiki-connector`
 
-> TODO: description
-
-## Usage
-
-```
-const index = require('rafiki-connector');
-
-// TODO: DEMONSTRATE API
-```
+> An implementation of an ILP connector built using Rafiki-Core and Rafiki-Middleware packages.

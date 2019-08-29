@@ -1,3 +1,3 @@
 # `@interledger/rafiki-logger-pino`
 
-> TODO: description
+> Middleware that attaches a `pino` based logger to the Rafiki services.

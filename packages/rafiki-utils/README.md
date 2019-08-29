@@ -1,11 +1,3 @@
 # `rafiki-utils`
 
-> TODO: description
-
-## Usage
-
-```
-const index = require('rafiki-utils');
-
-// TODO: DEMONSTRATE API
-```
+> Collection of components and helper functions used across multiple Rafiki packages.
