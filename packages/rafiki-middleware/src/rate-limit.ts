@@ -5,7 +5,7 @@ import { TokenBucket } from '@interledger/rafiki-utils'
 const { RateLimitedError } = Errors
 
 const DEFAULT_REFILL_PERIOD = 60 * 1000 // 1 minute
-const DEFAULT_REFILL_COUNT = 10000n
+const DEFAULT_REFILL_COUNT = BigInt(10000)
 
 export function createRateLimitBucketForPeer (peerInfo: PeerInfo): TokenBucket {
   const { rateLimitRefillPeriod, rateLimitRefillCount, rateLimitCapacity } = peerInfo

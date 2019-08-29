@@ -13,9 +13,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "codecov": "codecov",
+    "codecov": "codecov --root=../../ -F rafiki-core",
     "doc": "typedoc --options typedoc.js src",
-    "test": "jest --bail --runInBand"
+    "test": "jest --bail --runInBand",
+    "test:ci": "jest --bail --runInBand --coverage"
   },
   "publishConfig": {
     "access": "public"
@@ -68,21 +69,5 @@
     "json-schema-to-typescript": "^6.1.1",
     "source-map-support": "^0.5.10",
     "typedoc": "^0.14.2"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    },
-    "coverageReporters": [
-      "json",
-      "lcov"
-    ],
-    "coverageDirectory": "./coverage"
   }
 }

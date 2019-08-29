@@ -20,7 +20,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "test": "jest --bail --runInBand"
+    "codecov": "codecov --root=../../ -F rafiki-middleware",
+    "test": "jest --bail --runInBand",
+    "test:ci": "jest --bail --runInBand --coverage"
   },
   "bugs": {
     "url": "https://github.com/interledgerjs/rafiki/issues"
@@ -28,23 +30,5 @@
   "dependencies": {
     "@interledger/rafiki-core": "^0.2.3",
     "@interledger/rafiki-utils": "^0.1.3"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    },
-    "coverageReporters": [
-      "json",
-      "lcov"
-    ],
-    "coverageDirectory": "./coverage",
-    "setupFiles": [],
-    "clearMocks": true
   }
 }

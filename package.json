@@ -10,9 +10,11 @@
     "clean": "yarn clean:artifacts && yarn clean:packages",
     "clean:artifacts": "lerna run clean --parallel",
     "clean:packages": "lerna clean --yes",
+    "codecov": "lerna run codecov",
     "lint": "standardx \"./packages/**/*.ts\"",
     "lint:fix": "standardx --fix \"./packages/**/*.ts\"",
-    "test": "lerna run test --stream"
+    "test": "lerna run test --stream",
+    "test:ci": "lerna run test:ci --stream"
   },
   "devDependencies": {
     "@types/jest": "^24.0.17",

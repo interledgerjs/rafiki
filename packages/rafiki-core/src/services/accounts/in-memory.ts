@@ -46,10 +46,10 @@ export class InMemoryAccountsService implements AccountsService {
   add (accountInfo: AccountInfo): void {
     const account: InMemoryAccount = {
       ...accountInfo,
-      balancePayableInflight: 0n,
-      balancePayable: 0n,
-      balanceReceivable: 0n,
-      balanceReceivableInflight: 0n
+      balancePayableInflight: BigInt(0),
+      balancePayable: BigInt(0),
+      balanceReceivable: BigInt(0),
+      balanceReceivableInflight: BigInt(0)
     }
     this._accounts.set(account.id, account)
   }
@@ -68,7 +68,7 @@ export class InMemoryAccountsService implements AccountsService {
   public async adjustBalancePayable (amount: bigint, accountId: string, callback: (trx: Transaction) => Promise<any>): Promise<AccountSnapshot> {
     const account = await this.get(accountId)
 
-    if (amount > 0n) {
+    if (amount > BigInt(0)) {
       // Need to ensure these are actually called
       const transaction: Transaction = {
         commit: async () => {
