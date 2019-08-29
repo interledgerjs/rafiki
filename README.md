@@ -12,42 +12,42 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
 
 **This is a BETA. There are still TODO's:**
 
- - [ ] Thorough code review 😬
- - [ ] Documentation
- - [ ] CI/CD and some automation around commit checks
- - [ ] Get/set own address when child
- - [ ] Update config schemas and/or support old schemas
- - [ ] HTTP/2 endpoint reconnect logic
- - [ ] Support unsolicited peer connections
- - [ ] Pluggable settlement and/or alternative settlement engines
+*Dev* :
+ - [ ] Check how connector reacts if child and gets own address.
+ - [ ] Config for rafiki-connector
+ - [ ] Exchange rate middleware
  - [ ] Synchronous/atomic settlement model (alternative balance rule and settlement engine)
- - [ ] Exchange rate rules
- - [ ] Connector control-plane service
- - [ ] Consider creating mono-repo including endpoints and router
+ - [ ] Pluggable settlement and/or alternative settlement engines
+ - [ ] Support unsolicited peer connections
+ - [ ] Add TESTS
+ - [ ] Admin API cleanup and being semantically correct 
+ - [ ] Fix path matching for letting connector listen on non standard ilp path
+ - [ ] Change account service to use two balances
+ - [ ] Move expiry logic and validate fulfillment into the outgoing client logic
  
- Dependencies:
+*Cleanup*:
+ - [ ] Thorough code review 😬
+ - [ ] CI/CD: decide on publishing policy. e.g. Publish only if branch is master and there are tags? Run pipelines for every commit?
+ - [ ] Setup code coverage
+ - [ ] Move jest config out of package.json for packages
  
-> Changes required in other projects that we've worked around for now.
+*Documentation*:
+ - [ ] Update README files to include more detailed descriptions and usage examples
+ - [ ] Update architecture diagram
  
- - [ ] https://github.com/winstonjs/logform/pull/84
- - [ ] https://github.com/interledgerjs/ilp-protocol-ccp/pull/3
- - [ ] https://github.com/winstonjs/winston/pull/1603
-
 ## About
 
 > More details coming soon, some major differences from `ilp-connector` below:
 
-![architecture](./media/architecture.png)
-
  - Stand-alone routing table and route manager
  - Stand-alone settlement engine
- - [Endpoints](./endpoints.md) replace plugins and are built in for major transports
- - Rules and protocols replace middleware and controllers and are instantiated per peer
-
+ - ~~Rules and protocols replace middleware and controllers and are instantiated per peer~~
+ - Middleware and controllers now replace rules and protocols (Humble 🥧 🤣)
+ 
 
 ## Project
 
-We designed Rafiki to be modular and therefor easy for work to be done on individual components in isolation. We encourage contributions especially in the form of new rules, protocols or settlement engines.
+We designed Rafiki to be modular and therefore easy for work to be done on individual components in isolation. We encourage contributions especially in the form of new middleware or settlement engines.
 
 If you are keen to contribute please look at the issues, especially those labelled 'Good First Issue'.
 
@@ -56,11 +56,3 @@ If you are keen to contribute please look at the issues, especially those labell
 All source code is expected to be TypeScript and is placed in the `src` folder. Tests are put in the `test` folder.
 
 The NPM package will not contain any TypeScript files (`*.ts`) but will have typings and source maps.
-
-### Scripts
-
-  - `clean` : Cleans the build folder and test output
-  - `build` : Build the project
-  - `lint`  : Run the linter over the project
-  - `test`  : Run the unit tests and produce a code coverage report
-  - `doc`   : Build the docs
