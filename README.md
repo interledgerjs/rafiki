@@ -27,19 +27,17 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
  
 *Cleanup*:
  - [ ] Thorough code review 😬
- - [ ] CI/CD and some automation around commit checks
- - [ ] Check each package dependency and remove unnecessary ones
- - [ ] Check package.json files and update
+ - [ ] CI/CD: decide on publishing policy. e.g. Publish only if branch is master and there are tags? Run pipelines for every commit?
+ - [ ] Setup code coverage
+ - [ ] Move jest config out of package.json for packages
  
 *Documentation*:
- - [ ] Documentation
- - [ ] Updated architecture diagram
+ - [ ] Update README files to include more detailed descriptions and usage examples
+ - [ ] Update architecture diagram
  
 ## About
 
 > More details coming soon, some major differences from `ilp-connector` below:
-
-![architecture](./media/architecture.png)
 
  - Stand-alone routing table and route manager
  - Stand-alone settlement engine
@@ -49,7 +47,7 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
 
 ## Project
 
-We designed Rafiki to be modular and therefor easy for work to be done on individual components in isolation. We encourage contributions especially in the form of new rules, protocols or settlement engines.
+We designed Rafiki to be modular and therefore easy for work to be done on individual components in isolation. We encourage contributions especially in the form of new middleware or settlement engines.
 
 If you are keen to contribute please look at the issues, especially those labelled 'Good First Issue'.
 
@@ -58,11 +56,3 @@ If you are keen to contribute please look at the issues, especially those labell
 All source code is expected to be TypeScript and is placed in the `src` folder. Tests are put in the `test` folder.
 
 The NPM package will not contain any TypeScript files (`*.ts`) but will have typings and source maps.
-
-### Scripts
-
-  - `clean` : Cleans the build folder and test output
-  - `build` : Build the project
-  - `lint`  : Run the linter over the project
-  - `test`  : Run the unit tests and produce a code coverage report
-  - `doc`   : Build the docs
