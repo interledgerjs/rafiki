@@ -11,16 +11,20 @@ export class RemoteTokenService implements TokenService {
     const { data } = await axios.post<TokenInfo>(this._url, { token })
     return data
   }
-  public async lookup (tokenInfo: TokenInfo): Promise<string | undefined> {
+
+  public async lookup (tokenInfo: TokenInfo): Promise<string | undefined> { // eslint-disable-line @typescript-eslint/no-unused-vars
     throw new Error('not implemented')
   }
-  public async store (token: string, tokenInfo: TokenInfo): Promise<void> {
+
+  public async store (token: string, tokenInfo: TokenInfo): Promise<void> { // eslint-disable-line @typescript-eslint/no-unused-vars
     throw new Error('not implemented')
   }
-  public async delete (tokenOrtokenInfo: string | TokenInfo): Promise<void> {
+
+  public async delete (tokenOrtokenInfo: string | TokenInfo): Promise<void> { // eslint-disable-line @typescript-eslint/no-unused-vars
     throw new Error('not implemented')
   }
-  public async create (tokenInfo: TokenInfo): Promise<string> {
+
+  public async create (tokenInfo: TokenInfo): Promise<string> { // eslint-disable-line @typescript-eslint/no-unused-vars
     throw new Error('not implemented')
   }
 }

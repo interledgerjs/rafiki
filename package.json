@@ -11,6 +11,7 @@
     "clean:artifacts": "lerna run clean --parallel",
     "clean:packages": "lerna clean --yes",
     "lint": "standardx \"./packages/**/*.ts\"",
+    "lint:fix": "standardx --fix \"./packages/**/*.ts\"",
     "test": "lerna run test --stream"
   },
   "devDependencies": {

@@ -6,7 +6,7 @@ const { AmountTooLargeError } = Errors
  * @throws {AmountTooLargeError} Throws if the request amount is greater than the prescribed max packet amount.
  */
 export function createIncomingMaxPacketAmountMiddleware (): RafikiMiddleware {
-  return async ({ services: { logger }, request, peers }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ services: { logger }, request, peers }: RafikiContext, next: () => Promise<any>): Promise<void> => {
     const { maxPacketAmount } = await peers.incoming
     if (maxPacketAmount) {
       const amount = request.prepare.intAmount

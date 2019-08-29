@@ -20,21 +20,25 @@ import getRawBody from 'raw-body'
 
 const CONTENT_TYPE = 'application/octet-stream'
 
+export function ilpAddressToPath (ilpAddress: string, prefix?: string): string {
+  return (prefix || '') + ilpAddress.replace(/\./g, '/')
+}
+
 export interface IlpPacketMiddlewareOptions {
-  getRawBody?: (req: Readable) => Promise<Buffer>
+  getRawBody?: (req: Readable) => Promise<Buffer>;
 }
 
 interface RawPacket {
-  readonly raw: Buffer
+  readonly raw: Buffer;
 }
 
 export interface RafikiPrepare extends IlpPrepare {
-  intAmount: bigint
-  readonly originalAmount: bigint
-  readonly originalExpiresAt: Date
+  intAmount: bigint;
+  readonly originalAmount: bigint;
+  readonly originalExpiresAt: Date;
 
-  readonly amountChanged: boolean
-  readonly expiresAtChanged: boolean
+  readonly amountChanged: boolean;
+  readonly expiresAtChanged: boolean;
 }
 
 export class ZeroCopyIlpPrepare implements RafikiPrepare {
@@ -66,21 +70,13 @@ export class ZeroCopyIlpPrepare implements RafikiPrepare {
     return this._prepare.data
   }
 
-  get expiresAt (): Date {
-    return this._prepare.expiresAt
-  }
-
-  get amount (): string {
-    return this._prepare.amount
-  }
-
-  get intAmount (): bigint {
-    return this._amount
-  }
-
   set expiresAt (val: Date) {
     this._expiresAtChanged = true
     this._prepare.expiresAt = val
+  }
+
+  get expiresAt (): Date {
+    return this._prepare.expiresAt
   }
 
   set amount (val: string) {
@@ -89,36 +85,41 @@ export class ZeroCopyIlpPrepare implements RafikiPrepare {
     this._amount = BigInt(val)
   }
 
+  get amount (): string {
+    return this._prepare.amount
+  }
+
   set intAmount (val: bigint) {
     this._amountChanged = true
     this._prepare.amount = val.toString()
     this._amount = val
   }
 
-  get amountChanged () {
+  get intAmount (): bigint {
+    return this._amount
+  }
+
+  get amountChanged (): boolean {
     return this._amountChanged
   }
 
-  get expiresAtChanged () {
+  get expiresAtChanged (): boolean {
     return this._expiresAtChanged
   }
 
-  get originalAmount () {
+  get originalAmount (): bigint {
     return this._originalAmount
   }
 
-  get originalExpiresAt () {
+  get originalExpiresAt (): Date {
     return this._originalExpiresAt
   }
-
 }
 
 export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions): RafikiMiddleware {
-
   const _getRawBody = (config && config.getRawBody) ? config.getRawBody : getRawBody
 
-  return async function ilpPacket (ctx: RafikiContext, next: () => Promise<any>) {
-
+  return async function ilpPacket (ctx: RafikiContext, next: () => Promise<any>): Promise<void> {
     ctx.assert(ctx.request.type === CONTENT_TYPE, 400, 'Expected Content-Type of ' + CONTENT_TYPE)
     const buffer = await _getRawBody(ctx.req)
     const prepare = new ZeroCopyIlpPrepare(buffer)
@@ -128,16 +129,16 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions):
     ctx.request.rawPrepare = buffer
     ctx.path = ilpAddressToPath(prepare.destination, ctx.path)
 
-    let reject: IlpReject | undefined = undefined
-    let fulfill: IlpFulfill | undefined = undefined
-    let rawReject: Buffer | undefined = undefined
-    let rawFulfill: Buffer | undefined = undefined
+    let reject: IlpReject | undefined
+    let fulfill: IlpFulfill | undefined
+    let rawReject: Buffer | undefined
+    let rawFulfill: Buffer | undefined
 
     const properties: PropertyDescriptorMap = {
-      fulfill : {
+      fulfill: {
         enumerable: true,
-        get: () => fulfill,
-        set: (val: IlpFulfill | undefined) => {
+        get: (): IlpFulfill | undefined => fulfill,
+        set: (val: IlpFulfill | undefined): void => {
           fulfill = val
           if (val) {
             reject = rawReject = undefined
@@ -147,10 +148,10 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions):
           }
         }
       },
-      rawFulfill : {
+      rawFulfill: {
         enumerable: true,
-        get: () => rawFulfill,
-        set: (val: Buffer | undefined) => {
+        get: (): Buffer | undefined => rawFulfill,
+        set: (val: Buffer | undefined): void => {
           rawFulfill = val
           if (val) {
             reject = rawReject = undefined
@@ -160,10 +161,10 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions):
           }
         }
       },
-      reject : {
+      reject: {
         enumerable: true,
-        get: () => reject,
-        set: (val: IlpReject | undefined) => {
+        get: (): IlpReject | undefined => reject,
+        set: (val: IlpReject | undefined): void => {
           reject = val
           if (val) {
             fulfill = rawFulfill = undefined
@@ -173,10 +174,10 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions):
           }
         }
       },
-      rawReject : {
+      rawReject: {
         enumerable: true,
-        get: () => rawReject,
-        set: (val: Buffer | undefined) => {
+        get: (): Buffer | undefined => rawReject,
+        set: (val: Buffer | undefined): void => {
           rawReject = val
           if (val) {
             fulfill = rawFulfill = undefined
@@ -186,10 +187,10 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions):
           }
         }
       },
-      reply : {
+      reply: {
         enumerable: true,
-        get: () => (fulfill || reject),
-        set: (val: IlpReply | undefined) => {
+        get: (): IlpFulfill | IlpReject | undefined => (fulfill || reject),
+        set: (val: IlpReply | undefined): void => {
           if (val) {
             if (isFulfill(val)) {
               fulfill = val
@@ -206,10 +207,10 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions):
           }
         }
       },
-      rawReply : {
+      rawReply: {
         enumerable: true,
-        get: () => (rawFulfill || rawReject),
-        set: (val: Buffer | undefined) => {
+        get: (): Buffer | undefined => (rawFulfill || rawReject),
+        set: (val: Buffer | undefined): void => {
           if (val) {
             const packet = deserializeIlpReply(val)
             if (isFulfill(packet)) {
@@ -237,9 +238,4 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions):
     ctx.assert(ctx.response.rawReply, 500, 'ilp reply not set')
     ctx.body = ctx.response.rawReply
   }
-
-}
-
-export function ilpAddressToPath (ilpAddress: string, prefix?: string) {
-  return (prefix ? prefix : '') + ilpAddress.replace(/\./g, '/')
 }

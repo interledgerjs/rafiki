@@ -9,7 +9,7 @@ export function createSettlementApiRoutes (): Router {
   router.route({
     method: 'get',
     path: '/health',
-    handler: (ctx: RafikiContext) => ctx.body = 'Hello World!'
+    handler: (ctx: RafikiContext) => { ctx.body = 'Hello World!' }
   })
 
   router.route({

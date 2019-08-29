@@ -1,9 +1,9 @@
-import Koa, { Middleware } from 'koa'
+import Koa from 'koa'
 import { MockIncomingMessageOptions, MockIncomingMessage, MockServerResponse } from '.'
 
 export type Options<StateT, CustomT> = {
-  app?: Koa<StateT, CustomT>
-  req?: MockIncomingMessageOptions
+  app?: Koa<StateT, CustomT>;
+  req?: MockIncomingMessageOptions;
   res?: () => void;
   state?: StateT;
   [name: string]: any;

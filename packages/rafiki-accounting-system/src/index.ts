@@ -1,33 +1,33 @@
 import bodyParser from 'koa-bodyparser'
-import { Rafiki, PeersService, AccountsService, AccountSnapshot } from '@interledger/rafiki-core'
+import { PeersService, AccountsService, AccountSnapshot } from '@interledger/rafiki-core'
 import { normalizeAsset } from '@interledger/rafiki-utils'
 import { createSettlementApiRoutes } from './routes'
-import getRawBody = require('raw-body')
 import Koa, { Context } from 'koa'
 import { Server } from 'http'
 import { IlpPrepare, IlpReply } from 'ilp-packet'
 import {
   SettlementEngineService,
-  SettlementResponse
+  SettlementResponse,
+  SettlementEngine
 } from './services/settlement-engine'
+import getRawBody = require('raw-body')
 
 export interface AccountingSystemConfig {
-  peers: PeersService
-  accounts: AccountsService,
-  settlementEngines: SettlementEngineService,
-  host?: string,
-  port?: number
+  peers: PeersService;
+  accounts: AccountsService;
+  settlementEngines: SettlementEngineService;
+  host?: string;
+  port?: number;
 }
 
 export interface AccountingSystemContext extends Context {
   services: {
-    peers: PeersService,
-    accounts: AccountsService
-  }
+    peers: PeersService;
+    accounts: AccountsService;
+  };
 }
 
 export class AccountingSystem {
-
   private _peersService: PeersService
   private _accountsService: AccountsService
   private _app: Koa
@@ -51,13 +51,13 @@ export class AccountingSystem {
     this._app.use(createSettlementApiRoutes().middleware())
   }
 
-  private async getAccountOrThrow (accountId: string) {
+  private async getAccountOrThrow (accountId: string): Promise<AccountSnapshot> {
     const account = await this._accountsService.get(accountId)
     if (!account) throw new Error('Account not found')
     return account
   }
 
-  private async getAccountSettlementEngineOrThrow (account: AccountSnapshot) {
+  private async getAccountSettlementEngineOrThrow (account: AccountSnapshot): Promise<SettlementEngine> {
     if (!account.settlementEngine) throw new Error('No settlement Engine defined for account')
     const settlementEngine = await this._settlementEngineService.get(account.settlementEngine)
     if (!settlementEngine) throw new Error('Settlement Engine not found')
@@ -75,7 +75,6 @@ export class AccountingSystem {
 
     // TODO this may need to go to retry queue
     await engine.addAccount(account.id)
-    return
   }
 
   async removeAccount (accountId: string): Promise<void> {
@@ -83,7 +82,6 @@ export class AccountingSystem {
     const engine = await this.getAccountSettlementEngineOrThrow(account)
 
     await engine.removeAccount(account.id)
-    return
   }
 
   async receiveRequest (accountId: string, packet: IlpPrepare): Promise<IlpReply> {
@@ -109,7 +107,7 @@ export class AccountingSystem {
     })
   }
 
-  async maybeSettle (accountSnapshot: AccountSnapshot) {
+  async maybeSettle (accountSnapshot: AccountSnapshot): Promise<void> {
     // Quick check if must settle based on the snapshot data
     const settle = accountSnapshot.settlementThreshold && accountSnapshot.balancePayable > accountSnapshot.settlementThreshold
     // Are not required to settle so return
@@ -132,17 +130,16 @@ export class AccountingSystem {
     }
   }
 
-  public listen () {
+  public listen (): void {
     if (!this._server) {
       this._server = this._app.listen()
     }
     this._accountsService.updated.subscribe(this.maybeSettle)
   }
 
-  public shutdown () {
+  public shutdown (): void {
     if (this._server) {
       this._server.close()
     }
   }
-
 }

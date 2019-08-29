@@ -9,7 +9,7 @@ export class RemoteSettlementEngine implements SettlementEngine {
     this._log = log || new DebugLogger('InMemoryRouter')
   }
 
-  async addAccount (accountId: string) {
+  async addAccount (accountId: string): Promise<void> {
     this._log.info('Creating account on settlement engine for peer=' + accountId + ' endpoint:' + `${this._url}/accounts`)
     await axios.post(`${this._url}/accounts`, { accountId })
       .then(response => {
@@ -22,7 +22,7 @@ export class RemoteSettlementEngine implements SettlementEngine {
       })
   }
 
-  async removeAccount (accountId: string) {
+  async removeAccount (accountId: string): Promise<void> {
     this._log.info('Removing account on settlement engine', { accountId })
     await axios.delete(`${this._url}/accounts/${accountId}`).catch(error => {
       console.log('failed to delete account' + accountId, 'url', `${this._url}/accounts/${accountId}`, 'error', error)
@@ -37,7 +37,7 @@ export class RemoteSettlementEngine implements SettlementEngine {
     try {
       const response = await axios.post(`${this._url}/accounts/${accountId}/messages`, bufferMessage, { headers: { 'content-type': 'application/octet-stream' }, responseType: 'arraybuffer' })
       const ilpFulfill: IlpFulfill = {
-        data: response.data || Buffer.from('') ,
+        data: response.data || Buffer.from(''),
         fulfillment: STATIC_FULFILLMENT
       }
       return ilpFulfill

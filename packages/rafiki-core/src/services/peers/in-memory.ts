@@ -1,7 +1,7 @@
 import { Peer, PeersService } from '.'
 import { PeerInfo, PeerRelation } from '../../types'
 import { AxiosClient } from '../client/axios'
-import { Subject } from 'rxjs'
+import { Subject, Observable } from 'rxjs'
 import { PeerNotFoundError } from '../../errors'
 import debug from 'debug'
 import { AxiosRequestConfig } from 'axios'
@@ -29,20 +29,18 @@ class InMemoryPeer implements Peer {
 
     if (this.url) {
       const axiosConfig: AxiosRequestConfig = { responseType: 'arraybuffer', headers: {} }
-      if (this.authToken) axiosConfig.headers = { 'Authorization': `Bearer ${this.authToken}` }
+      if (this.authToken) axiosConfig.headers = { Authorization: `Bearer ${this.authToken}` }
       this.axiosClient = new AxiosClient(this.url, axiosConfig)
     }
   }
 
-  public send (data: Buffer) {
+  public send (data: Buffer): Promise<Buffer> {
     if (!this.axiosClient) throw new Error('No send client configured for peer')
     return this.axiosClient.send(data)
   }
-
 }
 
 export class InMemoryPeers implements PeersService {
-
   private _addedPeers: Subject<Peer>
   private _updatedPeers: Subject<Peer>
   private _removedPeers: Subject<string>
@@ -54,15 +52,15 @@ export class InMemoryPeers implements PeersService {
     this._removedPeers = new Subject<string>()
   }
 
-  get added () {
+  get added (): Observable<Peer> {
     return this._addedPeers.asObservable()
   }
 
-  get updated () {
+  get updated (): Observable<Peer> {
     return this._updatedPeers.asObservable()
   }
 
-  get deleted () {
+  get deleted (): Observable<string> {
     return this._removedPeers.asObservable()
   }
 
@@ -72,7 +70,7 @@ export class InMemoryPeers implements PeersService {
     return peer
   }
 
-  async add (peerInfo: Readonly<PeerInfo>) {
+  async add (peerInfo: Readonly<PeerInfo>): Promise<InMemoryPeer> {
     const peer = new InMemoryPeer(peerInfo)
     this._peers.set(peer.id, peer)
     this._addedPeers.next(peer)
@@ -80,7 +78,7 @@ export class InMemoryPeers implements PeersService {
     return peer
   }
 
-  async update (peerInfo: Readonly<PeerInfo>) {
+  async update (peerInfo: Readonly<PeerInfo>): Promise<InMemoryPeer> {
     let peer = this._peers.get(peerInfo.id)
     if (!peer) {
       throw new PeerNotFoundError(peerInfo.id)
@@ -92,7 +90,7 @@ export class InMemoryPeers implements PeersService {
     return peer
   }
 
-  async remove (peerId: string) {
+  async remove (peerId: string): Promise<void> {
     const oldPeer = this._peers.get(peerId)
     if (!oldPeer) {
       throw new PeerNotFoundError(peerId)
@@ -102,7 +100,7 @@ export class InMemoryPeers implements PeersService {
     log('removed peer', oldPeer)
   }
 
-  async list () {
+  async list (): Promise<Peer[]> {
     return [...this._peers.values()].map(peer => peer.info)
   }
 }

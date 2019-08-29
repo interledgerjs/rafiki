@@ -5,7 +5,7 @@ import { Errors } from 'ilp-packet'
 
 export class InvalidJsonBodyError extends ExtensibleError {
   public ilpErrorCode: string
-  public httpErrorCode: number = 400
+  public httpErrorCode = 400
   protected validationErrors: ErrorObject[]
 
   constructor (message: string, validationErrors: ErrorObject[]) {
@@ -15,10 +15,10 @@ export class InvalidJsonBodyError extends ExtensibleError {
     this.validationErrors = validationErrors
   }
 
-  debugPrint (log: (message: string) => void, validationError?: ErrorObject) {
+  debugPrint (log: (message: string) => void, validationError?: ErrorObject): void {
     if (!validationError) {
       if (this.validationErrors) {
-        for (let ve of this.validationErrors) {
+        for (const ve of this.validationErrors) {
           this.debugPrint(log, ve)
         }
       }

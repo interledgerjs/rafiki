@@ -1,4 +1,17 @@
 import { Reader } from 'oer-utils'
+export function dateToInterledgerTime (date: Date): string {
+  const pad = (n: number): string => (n < 10)
+    ? '0' + n
+    : String(n)
+
+  return date.getUTCFullYear() +
+    pad(date.getUTCMonth() + 1) +
+    pad(date.getUTCDate()) +
+    pad(date.getUTCHours()) +
+    pad(date.getUTCMinutes()) +
+    pad(date.getUTCSeconds()) +
+    (date.getUTCMilliseconds() / 1000).toFixed(3).slice(2, 5)
+}
 export function modifySerializedIlpPrepareAmount (prepare: Buffer, amount: bigint): Buffer {
   const reader = new Reader(prepare)
   reader.skip(1) // skip packet type
@@ -9,7 +22,7 @@ export function modifySerializedIlpPrepareAmount (prepare: Buffer, amount: bigin
 }
 
 export function modifySerializedIlpPrepareExpiry (prepare: Buffer, expiry: Date): Buffer {
-  const EXPIRY_OFFSET = 8  // amount is 64 bit int
+  const EXPIRY_OFFSET = 8 // amount is 64 bit int
   const reader = new Reader(prepare)
   reader.skip(1) // skip packet type
   reader.readLengthPrefix()
@@ -33,18 +46,4 @@ export function modifySerializedIlpPrepare (prepare: Buffer, amount?: bigint, ex
     }
   }
   return prepare
-}
-
-export function dateToInterledgerTime (date: Date): string {
-  const pad = (n: number) => (n < 10)
-      ? '0' + n
-      : String(n)
-
-  return date.getUTCFullYear() +
-    pad(date.getUTCMonth() + 1) +
-    pad(date.getUTCDate()) +
-    pad(date.getUTCHours()) +
-    pad(date.getUTCMinutes()) +
-    pad(date.getUTCSeconds()) +
-    (date.getUTCMilliseconds() / 1000).toFixed(3).slice(2, 5)
 }

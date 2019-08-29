@@ -4,32 +4,10 @@ import { Options } from 'pino-http'
 import { wrapRequestSerializer, wrapResponseSerializer } from 'pino-std-serializers'
 import logger from 'koa-pino-logger'
 import { IncomingMessage, ServerResponse } from 'http'
-import { RafikiRequestMixin, RafikiResponseMixin, RafikiContext } from '@interledger/rafiki-core'
+import { RafikiRequestMixin, RafikiResponseMixin, RafikiContext, RafikiMiddleware } from '@interledger/rafiki-core'
+import { Middleware } from 'koa'
 
-export const serializers = {
-  req: wrapRequestSerializer(serializeIlpPrepare),
-  res: wrapResponseSerializer(serializeIlpReply)
-}
-
-export function createPinoMiddleware (options?: Options, stream?: DestinationStream) {
-  const pino = logger(options, stream)
-  return async function pinoLogger (ctx: RafikiContext, next: () => Promise<any>) {
-    return pino(ctx, async () => {
-      // Attach the pino logger to services
-      ctx.services.logger = ctx.log
-      await next()
-    })
-  }
-}
-
-export interface SerializedIlpRequest extends SerializedRequest {
-  raw: IncomingMessage & RafikiRequestMixin
-}
-export interface SerializedIlpResponse extends SerializedResponse {
-  raw: ServerResponse & RafikiResponseMixin
-}
-
-function serializeIlpPrepare (req: SerializedIlpRequest) {
+function serializeIlpPrepare (req: SerializedIlpRequest): SerializedIlpRequest {
   if (req.raw && req.raw.prepare) {
     req['ilp-destination'] = req.raw.prepare.destination
     req['ilp-amount'] = req.raw.prepare.amount
@@ -39,7 +17,7 @@ function serializeIlpPrepare (req: SerializedIlpRequest) {
   return req
 }
 
-function serializeIlpReply (res: SerializedIlpResponse) {
+function serializeIlpReply (res: SerializedIlpResponse): SerializedIlpResponse {
   if (res.raw && res.raw.fulfill) {
     res['ilp-fulfillment'] = res.raw.fulfill.fulfillment.toString('hex')
   }
@@ -49,4 +27,27 @@ function serializeIlpReply (res: SerializedIlpResponse) {
     res['ilp-reject-triggered-by'] = res.raw.reject.triggeredBy
   }
   return res
+}
+
+export const serializers = {
+  req: wrapRequestSerializer(serializeIlpPrepare),
+  res: wrapResponseSerializer(serializeIlpReply)
+}
+
+export function createPinoMiddleware (options?: Options, stream?: DestinationStream): RafikiMiddleware {
+  const pino = logger(options, stream)
+  return async function pinoLogger (ctx: RafikiContext, next: () => Promise<any>): Promise<Middleware> {
+    return pino(ctx, async () => {
+      // Attach the pino logger to services
+      ctx.services.logger = ctx.log
+      await next()
+    })
+  }
+}
+
+export interface SerializedIlpRequest extends SerializedRequest {
+  raw: IncomingMessage & RafikiRequestMixin;
+}
+export interface SerializedIlpResponse extends SerializedResponse {
+  raw: ServerResponse & RafikiResponseMixin;
 }

@@ -8,7 +8,7 @@ const { TransferTimedOutError } = Errors
  * the whole pipeline process the reject that is generated when a prepare expires
  */
 export function createOutgoingExpireMiddleware () {
-  return async ({ request, services: { logger } }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ request, services: { logger } }: RafikiContext, next: () => Promise<any>): Promise<void> => {
     const { expiresAt } = request.prepare
     const duration = expiresAt.getTime() - Date.now()
     const timeout = setTimeout(() => {

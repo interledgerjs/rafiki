@@ -15,7 +15,8 @@ export class AxiosClient implements Client {
       httpsAgent: this.keepAliveAgent
     })
   }
-  public async send (data: Buffer) {
+
+  public async send (data: Buffer): Promise<Buffer> {
     const res = await this.axiosInstance.post<Buffer>('', data, this._config)
     if (res.headers['callback-url']) {
       // TODO - Update config if new value provided in callback-url and callback-auth headers

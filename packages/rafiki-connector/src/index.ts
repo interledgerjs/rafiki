@@ -18,14 +18,14 @@ import {
   createOutgoingThroughputMiddleware,
   createOutgoingValidateFulfillmentMiddleware
 } from '@interledger/rafiki-middleware'
-import compose = require('koa-compose')
 import { AdminApi } from '@interledger/rafiki-admin-api'
 
 import { config } from 'dotenv'
 import { Server } from 'http'
-config()
 
 import createLogger from 'pino'
+import compose = require('koa-compose')
+config()
 const logger = createLogger()
 
 /**
@@ -33,7 +33,7 @@ const logger = createLogger()
  */
 const ADMIN_API_HOST = process.env.ADMIN_API_HOST || '127.0.0.1'
 const ADMIN_API_PORT = parseInt(process.env.ADMIN_API_PORT || '3001', 10)
-const ADMIN_API_AUTH_TOKEN = process.env.ADMIN_API_AUTH_TOKEN || '' // TODO
+// const ADMIN_API_AUTH_TOKEN = process.env.ADMIN_API_AUTH_TOKEN || '' // TODO
 
 /**
  * Connector variables
@@ -50,7 +50,7 @@ const router = new InMemoryRouter(peerService, {
 })
 
 const adminApi = new AdminApi({ host: ADMIN_API_HOST, port: ADMIN_API_PORT }, {
-  auth: () => {
+  auth: (): boolean => {
     return true
   },
   peers: peerService,
@@ -69,14 +69,14 @@ const incoming = compose([
 ])
 
 const outgoing = compose([
-    // Outgoing Rules
+  // Outgoing Rules
   createOutgoingBalanceMiddleware(),
   createOutgoingThroughputMiddleware(),
   createOutgoingReduceExpiryMiddleware(),
   createOutgoingExpireMiddleware(),
   createOutgoingValidateFulfillmentMiddleware(),
 
-    // Send outgoing packets
+  // Send outgoing packets
   createClientController()
 ])
 
@@ -102,11 +102,11 @@ app.use(appRouter.routes())
 
 let server: Server
 
-export const gracefulShutdown = async () => {
+export const gracefulShutdown = async (): Promise<void> => {
   logger.info('shutting down.')
   adminApi.shutdown()
   if (server) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject): void => {
       server.close((err?: Error) => {
         if (err) {
           reject(err)
@@ -117,10 +117,9 @@ export const gracefulShutdown = async () => {
     })
   }
 }
-export const start = async () => {
-
+export const start = async (): Promise<void> => {
   let shuttingDown = false
-  process.on('SIGINT', async () => {
+  process.on('SIGINT', async (): Promise<void> => {
     try {
       if (shuttingDown) {
         logger.warn('received second SIGINT during graceful shutdown, exiting forcefully.')

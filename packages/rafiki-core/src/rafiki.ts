@@ -18,50 +18,49 @@ import { IlpReply, IlpReject, IlpFulfill } from 'ilp-packet'
 import { DebugLogger } from './services/logger/debug'
 
 export interface RafikiServices {
-  router: Router
-  peers: PeersService
-  accounts: AccountsService
-  logger: LoggingService
+  router: Router;
+  peers: PeersService;
+  accounts: AccountsService;
+  logger: LoggingService;
 }
 
 export interface RafikiIlpConfig extends IlpPacketMiddlewareOptions, PeerMiddlewareOptions {
-  path?: string
+  path?: string;
 }
 export type RafikiState<T> = T & AuthState
 
 export type RafikiRequestMixin = {
-  prepare: RafikiPrepare,
-  rawPrepare: Buffer
+  prepare: RafikiPrepare;
+  rawPrepare: Buffer;
 }
 export type RafikiResponseMixin = {
-  reject?: IlpReject
-  rawReject?: Buffer
-  fulfill?: IlpFulfill
-  rawFulfill?: Buffer
-  reply?: IlpReply
-  rawReply?: Buffer
+  reject?: IlpReject;
+  rawReject?: Buffer;
+  fulfill?: IlpFulfill;
+  rawFulfill?: Buffer;
+  reply?: IlpReply;
+  rawReply?: Buffer;
 }
 
 export type RafikiRequest = Koa.Request & RafikiRequestMixin
 export type RafikiResponse = Koa.Response & RafikiResponseMixin
 
 export type RafikiContextMixin = {
-  services: RafikiServices
+  services: RafikiServices;
   peers: {
-    readonly incoming: Promise<Peer>
-    readonly outgoing: Promise<Peer>
-  }
-  request: RafikiRequest
-  response: RafikiResponse
-  req: IncomingMessage & RafikiRequestMixin
-  res: ServerResponse & RafikiResponseMixin
+    readonly incoming: Promise<Peer>;
+    readonly outgoing: Promise<Peer>;
+  };
+  request: RafikiRequest;
+  response: RafikiResponse;
+  req: IncomingMessage & RafikiRequestMixin;
+  res: ServerResponse & RafikiResponseMixin;
 }
 
 export type RafikiContext<T = any> = Koa.ParameterizedContext<T, RafikiContextMixin>
 export type RafikiMiddleware<T = any> = Middleware<T, RafikiContextMixin>
 
 export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
-
   private _router?: Router
   private _peers?: PeersService
   private _accounts?: AccountsService
@@ -72,35 +71,35 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
     this._peers = (config && config.peers) ? config.peers : undefined
     this._accounts = (config && config.accounts) ? config.accounts : undefined
     const logger = (config && config.logger) ? config.logger : new DebugLogger('rafiki')
-    const peersOrThrow = () => {
+    const peersOrThrow = (): PeersService => {
       if (this._peers) return this._peers
       throw new Error('No peers service provided to the app')
     }
-    const accountsOrThrow = () => {
+    const accountsOrThrow = (): AccountsService => {
       if (this._accounts) return this._accounts
       throw new Error('No accounts service provided to the app')
     }
-    const routerOrThrow = () => {
+    const routerOrThrow = (): Router => {
       if (this._router) return this._router
       throw new Error('No router service provided to the app')
     }
 
     // Set global context that exposes services
     this.context.services = {
-      get peers () {
+      get peers (): PeersService {
         return peersOrThrow()
       },
-      get router () {
+      get router (): Router {
         return routerOrThrow()
       },
-      get accounts () {
+      get accounts (): AccountsService {
         return accountsOrThrow()
       },
       logger
     }
   }
 
-  public get router () {
+  public get router (): Router | undefined {
     return this._router
   }
 
@@ -108,7 +107,7 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
     this._router = router
   }
 
-  public get peers () {
+  public get peers (): PeersService | undefined {
     return this._peers
   }
 
@@ -116,7 +115,7 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
     this._peers = peers
   }
 
-  public get accounts () {
+  public get accounts (): AccountsService | undefined {
     return this._accounts
   }
 
@@ -124,7 +123,7 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
     this._accounts = accounts
   }
 
-  public get logger () {
+  public get logger (): LoggingService {
     return this.context.services.logger
   }
 
@@ -132,18 +131,25 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
     this.context.services.logger = logger
   }
 
-  public useIlp (config?: RafikiIlpConfig) {
+  public useIlp (config?: RafikiIlpConfig): void {
     this.use(createIlpPacketMiddleware())
     this.use(createPeerMiddleware(config))
   }
 }
 
 interface RafikiCreateAppServices extends RafikiServices {
-  auth: RafikiMiddleware<AuthState> | Partial<TokenAuthConfig>
+  auth: RafikiMiddleware<AuthState> | Partial<TokenAuthConfig>;
 }
 
-export function createApp ({ auth, peers, accounts, router, logger }: Partial<RafikiCreateAppServices>) {
+export function createAuthMiddleware (auth?: RafikiMiddleware<AuthState> | Partial<TokenAuthConfig>): RafikiMiddleware {
+  if (typeof auth === 'function') {
+    return auth
+  } else {
+    return createTokenAuthMiddleware(auth)
+  }
+}
 
+export function createApp ({ auth, peers, accounts, router, logger }: Partial<RafikiCreateAppServices>): Rafiki {
   const app = new Rafiki({
     peers,
     router,
@@ -157,14 +163,6 @@ export function createApp ({ auth, peers, accounts, router, logger }: Partial<Ra
   return app
 }
 
-export function createAuthMiddleware (auth?: RafikiMiddleware<AuthState> | Partial<TokenAuthConfig>): RafikiMiddleware {
-  if (typeof auth === 'function') {
-    return auth
-  } else {
-    return createTokenAuthMiddleware(auth)
-  }
-}
-
 // TODO the joi-koa-middleware needs to be replaced by @koa/router. But the type defs are funky and require work
 export class RafikiRouter {
   private _router: KoaRouter
@@ -173,7 +171,7 @@ export class RafikiRouter {
     this._router = createRouter()
   }
 
-  public ilpRoute (ilpAddressPattern: string, handler: RafikiMiddleware<any>) {
+  public ilpRoute (ilpAddressPattern: string, handler: RafikiMiddleware<any>): void {
     const path = '/' + ilpAddressToPath(ilpAddressPattern)
       .split('/').filter(Boolean).join('/') // Trim trailing slash
       .replace('*', '(.*)') // Replace wildcard with regex that only matches valid address chars

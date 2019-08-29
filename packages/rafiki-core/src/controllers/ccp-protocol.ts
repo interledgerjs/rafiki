@@ -8,7 +8,7 @@ import { RafikiContext } from '../rafiki'
  * TODO: Should be a controller
  */
 export function createCcpProtocolController () {
-  return async function ccp ({ services: { logger, router }, request, response, peers: { incoming } }: RafikiContext) {
+  return async function ccp ({ services: { logger, router }, request, response, peers: { incoming } }: RafikiContext): Promise<void> {
     const peer = await incoming
     switch (request.prepare.destination) {
       case 'peer.route.control': {

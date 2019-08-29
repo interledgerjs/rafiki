@@ -5,35 +5,26 @@ const { InsufficientLiquidityError } = Errors
 
 const DEFAULT_REFILL_PERIOD = 1000 // 1 second
 
-/**
- * The Throughput rule throttles throughput based on the amount in the packets.
- */
-export function createIncomingThroughputMiddleware (): RafikiMiddleware {
+export function createThroughputLimitBucketsForPeer (peer: Peer, inOrOut: 'incoming' | 'outgoing'): TokenBucket | undefined {
+  const incomingAmount = peer.incomingThroughputLimit || false
+  const outgoingAmount = peer.outgoingThroughputLimit || false
 
-  const _buckets = new Map<string,TokenBucket>()
-
-  return async ({ services: { logger }, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
-    const peer = await peers.incoming
-    let incomingBucket = _buckets.get(peer.id)
-    if (!incomingBucket) {
-      incomingBucket = createThroughputLimitBucketsForPeer(peer, 'incoming')
-      if (incomingBucket) _buckets.set(peer.id, incomingBucket)
-    }
-    if (incomingBucket) {
-      if (!incomingBucket.take(BigInt(prepare.amount))) {
-        logger.warn('throttling incoming packet due to bandwidth exceeding limit', { prepare })
-        throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
-      }
-    }
-    await next()
+  if (inOrOut === 'incoming' && incomingAmount) {
+    // TODO: We should handle updates to the peer config
+    const refillPeriod = peer.incomingThroughputLimitRefillPeriod ? peer.incomingThroughputLimitRefillPeriod : DEFAULT_REFILL_PERIOD
+    return new TokenBucket({ refillPeriod, refillCount: BigInt(incomingAmount) })
+  }
+  if (inOrOut === 'outgoing' && outgoingAmount) {
+    // TODO: We should handle updates to the peer config
+    const refillPeriod = peer.outgoingThroughputLimitRefillPeriod ? peer.outgoingThroughputLimitRefillPeriod : DEFAULT_REFILL_PERIOD
+    return new TokenBucket({ refillPeriod, refillCount: BigInt(outgoingAmount) })
   }
 }
 
 export function createOutgoingThroughputMiddleware (): RafikiMiddleware {
+  const _buckets = new Map<string, TokenBucket>()
 
-  const _buckets = new Map<string,TokenBucket>()
-
-  return async ({ services: { logger } , request: { prepare }, peers }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ services: { logger }, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>): Promise<void> => {
     const peer = await peers.outgoing
     let outgoingBucket = _buckets.get(peer.id)
     if (!outgoingBucket) {
@@ -50,18 +41,25 @@ export function createOutgoingThroughputMiddleware (): RafikiMiddleware {
   }
 }
 
-export function createThroughputLimitBucketsForPeer (peer: Peer, inOrOut: 'incoming' | 'outgoing'): TokenBucket | undefined {
-  const incomingAmount = peer.incomingThroughputLimit || false
-  const outgoingAmount = peer.outgoingThroughputLimit || false
+/**
+ * The Throughput rule throttles throughput based on the amount in the packets.
+ */
+export function createIncomingThroughputMiddleware (): RafikiMiddleware {
+  const _buckets = new Map<string, TokenBucket>()
 
-  if (inOrOut === 'incoming' && incomingAmount) {
-    // TODO: We should handle updates to the peer config
-    const refillPeriod = peer.incomingThroughputLimitRefillPeriod ? peer.incomingThroughputLimitRefillPeriod : DEFAULT_REFILL_PERIOD
-    return new TokenBucket({ refillPeriod, refillCount: BigInt(incomingAmount) })
-  }
-  if (inOrOut === 'outgoing' && outgoingAmount) {
-    // TODO: We should handle updates to the peer config
-    const refillPeriod = peer.outgoingThroughputLimitRefillPeriod ? peer.outgoingThroughputLimitRefillPeriod : DEFAULT_REFILL_PERIOD
-    return new TokenBucket({ refillPeriod, refillCount: BigInt(outgoingAmount) })
+  return async ({ services: { logger }, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>): Promise<void> => {
+    const peer = await peers.incoming
+    let incomingBucket = _buckets.get(peer.id)
+    if (!incomingBucket) {
+      incomingBucket = createThroughputLimitBucketsForPeer(peer, 'incoming')
+      if (incomingBucket) _buckets.set(peer.id, incomingBucket)
+    }
+    if (incomingBucket) {
+      if (!incomingBucket.take(BigInt(prepare.amount))) {
+        logger.warn('throttling incoming packet due to bandwidth exceeding limit', { prepare })
+        throw new InsufficientLiquidityError('exceeded money bandwidth, throttling.')
+      }
+    }
+    await next()
   }
 }

@@ -39,8 +39,11 @@
   },
   "dependencies": {
     "@interledger/rafiki-core": "^0.2.3",
+    "@types/koa-pino-logger": "^2.1.6",
     "@types/pino": "^5.8.9",
     "@types/pino-std-serializers": "^2.4.0",
+    "koa-pino-logger": "^2.1.3",
+    "pino-http": "^4.3.0",
     "pino-std-serializers": "^2.4.2"
   }
 }

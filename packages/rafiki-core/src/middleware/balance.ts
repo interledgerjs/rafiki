@@ -2,7 +2,7 @@ import { RafikiContext } from '../rafiki'
 import { Transaction } from '../services/accounts'
 
 export function createIncomingBalanceMiddleware () {
-  return async ({ request, response, services: { accounts, logger }, peers }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ request, response, services: { accounts }, peers }: RafikiContext, next: () => Promise<any>): Promise<void> => {
     const { amount } = request.prepare
 
     // Ignore zero amount packets
@@ -15,7 +15,6 @@ export function createIncomingBalanceMiddleware () {
 
     // Increase balance on prepare
     await accounts.adjustBalanceReceivable(BigInt(amount), peer.id, async (trx: Transaction) => {
-
       await next()
 
       if (response.fulfill) {
@@ -28,7 +27,7 @@ export function createIncomingBalanceMiddleware () {
 }
 
 export function createOutgoingBalanceMiddleware () {
-  return async ({ request, response, services: { accounts, logger }, peers }: RafikiContext, next: () => Promise<any>) => {
+  return async ({ request, response, services: { accounts }, peers }: RafikiContext, next: () => Promise<any>): Promise<void> => {
     const { amount } = request.prepare
 
     // Ignore zero amount packets
@@ -40,7 +39,6 @@ export function createOutgoingBalanceMiddleware () {
     const peer = await peers.outgoing
 
     await accounts.adjustBalancePayable(BigInt(amount), peer.id, async (trx: Transaction) => {
-
       await next()
 
       if (response.fulfill) {

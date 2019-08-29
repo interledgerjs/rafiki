@@ -2,10 +2,9 @@ import { PeerNotFoundError, STATIC_CONDITION, sendToPeer } from '@interledger/ra
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
 import { AccountingSystemContext } from '../index'
 
-export async function create (ctx: AccountingSystemContext) {
-  const peerId = ctx.request.params['peerId']
+export async function create (ctx: AccountingSystemContext): Promise<void> {
+  const peerId = ctx.request.params.peerId
   try {
-
     // TODO: Do we need to do some validation here that the SE is supposed to be talking to this peer?
 
     const message = Buffer.from(ctx.request.body)
@@ -24,7 +23,6 @@ export async function create (ctx: AccountingSystemContext) {
 
     ctx.response.status = 200
     ctx.body = reply.data
-
   } catch (error) {
     if (error instanceof PeerNotFoundError) {
       ctx.response.status = 404

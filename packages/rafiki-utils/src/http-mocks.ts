@@ -3,11 +3,11 @@ import { Transform } from 'stream'
 import { Socket } from 'net'
 
 export interface MockIncomingMessageOptions {
-  [ key: string]: string | undefined | string[] | IncomingHttpHeaders
-  method?: string
-  url?: string
-  headers?: IncomingHttpHeaders
-  rawHeaders?: string[]
+  [ key: string]: string | undefined | string[] | IncomingHttpHeaders;
+  method?: string;
+  url?: string;
+  headers?: IncomingHttpHeaders;
+  rawHeaders?: string[];
 
 }
 
@@ -19,11 +19,12 @@ export class MockIncomingMessage extends Transform {
   connection: Socket
   headers: IncomingHttpHeaders
   rawHeaders: string[]
-  trailers: { [key: string]: string | undefined; }
+  trailers: { [key: string]: string | undefined }
   rawTrailers: string[]
-  setTimeout (msecs: number, callback: () => void): this {
+  setTimeout (msecs: number, callback: () => void): this { // eslint-disable-line @typescript-eslint/no-unused-vars
     throw new Error('method not implemented.')
   }
+
   method?: string | undefined
   url?: string | undefined
   statusCode?: number | undefined
@@ -37,7 +38,7 @@ export class MockIncomingMessage extends Transform {
     super({
       writableObjectMode: true,
       readableObjectMode: false,
-      transform : (chunk, encoding, next) => {
+      transform: (chunk, encoding, next) => {
         if (this._failError) {
           return this.emit('error', this._failError)
         }
@@ -70,7 +71,7 @@ export class MockIncomingMessage extends Transform {
     this.rawHeaders = []
     if (options.headers) {
       Object.keys(options.headers).forEach((key) => {
-        let header = options.headers![key]
+        const header = options.headers![key]
         if (header !== undefined) {
           this.headers[key.toLowerCase()] = header
           this.rawHeaders.push(key)
@@ -83,13 +84,12 @@ export class MockIncomingMessage extends Transform {
     if (this.method === 'GET' || this.method === 'HEAD' || this.method === 'DELETE') this.end()
   }
 
-  public fail (error: Error) {
+  public fail (error: Error): void {
     this._failError = error
   }
 }
 
 export class MockServerResponse extends Transform {
-
   statusCode: number
   statusMessage: string
 
@@ -98,29 +98,35 @@ export class MockServerResponse extends Transform {
   shouldKeepAlive: boolean
   useChunkedEncodingByDefault: boolean
   sendDate: boolean
-  finished: boolean = false
+  finished = false
   headersSent: boolean
   connection: Socket
 
   setTimeout: (msecs: number, callback?: () => void) => this
-  setHeader = (name: string, value: number | string | string[]) => {
+  setHeader = (name: string, value: number | string | string[]): void => {
     this._headers[name.toLowerCase()] = value
   }
+
   getHeader = (name: string): number | string | string[] | undefined => {
     return this._headers[name.toLowerCase()]
   }
+
   getHeaders = (): OutgoingHttpHeaders => {
     return this._headers
   }
+
   getHeaderNames = (): string[] => {
     return Object.keys(this._headers)
   }
+
   hasHeader = (name: string): boolean => {
     return this._headers[name.toLowerCase()] !== undefined
   }
+
   removeHeader = (name: string): void => {
     delete this._headers[name.toLowerCase()]
   }
+
   addTrailers: (headers: OutgoingHttpHeaders | Array<[string, string]>) => void
   flushHeaders: () => void
   assignSocket: (socket: Socket) => void
@@ -129,6 +135,7 @@ export class MockServerResponse extends Transform {
   writeContinue = (callback?: () => void): void => {
     if (callback) callback()
   }
+
   writeHead = (statusCode: number, reasonPhrase?: string | OutgoingHttpHeaders, headers?: OutgoingHttpHeaders): this => {
     if (typeof reasonPhrase !== 'string') {
       headers = reasonPhrase
@@ -138,12 +145,12 @@ export class MockServerResponse extends Transform {
     this.statusMessage = reasonPhrase || STATUS_CODES[statusCode] || 'unknown'
     if (headers) {
       for (const name in headers) {
-
         if (headers[name]) this.setHeader(name, headers[name]!)
       }
     }
     return this
   }
+
   _responseData: any[]
   _headers: OutgoingHttpHeaders = {}
 

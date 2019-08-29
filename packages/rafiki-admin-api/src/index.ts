@@ -1,19 +1,19 @@
-import { Router, Rafiki, RafikiMiddleware, createAuthMiddleware, TokenAuthConfig, PeersService, AccountsService } from '@interledger/rafiki-core'
+import { Router, Rafiki, RafikiMiddleware, TokenAuthConfig, PeersService, AccountsService } from '@interledger/rafiki-core'
 import { Context } from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server } from 'http'
 
 export interface AdminApiOptions {
-  host?: string,
-  port?: number,
+  host?: string;
+  port?: number;
 }
 
 export interface AdminApiServices {
-  peers: PeersService
-  auth: RafikiMiddleware | Partial<TokenAuthConfig>
-  router: Router,
-  accounts: AccountsService,
+  peers: PeersService;
+  auth: RafikiMiddleware | Partial<TokenAuthConfig>;
+  router: Router;
+  accounts: AccountsService;
 }
 
 /**
@@ -24,19 +24,19 @@ export class AdminApi {
   private _httpServer?: Server
   private _host?: string
   private _port?: number
-  constructor ({ host, port }: AdminApiOptions, { auth, router, peers, accounts }: AdminApiServices) {
+  constructor ({ host, port }: AdminApiOptions, { peers, accounts }: AdminApiServices) {
     this._koa = new Rafiki()
     // this._koa.use(createAuthMiddleware(auth))
-    this._koa.use(this._getRoutes(router, peers, accounts).middleware())
+    this._koa.use(this._getRoutes(peers, accounts).middleware())
     this._host = host
     this._port = port
   }
 
-  shutdown () {
+  shutdown (): void {
     if (this._httpServer) this._httpServer.close()
   }
 
-  listen () {
+  listen (): void {
     const adminApiHost = this._host || '0.0.0.0'
     const adminApiPort = this._port || 7780
 
@@ -44,14 +44,14 @@ export class AdminApi {
     this._koa.context.log.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
   }
 
-  private _getRoutes (router: Router, peers: PeersService, accounts: AccountsService) {
+  private _getRoutes (peers: PeersService, accounts: AccountsService): createRouter.Router {
     const middlewareRouter = createRouter()
 
     middlewareRouter.use(bodyParser())
     middlewareRouter.route({
       method: 'get',
       path: '/health',
-      handler: async (ctx: Context) => ctx.body = 'Status: ok'
+      handler: async (ctx: Context) => { ctx.body = 'Status: ok' }
     })
     middlewareRouter.route({
       method: 'get',
@@ -73,7 +73,7 @@ export class AdminApi {
       path: '/balance/:id',
       handler: async (ctx: Context) => {
         try {
-          const account = await accounts.get(ctx.request.params['id'])
+          const account = await accounts.get(ctx.request.params.id)
           ctx.body = account
         } catch (error) {
           ctx.response.status = 404
@@ -102,7 +102,7 @@ export class AdminApi {
     middlewareRouter.route({
       method: 'get',
       path: '/peers',
-      handler: async (ctx: Context) => ctx.body = await peers.list()
+      handler: async (ctx: Context) => { ctx.body = await peers.list() }
     })
     // router.route({
     //   method: 'get',

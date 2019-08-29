@@ -22,13 +22,18 @@ export class CcpSenderService extends Map<string, CcpSender> {
 }
 
 export interface CcpSenderOpts {
-  peerId: string
-  sendData: (packet: Buffer) => Promise<Buffer>,
-  getOwnAddress: () => string
-  routeExpiry: number
-  routeBroadcastInterval: number
-  forwardingRoutingTable: ForwardingRoutingTable
-  getPeerRelation: (accountId: string) => Relation
+  peerId: string;
+  sendData: (packet: Buffer) => Promise<Buffer>;
+  getOwnAddress: () => string;
+  routeExpiry: number;
+  routeBroadcastInterval: number;
+  forwardingRoutingTable: ForwardingRoutingTable;
+  getPeerRelation: (accountId: string) => Relation;
+}
+
+interface CcpSenderStatus {
+  epoch: number;
+  mode: string;
 }
 
 const MINIMUM_UPDATE_INTERVAL = 150
@@ -48,8 +53,8 @@ export class CcpSender {
   /**
    * Next epoch that the peer requested from us.
    */
-  private _lastKnownEpoch: number = 0
-  private _lastUpdate: number = 0
+  private _lastKnownEpoch = 0
+  private _lastUpdate = 0
   private _sendRouteUpdateTimer?: NodeJS.Timer
 
   constructor ({
@@ -70,17 +75,17 @@ export class CcpSender {
     this._routeBroadcastInterval = routeBroadcastInterval
   }
 
-  public stop () {
+  public stop (): void {
     if (this._sendRouteUpdateTimer) {
       clearTimeout(this._sendRouteUpdateTimer)
     }
   }
 
-  public getLastUpdate () {
+  public getLastUpdate (): number {
     return this._lastUpdate
   }
 
-  public getStatus () {
+  public getStatus (): CcpSenderStatus {
     return {
       epoch: this._lastKnownEpoch,
       mode: ModeReverseMap[this._mode]
@@ -90,10 +95,8 @@ export class CcpSender {
   public async handleRouteControl ({
     mode,
     lastKnownRoutingTableId,
-    lastKnownEpoch,
-    features
+    lastKnownEpoch
   }: CcpRouteControlRequest): Promise<CcpRouteControlResponse> {
-
     if (this._mode !== mode) {
       log('peer requested changing routing mode', { oldMode: ModeReverseMap[this._mode], newMode: ModeReverseMap[mode] })
     }
@@ -122,7 +125,7 @@ export class CcpSender {
     return {} as CcpRouteControlResponse
   }
 
-  private _scheduleRouteUpdate () {
+  private _scheduleRouteUpdate (): void {
     if (this._sendRouteUpdateTimer) {
       clearTimeout(this._sendRouteUpdateTimer)
       this._sendRouteUpdateTimer = undefined
@@ -156,7 +159,7 @@ export class CcpSender {
     this._sendRouteUpdateTimer.unref()
   }
 
-  private async _sendSingleRouteUpdate () {
+  private async _sendSingleRouteUpdate (): Promise<void> {
     this._lastUpdate = Date.now()
 
     const nextRequestedEpoch = this._lastKnownEpoch
@@ -196,7 +199,7 @@ export class CcpSender {
       })
 
     const newRoutes: BroadcastRoute[] = []
-    const withdrawnRoutes: { prefix: string, epoch: number }[] = []
+    const withdrawnRoutes: { prefix: string; epoch: number }[] = []
 
     for (const update of updates) {
       if (update.route) {
@@ -238,7 +241,7 @@ export class CcpSender {
 
     const timeout = this._routeBroadcastInterval
 
-    const timerPromise: Promise<Buffer> = new Promise((resolve, reject) => {
+    const timerPromise: Promise<Buffer> = new Promise((resolve, reject): void => {
       const timer = setTimeout(() => reject(new Error('route update timed out.')), timeout)
       // Don't let this timer keep Node running
       timer.unref()

@@ -12,7 +12,7 @@ import debug from 'debug'
 // Implementations SHOULD use a better logger than debug for production services
 const log = debug('rafiki:ccp-receiver')
 
-export class CcpReceiverService extends Map<string,CcpReceiver> {
+export class CcpReceiverService extends Map<string, CcpReceiver> {
   public getOrThrow (id: string): CcpReceiver {
     const receiver = this.get(id)
     if (!receiver) throw new PeerNotFoundError(id)
@@ -21,36 +21,40 @@ export class CcpReceiverService extends Map<string,CcpReceiver> {
 }
 
 export interface CcpReceiverOpts {
-  peerId: string,
-  sendData: (packet: Buffer) => Promise<Buffer>,
-  addRoute: (route: IncomingRoute) => void,
-  removeRoute: (peerId: string, prefix: string) => void,
-  getRouteWeight: (peerId: string) => number
+  peerId: string;
+  sendData: (packet: Buffer) => Promise<Buffer>;
+  addRoute: (route: IncomingRoute) => void;
+  removeRoute: (peerId: string, prefix: string) => void;
+  getRouteWeight: (peerId: string) => number;
+}
+
+interface CcpReceiverStatus {
+  routingTableId: string;
+  epoch: number;
 }
 
 const ROUTE_CONTROL_RETRY_INTERVAL = 30000
 
 // TODO: Pass the local routing table up to the peer
 export class CcpReceiver {
-
   private _peerId: string
   private _sendData: (packet: Buffer) => Promise<Buffer>
   private _addRoute: (route: IncomingRoute) => void
   private _removeRoute: (peerId: string, prefix: string) => void
   private _getRouteWeight: (peerId: string) => number
-  private _expiry: number = 0
+  private _expiry = 0
 
   /**
    * Current routing table id used by our peer.
    *
    * We'll reset our epoch if this changes.
    */
-  private _routingTableId: string = '00000000-0000-0000-0000-000000000000'
+  private _routingTableId = '00000000-0000-0000-0000-000000000000'
 
   /**
    * Epoch index up to which our peer has sent updates
    */
-  private _epoch: number = 0
+  private _epoch = 0
 
   constructor ({ peerId, sendData, addRoute, removeRoute, getRouteWeight }: CcpReceiverOpts) {
     this._peerId = peerId
@@ -64,7 +68,7 @@ export class CcpReceiver {
     interval.unref()
   }
 
-  public getStatus () {
+  public getStatus (): CcpReceiverStatus {
     return {
       routingTableId: this._routingTableId,
       epoch: this._epoch
@@ -72,7 +76,6 @@ export class CcpReceiver {
   }
 
   public async handleRouteUpdate ({
-    speaker,
     routingTableId,
     fromEpochIndex,
     toEpochIndex,
@@ -102,7 +105,7 @@ export class CcpReceiver {
 
     // just a heartbeat
     if (newRoutes.length === 0 && withdrawnRoutes.length === 0) {
-      log('pure heartbeat.', { fromEpoch: fromEpochIndex , toEpoch: toEpochIndex })
+      log('pure heartbeat.', { fromEpoch: fromEpochIndex, toEpoch: toEpochIndex })
       this._epoch = toEpochIndex
       return []
     }
@@ -131,7 +134,7 @@ export class CcpReceiver {
     return {} as CcpRouteUpdateResponse
   }
 
-  public async sendRouteControl (sendOnce: boolean = false): Promise<void> {
+  public async sendRouteControl (sendOnce = false): Promise<void> {
     const routeControl: CcpRouteControlRequest = {
       mode: Mode.MODE_SYNC,
       lastKnownRoutingTableId: this._routingTableId,
@@ -162,16 +165,16 @@ export class CcpReceiver {
       }
     }
   }
-  private _bump (holdDownTime: number) {
+
+  private _bump (holdDownTime: number): void { // eslint-disable-line @typescript-eslint/no-unused-vars
     // TODO: Should this be now() + holdDownTime?
     this._expiry = Date.now()
   }
 
-  private async _maybeSendRouteControl () {
+  private async _maybeSendRouteControl (): Promise<void> {
     log('Checking if need to send new route control')
     if (Date.now() - this._expiry > 60 * 1000) {
       await this.sendRouteControl(true)
     }
   }
-
 }

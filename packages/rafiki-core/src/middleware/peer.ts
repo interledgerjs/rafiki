@@ -1,10 +1,10 @@
-import { RafikiContext } from '../rafiki'
+import { RafikiContext, RafikiMiddleware } from '../rafiki'
 import { Peer } from '../services/peers'
 import { AuthState } from './auth'
 
 export interface PeerMiddlewareOptions {
-  getIncomingPeerId?: (ctx: RafikiContext<AuthState>) => string
-  getOutgoingPeerId?: (ctx: RafikiContext) => string
+  getIncomingPeerId?: (ctx: RafikiContext<AuthState>) => string;
+  getOutgoingPeerId?: (ctx: RafikiContext) => string;
 }
 
 const defaultGetIncomingPeerId = (ctx: RafikiContext<AuthState>): string => {
@@ -22,22 +22,20 @@ const defaultMiddlewareOptions: PeerMiddlewareOptions = {
   getOutgoingPeerId: defaultGetOutgoingPeerId
 }
 
-export function createPeerMiddleware (config: PeerMiddlewareOptions = defaultMiddlewareOptions) {
-
+export function createPeerMiddleware (config: PeerMiddlewareOptions = defaultMiddlewareOptions): RafikiMiddleware {
   const getIncomingPeerId = (config && config.getIncomingPeerId) ? config.getIncomingPeerId : defaultGetIncomingPeerId
   const getOutgoingPeerId = (config && config.getOutgoingPeerId) ? config.getOutgoingPeerId : defaultGetOutgoingPeerId
 
-  return async function peer (ctx: RafikiContext<AuthState>, next: () => Promise<any>) {
-
-    let incomingPeer: Promise<Peer> | undefined = undefined
-    let outgoingPeer: Promise<Peer> | undefined = undefined
+  return async function peer (ctx: RafikiContext<AuthState>, next: () => Promise<any>): Promise<void> {
+    let incomingPeer: Promise<Peer> | undefined
+    let outgoingPeer: Promise<Peer> | undefined
     ctx.peers = {
-      get incoming () {
+      get incoming (): Promise<Peer> {
         if (incomingPeer) return incomingPeer
         incomingPeer = ctx.services.peers.get(getIncomingPeerId(ctx))
         return incomingPeer
       },
-      get outgoing () {
+      get outgoing (): Promise<Peer> {
         if (outgoingPeer) return outgoingPeer
         outgoingPeer = ctx.services.peers.get(getOutgoingPeerId(ctx))
         return outgoingPeer

@@ -14,8 +14,8 @@ import debug from 'debug'
 const log = debug('rafiki:in-memory-router-service')
 
 export interface ImMemoryRouterConfig {
-  globalPrefix?: string,
-  ilpAddress?: string
+  globalPrefix?: string;
+  ilpAddress?: string;
 }
 
 /**
@@ -28,7 +28,6 @@ export class InMemoryRouter implements Router {
   private _ccpReceivers: CcpReceiverService = new CcpReceiverService()
 
   constructor (private _peers: PeersService, { globalPrefix, ilpAddress }: ImMemoryRouterConfig) {
-
     // Setup the `self` peer
     this._routeManager.addPeer(SELF_PEER_ID, 'local')
     this._routingTable.setGlobalPrefix(globalPrefix || 'test')
@@ -43,16 +42,15 @@ export class InMemoryRouter implements Router {
     })
 
     // Updated
-    this._peers.updated.subscribe(async (peer: PeerInfo) => {
+    this._peers.updated.subscribe(async (peer: PeerInfo) => { // eslint-disable-line @typescript-eslint/no-unused-vars
       // TODO: Handle updates to peer
-      return
+
     })
 
     // Removed
     this._peers.deleted.subscribe(async (peerId: string) => {
       await this._removePeer(peerId)
     })
-
   }
 
   public async handleRouteControl (peerId: string, request: CcpRouteControlRequest): Promise<CcpRouteControlResponse> {
@@ -73,17 +71,17 @@ export class InMemoryRouter implements Router {
   public getAddresses (peerId: string): string[] {
     const peer = this._routeManager.getPeer(peerId)
     return peer
-      ? peer['routes']['prefixes'].sort((a: string, b: string) => {
-        return peer['routes']['items'][b]['weight'] - peer['routes']['items'][a]['weight']
+      ? peer['routes']['prefixes'].sort((a: string, b: string) => { // eslint-disable-line dot-notation
+        return peer['routes']['items'][b]['weight'] - peer['routes']['items'][a]['weight'] // eslint-disable-line dot-notation
       })
       : []
   }
 
-  public getRoutingTable () {
+  public getRoutingTable (): object {
     return this._routingTable.getRoutingTable().toJSON()
   }
 
-  private async _addPeer (peerId: string, relation: Relation, weight: number, isSender = false, isReceiver = false) {
+  private async _addPeer (peerId: string, relation: Relation, weight: number, isSender = false, isReceiver = false): Promise<void> {
     log('adding peer', { peerId, relation })
     this._routeManager.addPeer(peerId, relation)
 
@@ -92,11 +90,11 @@ export class InMemoryRouter implements Router {
       log('creating CCP receiver for peer', { peerId })
       const receiver = new CcpReceiver({
         peerId,
-        sendData: async (data: Buffer) => {
+        sendData: async (data: Buffer): Promise<Buffer> => {
           return sendToPeer(peerId, data, this._peers)
         },
-        addRoute: (route: IncomingRoute) => { this._routeManager.addRoute(route) },
-        removeRoute:  (peerId: string, prefix: string) => { this._routeManager.removeRoute(peerId, prefix) },
+        addRoute: (route: IncomingRoute): void => { this._routeManager.addRoute(route) },
+        removeRoute: (peerId: string, prefix: string): void => { this._routeManager.removeRoute(peerId, prefix) },
         getRouteWeight
       })
       this._ccpReceivers.set(peerId, receiver)
@@ -107,11 +105,11 @@ export class InMemoryRouter implements Router {
       log('creating CCP sender for peer', { peerId })
       const sender = new CcpSender({
         peerId,
-        sendData: async (data: Buffer) => {
+        sendData: async (data: Buffer): Promise<Buffer> => {
           return sendToPeer(peerId, data, this._peers)
         },
         forwardingRoutingTable: this._routingTable.getForwardingRoutingTable(),
-        getOwnAddress: () => this._getOwnAddress(),
+        getOwnAddress: (): string => this._getOwnAddress(),
         getPeerRelation: (peerId: string): Relation => {
           const peer = this._routeManager.getPeer(peerId)
           if (!peer) throw new PeerNotFoundError(peerId)
@@ -157,7 +155,7 @@ export class InMemoryRouter implements Router {
     }
   }
 
-  private _addOwnAddress (address: string, weight: number = 500) {
+  private _addOwnAddress (address: string, weight = 500): void {
     log('setting own address', { address })
     this._routingTable.setOwnAddress(address) // Tricky: This needs to be here for now to append to path of forwarding routing table
     this._routeManager.addRoute({
@@ -177,7 +175,7 @@ export class InMemoryRouter implements Router {
     this._routeManager.removeRoute(SELF_PEER_ID, address)
   }
 
-  private _addRoute (peerId: string, prefix: string) {
+  private _addRoute (peerId: string, prefix: string): void {
     log('adding route', { prefix, peerId })
     const peer = this._routeManager.getPeer(peerId)
     if (!peer) {
@@ -191,7 +189,7 @@ export class InMemoryRouter implements Router {
     })
   }
 
-  private _removeRoute (peerId: string, prefix: string) {
+  private _removeRoute (peerId: string, prefix: string): void {
     this._routeManager.removeRoute(peerId, prefix)
   }
 }
