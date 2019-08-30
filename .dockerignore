@@ -1,9 +1,0 @@
-.npmrc
-.circleci
-.nyc_output
-.vscode
-node_modules
-npm-debug.log
-/coverage/*
-test
-*.sqlite

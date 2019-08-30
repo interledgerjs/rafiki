@@ -1,0 +1,14 @@
+{
+  "name": "@interledger/rafiki-with-pino",
+  "version": "0.1.0",
+  "description": "Example app using Pino logger",
+  "main": "build/index.js",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "@interledger/rafiki-core": "^0.1.0",
+    "@interledger/rafiki-logger-pino": "^0.1.0",
+    "@types/koa-pino-logger": "^2.1.6",
+    "koa-pino-logger": "^2.1.3"
+  }
+}

@@ -1,128 +1,47 @@
 {
-  "name": "@interledger/rafiki",
-  "version": "0.0.1-beta.4",
-  "description": "A modular ILP connector with stand-alone settlement engine and router",
-  "engines": {
-    "node": ">=10.13"
-  },
-  "main": "build/src/index.js",
-  "types": "build/src/index.d.ts",
-  "bin": {
-    "rafiki": "build/src/start.js"
-  },
-  "files": [
-    "build/src/**/*.json",
-    "build/src/**/*.js",
-    "build/src/**/*.js.map",
-    "build/src/**/*.d.ts",
-    "build/doc"
+  "name": "root",
+  "private": true,
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
-    "start": "npm run build && node ./build/src/start.js",
-    "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "build": "npm run schema-to-tsd && tsc && npm run copy-schemas",
-    "copy-schemas": "mkdir -p ./build/src/schemas && cp ./src/schemas/*.json ./build/src/schemas",
-    "lint": "tslint --project .",
-    "lintFix": "tslint --project . --fix",
-    "schema-to-tsd": "node scripts/build_schema_types",
-    "migrate:make": "knex migrate:make",
-    "test": "TS_NODE_TRANSPILE_ONLY=true mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register --require ./test/logger 'test/{,!(integration)/**}/*.test.ts'",
-    "test:file": "TS_NODE_TRANSPILE_ONLY=true mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register --require ./test/logger",
-    "test:integration": "TS_NODE_TRANSPILE_ONLY=true nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register --require ./test/logger  'test/integration/**/*.test.ts'",
-    "test:all": "nyc mocha --require ts-node/register --ui mocha-typescript --require source-map-support/register --require ./test/logger 'test/**/*.test.ts'",
-    "doc": "typedoc --options typedoc.js src",
-    "codecov": "codecov",
-    "preversion": "npm run lint && npm test",
-    "prepublishOnly": "rm -Rf ./build/test && npm run lint && npm test && npm run doc"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/interledgerjs/rafiki.git"
-  },
-  "author": "Interledger Team <info@interledger.org>",
-  "license": "Apache-2.0",
-  "dependencies": {
-    "@types/koa": "^2.0.48",
-    "@types/koa-bodyparser": "^4.3.0",
-    "@types/koa-joi-router": "^5.2.2",
-    "@types/nanoid": "^2.0.0",
-    "@types/node-fetch": "^2.3.3",
-    "ajv": "^6.9.1",
-    "change-case": "^3.1.0",
-    "extensible-error": "^1.0.2",
-    "ilp-compat-plugin": "^2.0.3",
-    "ilp-packet": "^3.0.8",
-    "ilp-plugin-btp": "^1.3.8",
-    "ilp-plugin-mini-accounts": "^4.1.0",
-    "ilp-plugin-xrp-asym-server": "^1.8.0",
-    "ilp-plugin-xrp-paychan": "^2.4.1",
-    "ilp-protocol-ccp": "^1.1.1",
-    "ilp-protocol-ildcp": "^2.0.1",
-    "ilp-routing": "^20.0.1-beta.1",
-    "knex": "^0.18.2",
-    "koa": "^2.7.0",
-    "koa-bodyparser": "^4.2.1",
-    "koa-joi-router": "^6.0.0",
-    "mysql": "^2.17.1",
-    "nanoid": "^2.0.3",
-    "objection": "^1.6.9",
-    "oer-utils": "^4.0.0",
-    "path-to-regexp": "^3.0.0",
-    "prom-client": "^11.2.1",
-    "raw-body": "^2.4.1",
-    "sqlite3": "^4.0.9",
-    "winston": "^3.2.1"
+    "bootstrap": "lerna bootstrap",
+    "build": "lerna run build --sort --concurrency=1 --stream",
+    "clean": "yarn clean:artifacts && yarn clean:packages",
+    "clean:artifacts": "lerna run clean --parallel",
+    "clean:packages": "lerna clean --yes",
+    "codecov": "lerna run codecov",
+    "lint": "standardx \"./packages/**/*.ts\"",
+    "lint:fix": "standardx --fix \"./packages/**/*.ts\"",
+    "test": "lerna run test --stream",
+    "test:ci": "lerna run test:ci --stream"
   },
   "devDependencies": {
-    "@types/chai": "^4.1.7",
-    "@types/chai-as-promised": "^7.1.0",
-    "@types/get-port": "^4.2.0",
-    "@types/mocha": "^5.2.5",
-    "@types/mock-require": "^2.0.0",
-    "@types/sinon": "^5.0.7",
-    "axios": "^0.18.0",
-    "chai": "^4.2.0",
-    "chai-as-promised": "^7.1.1",
-    "codecov": "^3.1.0",
-    "get-port": "^5.0.0",
-    "ilp-plugin-http": "^1.5.0",
-    "ilp-protocol-stream": "^1.8.9",
-    "json-schema-to-typescript": "^6.1.1",
-    "mocha": "^5.2.0",
-    "mocha-typescript": "^1.1.17",
-    "mock-require": "^3.0.3",
-    "mockttp": "^0.15.0",
-    "nyc": "^13.1.0",
-    "sinon": "^7.3.2",
-    "source-map-support": "^0.5.10",
-    "ts-node": "^8.0.2",
-    "tslint": "^5.12.1",
+    "@types/jest": "^24.0.17",
+    "@types/koa": "^2.0.49",
+    "@types/koa-compose": "^3.2.4",
+    "@typescript-eslint/eslint-plugin": "^2.0.0",
+    "@typescript-eslint/parser": "^2.0.0",
+    "axios": "^0.19.0",
+    "codecov": "^3.5.0",
+    "debug": "^4.1.1",
+    "eslint-plugin-import": "^2.18.2",
+    "ilp-packet": "^3.0.8",
+    "jest": "^24.9.0",
+    "koa": "^2.8.1",
+    "lerna": "^3.16.4",
+    "pino-debug": "^1.3.0",
+    "pino-pretty": "^3.2.1",
+    "standardx": "^5.0.0",
+    "ts-jest": "^24.0.2",
+    "tslint": "^5.18.0",
     "tslint-config-standard": "^8.0.1",
-    "typedoc": "^0.14.2",
-    "typescript": "^3.3.3"
+    "typescript": "^3.5.3"
   },
-  "nyc": {
-    "check-coverage": false,
-    "lines": 80,
-    "statements": 80,
-    "functions": 80,
-    "branches": 80,
-    "include": [
-      "src/**/*"
-    ],
-    "exclude": [
-      "test"
-    ],
-    "reporter": [
-      "lcov",
-      "text-summary"
-    ],
-    "extension": [
-      ".ts",
-      ".tsx"
-    ],
-    "sourceMap": true,
-    "instrument": true,
-    "all": true
+  "standardx": {
+    "ignore": [
+      "**/*.test.ts",
+      "packages/temp/*"
+    ]
   }
 }

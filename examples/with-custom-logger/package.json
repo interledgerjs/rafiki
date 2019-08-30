@@ -1,0 +1,11 @@
+{
+  "name": "@interledger/rafiki-with-custom-logger",
+  "version": "0.1.0",
+  "description": "Example app using custom logger",
+  "main": "build/index.js",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "@interledger/rafiki-core": "^0.1.0"
+  }
+}
