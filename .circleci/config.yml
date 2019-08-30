@@ -25,14 +25,6 @@ jobs:
             - "node-v1-"
 
       - run:
-          name: Install lerna
-          command: sudo npm install -g lerna
-
-      - run:
-          name: Bootstrap
-          command: lerna bootstrap
-          
-      - run:
           name: Install
           command: yarn install
 
@@ -74,7 +66,7 @@ jobs:
 
       - run:
           name: Publish package
-          command: lerna publish from-git --yes
+          command: yarn release:publish
 
 workflows:
   version: 2
