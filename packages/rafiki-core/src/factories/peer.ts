@@ -1,5 +1,5 @@
 import { Factory } from 'rosie'
-import { Peer } from '../../src/services/peers'
+import { Peer } from '../services/peers'
 import { PeerInfoFactory } from './peer-info'
 import { IlpFulfillFactory } from './ilp-packet'
 import { serializeIlpFulfill } from 'ilp-packet'
