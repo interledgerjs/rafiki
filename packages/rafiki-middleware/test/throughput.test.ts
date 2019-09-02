@@ -1,5 +1,6 @@
 import { Errors } from 'ilp-packet'
-import { PeerFactory, RafikiContext, RafikiServicesFactory, IlpPrepareFactory } from '@interledger/rafiki-core'
+import { RafikiContext } from '@interledger/rafiki-core'
+import { PeerFactory, RafikiServicesFactory, IlpPrepareFactory } from '@interledger/rafiki-core/build/factories'
 import { createContext, TokenBucket } from '@interledger/rafiki-utils'
 import { createIncomingThroughputMiddleware, createOutgoingThroughputMiddleware } from '../src/throughput'
 import { ZeroCopyIlpPrepare } from '@interledger/rafiki-core/src'

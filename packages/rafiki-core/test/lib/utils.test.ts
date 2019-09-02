@@ -1,5 +1,5 @@
 import { serializeIlpPrepare, deserializeIlpPrepare } from 'ilp-packet'
-import { IlpPrepareFactory } from '../../src'
+import { IlpPrepareFactory } from '../../src/factories'
 import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from '../../src/lib'
 
 describe('modifySerializedIlpPrepareAmount', () => {

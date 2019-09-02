@@ -1,5 +1,6 @@
 import { AccountingSystem } from '../src'
-import { AccountSnapshot, IlpPrepareFactory, InMemoryAccountsService, InMemoryPeers, IlpFulfillFactory } from '@interledger/rafiki-core'
+import { AccountSnapshot, InMemoryAccountsService, InMemoryPeers } from '@interledger/rafiki-core'
+import { IlpPrepareFactory, IlpFulfillFactory } from '@interledger/rafiki-core/build/factories'
 import {
   InMemorySettlementEngineService,
   RemoteSettlementEngine, SettlementResponse

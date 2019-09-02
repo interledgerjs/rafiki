@@ -1,5 +1,6 @@
 import { Errors } from 'ilp-packet'
-import { PeerFactory, RafikiContext, RafikiServicesFactory, IlpPrepareFactory } from '@interledger/rafiki-core'
+import { RafikiContext } from '@interledger/rafiki-core'
+import { PeerFactory, RafikiServicesFactory, IlpPrepareFactory } from '@interledger/rafiki-core/build/factories'
 import { createContext } from '@interledger/rafiki-utils'
 import { createOutgoingReduceExpiryMiddleware } from '../src/reduce-expiry'
 import { ZeroCopyIlpPrepare } from '@interledger/rafiki-core/src'
