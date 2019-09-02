@@ -1,5 +1,5 @@
 import { Factory } from 'rosie'
-import { PeerInfo } from '../../src/types'
+import { PeerInfo } from '../types'
 import faker from 'faker'
 
 export const PeerInfoFactory = Factory.define<PeerInfo>('PeerInfo').attrs({
