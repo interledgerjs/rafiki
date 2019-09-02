@@ -34,6 +34,7 @@ _Image Credit: [Felicia Ray](https://www.redbubble.com/people/feliciaray/works/2
 *Documentation*:
  - [ ] Update README files to include more detailed descriptions and usage examples
  - [ ] Update architecture diagram
+ - [ ] Documentation on using lerna 
  
 ## About
 

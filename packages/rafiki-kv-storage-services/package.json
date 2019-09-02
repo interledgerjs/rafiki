@@ -1,0 +1,32 @@
+{
+  "name": "@interledger/rafiki-kv-storage-services",
+  "version": "0.0.0",
+  "description": "Rafiki services backed by @kv-storage persistence",
+  "author": "Matt de Haast <matt.dehaast@coil.com>",
+  "homepage": "https://github.com/interledgerjs/rafiki#readme",
+  "license": "ISC",
+  "main": "src/index.ts",
+  "directories": {
+    "lib": "src",
+    "test": "test"
+  },
+  "files": [
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/interledgerjs/rafiki.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/interledgerjs/rafiki/issues"
+  },
+  "dependencies": {
+    "@kv-storage/core": "latest"
+  },
+  "jest": {
+
+  }
+}
