@@ -1,6 +1,6 @@
 import { Factory } from 'rosie'
 import { IlpPrepare, IlpFulfill, IlpReject } from 'ilp-packet'
-import { STATIC_CONDITION, STATIC_FULFILLMENT } from '../../src/constants'
+import { STATIC_CONDITION, STATIC_FULFILLMENT } from '../constants'
 import faker from 'faker'
 
 export const IlpPrepareFactory = Factory.define<IlpPrepare>('IlpPrepare').attrs({

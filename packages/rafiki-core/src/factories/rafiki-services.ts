@@ -1,6 +1,6 @@
 import { Factory } from 'rosie'
-import { RafikiServices } from '../../src/rafiki'
-import { InMemoryPeers, InMemoryRouter, InMemoryAccountsService } from '../../src/services'
+import { RafikiServices } from '../rafiki'
+import { InMemoryPeers, InMemoryRouter, InMemoryAccountsService } from '../services'
 import { TestLoggerFactory } from './test-logger'
 
 export const RafikiServicesFactory = Factory.define<RafikiServices>('PeerInfo')
