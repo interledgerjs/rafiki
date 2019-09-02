@@ -2,7 +2,7 @@ import { Readable } from 'stream'
 import { serializeIlpPrepare, serializeIlpFulfill, deserializeIlpFulfill, serializeIlpReject, deserializeIlpReject } from 'ilp-packet'
 import { createContext, MockIncomingMessageOptions } from '@interledger/rafiki-utils'
 import { createIlpPacketMiddleware } from '../../src/middleware/ilp-packet'
-import { IlpPrepareFactory, IlpFulfillFactory, IlpRejectFactory } from '../../src'
+import { IlpPrepareFactory, IlpFulfillFactory, IlpRejectFactory } from '../../src/factories'
 import { RafikiContext } from '../../src/rafiki'
 
 describe('ILP Packet Middleware', () => {

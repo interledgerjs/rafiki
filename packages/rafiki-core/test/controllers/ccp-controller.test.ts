@@ -4,7 +4,7 @@ import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcp
 import { createContext } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../../src/rafiki'
 import { createCcpProtocolController } from '../../src/controllers/ccp-protocol'
-import { PeerFactory, IlpPrepareFactory, RafikiServicesFactory, RouteUpdatePreparePacketFactory, RouteControlPreparePacketFactory } from '../../src'
+import { PeerFactory, IlpPrepareFactory, RafikiServicesFactory, RouteUpdatePreparePacketFactory, RouteControlPreparePacketFactory } from '../../src/factories'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 
 describe('CCP Rule', function () {

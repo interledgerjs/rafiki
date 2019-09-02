@@ -1,7 +1,7 @@
 import { createContext } from '@interledger/rafiki-utils'
-import { RafikiContext } from '../../src/rafiki'
-import { createIncomingBalanceMiddleware, createOutgoingBalanceMiddleware } from '../../src/middleware/balance'
-import { RafikiServicesFactory, InMemoryPeers, InMemoryAccountsService, PeerInfoFactory, AccountInfoFactory, IlpPrepareFactory, IlpFulfillFactory, ZeroCopyIlpPrepare, IlpRejectFactory } from '../../src'
+import { RafikiContext, InMemoryPeers, InMemoryAccountsService, ZeroCopyIlpPrepare } from '../../src'
+import { createIncomingBalanceMiddleware, createOutgoingBalanceMiddleware } from '../../src/middleware'
+import { RafikiServicesFactory, PeerInfoFactory, AccountInfoFactory, IlpPrepareFactory, IlpFulfillFactory, IlpRejectFactory } from '../../src/factories'
 
 const peers = new InMemoryPeers()
 const alice = PeerInfoFactory.build({ id: 'alice' })

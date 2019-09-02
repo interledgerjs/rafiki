@@ -1,8 +1,8 @@
 import { Errors } from 'ilp-packet'
-import { RafikiContext, RafikiServicesFactory, IlpPrepareFactory } from '@interledger/rafiki-core'
+import { RafikiContext, ZeroCopyIlpPrepare } from '@interledger/rafiki-core'
 import { createContext } from '@interledger/rafiki-utils'
 import { createOutgoingValidateFulfillmentMiddleware } from '../src/validate-fulfillment'
-import { ZeroCopyIlpPrepare, IlpFulfillFactory, IlpRejectFactory } from '@interledger/rafiki-core/src'
+import { RafikiServicesFactory, IlpPrepareFactory, IlpFulfillFactory, IlpRejectFactory } from '@interledger/rafiki-core/build/factories'
 
 const { WrongConditionError } = Errors
 

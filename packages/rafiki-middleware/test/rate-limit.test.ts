@@ -1,6 +1,7 @@
 import { Errors } from 'ilp-packet'
 import { createContext, TokenBucket } from '@interledger/rafiki-utils'
-import { RafikiContext, RafikiServicesFactory, PeerFactory, IlpPrepareFactory, ZeroCopyIlpPrepare } from '@interledger/rafiki-core'
+import { RafikiContext, ZeroCopyIlpPrepare } from '@interledger/rafiki-core'
+import { RafikiServicesFactory, PeerFactory, IlpPrepareFactory } from '@interledger/rafiki-core/build/factories'
 import { createIncomingRateLimitMiddleware } from '../src/rate-limit'
 const { RateLimitedError } = Errors
 

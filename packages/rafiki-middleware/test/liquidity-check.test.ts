@@ -1,12 +1,11 @@
 import { Errors } from 'ilp-packet'
 import { createContext } from '@interledger/rafiki-utils'
-import { RafikiContext, IlpRejectFactory, RafikiServicesFactory, IlpFulfillFactory } from '@interledger/rafiki-core'
+import { RafikiContext } from '@interledger/rafiki-core'
+import { PeerFactory, IlpRejectFactory, RafikiServicesFactory, IlpFulfillFactory } from '@interledger/rafiki-core/build/factories'
 import { createOutgoingLiquidityCheckMiddleware } from '../src/liquidity-check'
-import { PeerFactory } from '@interledger/rafiki-core/src'
 const { T04_INSUFFICIENT_LIQUIDITY } = Errors.codes
 
 describe('Liquidity Check Middleware', function () {
-
   const services = RafikiServicesFactory.build()
   const alice = PeerFactory.build({ id: 'alice' })
   const bob = PeerFactory.build({ id: 'bob' })

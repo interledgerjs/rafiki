@@ -1,7 +1,7 @@
 import { createContext } from '@interledger/rafiki-utils'
 import { createOutgoingExpireMiddleware } from '../../src/middleware/expire'
 import { RafikiContext } from '../../src/rafiki'
-import { IlpPrepareFactory, RafikiServicesFactory } from '../../src'
+import { IlpPrepareFactory, RafikiServicesFactory } from '../../src/factories'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 import { TransferTimedOutError } from 'ilp-packet/dist/src/errors'
 
