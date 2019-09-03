@@ -12,7 +12,7 @@ export interface PeerInfo {
   authToken?: string;
   isCcpSender?: boolean;
   isCcpReceiver?: boolean;
-  defaultAccountId?: string;
+  accountId?: string;
   maxPacketAmount?: bigint;
   rateLimitRefillPeriod?: number;
   rateLimitRefillCount?: bigint;
