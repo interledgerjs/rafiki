@@ -8,5 +8,5 @@ export const PeerInfoFactory = Factory.define<PeerInfo>('PeerInfo').attrs({
   isCcpReceiver: false,
   isCcpSender: false,
   url: faker.internet.url(),
-  defaultAccountId: faker.finance.accountName()
+  accountId: faker.finance.accountName()
 })

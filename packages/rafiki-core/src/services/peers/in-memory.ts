@@ -20,7 +20,7 @@ class InMemoryPeer implements Peer {
   authToken?: string
   isCcpSender: boolean
   isCcpReceiver: boolean
-  defaultAccountId: string
+  accountId: string
 
   readonly axiosClient: AxiosClient
 

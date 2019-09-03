@@ -13,8 +13,12 @@ export function createIncomingBalanceMiddleware () {
 
     const peer = await peers.incoming
 
+    if (!peer.accountId) {
+      throw new Error('Account not specific for peer')
+    }
+
     // Increase balance on prepare
-    await accounts.adjustBalanceReceivable(BigInt(amount), peer.id, async (trx: Transaction) => {
+    await accounts.adjustBalanceReceivable(BigInt(amount), peer.accountId, async (trx: Transaction) => {
       await next()
 
       if (response.fulfill) {
@@ -38,7 +42,11 @@ export function createOutgoingBalanceMiddleware () {
 
     const peer = await peers.outgoing
 
-    await accounts.adjustBalancePayable(BigInt(amount), peer.id, async (trx: Transaction) => {
+    if (!peer.accountId) {
+      throw new Error('Account not specific for peer')
+    }
+
+    await accounts.adjustBalancePayable(BigInt(amount), peer.accountId, async (trx: Transaction) => {
       await next()
 
       if (response.fulfill) {

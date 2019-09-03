@@ -4,8 +4,8 @@ import { createIncomingBalanceMiddleware, createOutgoingBalanceMiddleware } from
 import { RafikiServicesFactory, PeerInfoFactory, AccountInfoFactory, IlpPrepareFactory, IlpFulfillFactory, IlpRejectFactory } from '../../src/factories'
 
 const peers = new InMemoryPeers()
-const alice = PeerInfoFactory.build({ id: 'alice' })
-const bob = PeerInfoFactory.build({ id: 'bob' })
+const alice = PeerInfoFactory.build({ id: 'alice', accountId: 'alice' })
+const bob = PeerInfoFactory.build({ id: 'bob', accountId: 'bob' })
 // TODO: make one peer to many account relationship
 const aliceAccountInfo = AccountInfoFactory.build({ id: 'alice', peerId: 'alice', maximumPayable: BigInt(1000) })
 const bobAccountInfo = AccountInfoFactory.build({ id: 'bob', peerId: 'bob', maximumReceivable: BigInt(1000) })
