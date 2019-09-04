@@ -1,0 +1,10 @@
+flags:
+  accounting-system:
+    paths:
+      - packages/rafiki-accounting-system/src
+  core:
+    paths:
+      - packages/rafiki-core/src
+  middleware:
+    paths:
+      - packages/rafiki-middleware/src
