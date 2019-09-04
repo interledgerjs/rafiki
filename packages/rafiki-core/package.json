@@ -1,6 +1,6 @@
 {
   "name": "@interledger/rafiki-core",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "Core modules needed to construct a connector.",
   "engines": {
     "node": ">=10.13"
