@@ -11,11 +11,12 @@ import { createPeerMiddleware, PeerMiddlewareOptions } from './middleware/peer'
 import { PeersService, Peer } from './services/peers'
 import { AuthState } from './middleware/auth'
 import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
-import { AccountsService } from './services/accounts'
+import { AccountSnapshot, AccountsService } from './services/accounts'
 import { LoggingService } from './services/logger'
 import { IncomingMessage, ServerResponse } from 'http'
 import { IlpReply, IlpReject, IlpFulfill } from 'ilp-packet'
 import { DebugLogger } from './services/logger/debug'
+import { AccountMiddlewareOptions, createAccountMiddleware } from './middleware/account'
 
 export interface RafikiServices {
   router: Router;
@@ -24,7 +25,7 @@ export interface RafikiServices {
   logger: LoggingService;
 }
 
-export interface RafikiIlpConfig extends IlpPacketMiddlewareOptions, PeerMiddlewareOptions {
+export interface RafikiIlpConfig extends IlpPacketMiddlewareOptions, PeerMiddlewareOptions, AccountMiddlewareOptions {
   path?: string;
 }
 export type RafikiState<T> = T & AuthState
@@ -50,6 +51,10 @@ export type RafikiContextMixin = {
   peers: {
     readonly incoming: Promise<Peer>;
     readonly outgoing: Promise<Peer>;
+  };
+  accounts: {
+    readonly incoming: Promise<AccountSnapshot>;
+    readonly outgoing: Promise<AccountSnapshot>;
   };
   request: RafikiRequest;
   response: RafikiResponse;
@@ -134,6 +139,7 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
   public useIlp (config?: RafikiIlpConfig): void {
     this.use(createIlpPacketMiddleware())
     this.use(createPeerMiddleware(config))
+    this.use(createAccountMiddleware(config))
   }
 }
 
@@ -149,7 +155,7 @@ export function createAuthMiddleware (auth?: RafikiMiddleware<AuthState> | Parti
   }
 }
 
-export function createApp ({ auth, peers, accounts, router, logger }: Partial<RafikiCreateAppServices>): Rafiki {
+export function createApp ({ auth, peers, accounts, router, logger }: Partial<RafikiCreateAppServices>, config?: RafikiIlpConfig): Rafiki {
   const app = new Rafiki({
     peers,
     router,
@@ -158,7 +164,7 @@ export function createApp ({ auth, peers, accounts, router, logger }: Partial<Ra
   })
 
   app.use(createAuthMiddleware(auth))
-  app.useIlp()
+  app.useIlp(config)
 
   return app
 }

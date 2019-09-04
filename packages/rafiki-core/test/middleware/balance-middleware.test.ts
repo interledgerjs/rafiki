@@ -3,29 +3,21 @@ import { RafikiContext, InMemoryPeers, InMemoryAccountsService, ZeroCopyIlpPrepa
 import { createIncomingBalanceMiddleware, createOutgoingBalanceMiddleware } from '../../src/middleware'
 import { RafikiServicesFactory, PeerInfoFactory, AccountInfoFactory, IlpPrepareFactory, IlpFulfillFactory, IlpRejectFactory } from '../../src/factories'
 
-const peers = new InMemoryPeers()
-const alice = PeerInfoFactory.build({ id: 'alice', accountId: 'alice' })
-const bob = PeerInfoFactory.build({ id: 'bob', accountId: 'bob' })
 // TODO: make one peer to many account relationship
 const aliceAccountInfo = AccountInfoFactory.build({ id: 'alice', peerId: 'alice', maximumPayable: BigInt(1000) })
 const bobAccountInfo = AccountInfoFactory.build({ id: 'bob', peerId: 'bob', maximumReceivable: BigInt(1000) })
 const accounts = new InMemoryAccountsService()
-const services = RafikiServicesFactory.build({ peers, accounts })
+const services = RafikiServicesFactory.build({ accounts })
 const ctx = createContext<any, RafikiContext>()
-ctx.peers = {
+ctx.accounts = {
   get incoming () {
-    return peers.get('alice')
+    return accounts.get('alice')
   },
   get outgoing () {
-    return peers.get('bob')
+    return accounts.get('bob')
   }
 }
 ctx.services = services
-
-beforeAll(async () => {
-  await peers.add(alice)
-  await peers.add(bob)
-})
 
 beforeEach(() => {
   ctx.response.fulfill = undefined

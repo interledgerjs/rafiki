@@ -11,7 +11,7 @@ const log = debug('rafiki:in-memory-peers-service')
 /**
  * An in-memory peer service for development and testing purposes.
  */
-class InMemoryPeer implements Peer {
+export class InMemoryPeer implements Peer {
   readonly [key: string]: any
   id: string
   url?: string
