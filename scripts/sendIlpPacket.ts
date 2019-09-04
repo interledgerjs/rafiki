@@ -10,11 +10,11 @@ async function run () {
     executionCondition: STATIC_CONDITION,
     expiresAt: new Date(Date.now() + 60000)
   }
-  const response = await axios.post<Buffer>('http://localhost:3001/', serializeIlpPrepare(prepare), {
+  const response = await axios.post<Buffer>('http://localhost:3000/', serializeIlpPrepare(prepare), {
     headers: {
       accept: 'application/octet-stream',
       'content-type': 'application/octet-stream',
-      authorization: 'Bearer ' + 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY3RpdmUiOnRydWUsInN1YiI6ImFsaWNlIiwiaWF0IjoxNTE2MjM5MDIyfQ.nkVOy2hw_zfZ1Erjyg1E5qACjuZ2-0wd2C-i7TAH98U'
+      authorization: 'Bearer ' + 'oKIn6krL65uO2-FEQjYVAkYuI9nUTLbAy5SNxj4KQwA.n_-qgK0SZVFspLAuiW7R6JVLMwCBdV25RAq3TtHC_0M'
     },
     responseType: 'arraybuffer'
   })

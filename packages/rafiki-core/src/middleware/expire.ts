@@ -15,7 +15,12 @@ export function createOutgoingExpireMiddleware () {
       logger.debug('packet expired', { request })
       throw new TransferTimedOutError('packet expired.')
     }, duration)
-    await next()
+
+    await next().catch(error => {
+      clearTimeout(timeout)
+      throw error
+    })
+
     clearTimeout(timeout)
   }
 }
