@@ -40,7 +40,6 @@
     "@types/node-fetch": "^2.3.3",
     "@types/rosie": "0.0.36",
     "agentkeepalive": "^4.0.2",
-    "ajv": "^6.9.1",
     "axios": "^0.18.0",
     "change-case": "^3.1.0",
     "extensible-error": "^1.0.2",
@@ -50,24 +49,16 @@
     "ilp-protocol-ildcp": "^2.0.1",
     "ilp-routing": "^20.0.1-beta.1",
     "jsonwebtoken": "^8.5.1",
-    "knex": "^0.18.2",
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.2.1",
     "koa-joi-router": "^6.0.0",
-    "mysql": "^2.17.1",
     "nanoid": "^2.0.3",
-    "objection": "^1.6.9",
     "oer-utils": "^4.0.0",
-    "prom-client": "^11.2.1",
     "raw-body": "^2.4.1",
     "rosie": "^2.0.1",
-    "rxjs": "^6.5.2",
-    "sqlite3": "^4.0.9",
-    "winston": "^3.2.1"
+    "rxjs": "^6.5.2"
   },
   "devDependencies": {
-    "json-schema-to-typescript": "^6.1.1",
-    "source-map-support": "^0.5.10",
     "typedoc": "^0.14.2"
   }
 }
