@@ -12,12 +12,12 @@ const bobAccountInfo = AccountInfoFactory.build({ id: 'bob', peerId: 'bob', maxi
 const accounts = new InMemoryAccountsService()
 const services = RafikiServicesFactory.build({ peers, accounts })
 const ctx = createContext<any, RafikiContext>()
-ctx.peers = {
+ctx.accounts = {
   get incoming () {
-    return peers.get('alice')
+    return accounts.get('alice')
   },
   get outgoing () {
-    return peers.get('bob')
+    return accounts.get('bob')
   }
 }
 ctx.services = services
