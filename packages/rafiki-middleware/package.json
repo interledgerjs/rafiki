@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -Rf .nyc_output && rm -Rf coverage && rm -Rf build ",
-    "codecov": "codecov --root=../../ -F middleware",
+    "codecov": "codecov --root=../../ -f ./coverage/lcov.info -F middleware",
     "test": "jest --bail --runInBand",
     "test:ci": "jest --bail --runInBand --coverage"
   },
