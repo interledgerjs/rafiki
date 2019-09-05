@@ -66,7 +66,7 @@ export class AccountingSystem {
 
   /**
    * Hoist information about the account out of accountService and try and add to SE corresponding SE
-   * @param accountId
+   * @param accountId Id of the account
    */
   async addAccount (accountId: string): Promise<void> {
     const account = await this.getAccountOrThrow(accountId)
