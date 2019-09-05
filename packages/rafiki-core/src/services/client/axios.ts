@@ -7,16 +7,9 @@ export class AxiosClient implements Client {
   readonly keepAliveAgent: Agent
 
   constructor (private _url: string, private _config: AxiosRequestConfig) {
-    this.keepAliveAgent = new Agent({ keepAlive: true })
-    const url = new URL(_url)
-    this.axiosInstance = url.protocol === 'https:' ? Axios.create({
+    this.axiosInstance = Axios.create({
       baseURL: _url,
-      timeout: 30000,
-      httpsAgent: this.keepAliveAgent
-    }) : Axios.create({
-      baseURL: _url,
-      timeout: 30000,
-      httpAgent: this.keepAliveAgent
+      timeout: 30000
     })
   }
 
