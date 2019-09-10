@@ -39,6 +39,6 @@ jobs:
           node-version: 12
           registry-url: https://registry.npmjs.org/
       - run: echo TODO enable publishing
-        if: github.ref === 'master'
+        if: github.ref == 'master'
         env:
           NODE_AUTH_TOKEN: ${{secrets.npm_token}}
