@@ -3,7 +3,7 @@
 > A modular ILP connector with stand-alone settlement engine and router
 
 <!-- [![NPM Package](https://img.shields.io/npm/v/ilp-routing.svg?style=flat)](https://npmjs.org/package/ilp-routing) -->
-[![CircleCI](https://circleci.com/gh/interledgerjs/rafiki.svg?style=shield)](https://circleci.com/gh/interledgerjs/rafiki)
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Finterledgerjs%2Frafiki%2Fbadge&style=flat)](https://actions-badge.atrox.dev/interledgerjs/rafiki/goto)
 [![codecov](https://codecov.io/gh/interledgerjs/rafiki/branch/master/graph/badge.svg)](https://codecov.io/gh/interledgerjs/rafiki)
 
 ![rafiki](./media/rafiki.jpeg)
