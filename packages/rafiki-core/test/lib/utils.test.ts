@@ -1,41 +1,37 @@
 import { serializeIlpPrepare, deserializeIlpPrepare } from 'ilp-packet'
 import { IlpPrepareFactory } from '../../src/factories'
-import { modifySerializedIlpPrepareAmount, modifySerializedIlpPrepareExpiry } from '../../src/lib'
+import { modifySerializedIlpPrepare } from '../../src/lib'
 
-describe('modifySerializedIlpPrepareAmount', () => {
-  it('can modify the amount for a length indicator that is not longer than 1 byte', async () => {
-    const prepare = IlpPrepareFactory.build({ amount: '10' })
-
-    const modifiedPrepare = modifySerializedIlpPrepareAmount(serializeIlpPrepare(prepare), 5n)
-
-    expect(deserializeIlpPrepare(modifiedPrepare).amount).toBe('5')
-  })
-
-  it('can modify the amount for a length indicator that is longer than 1 byte', async () => {
-    const prepare = IlpPrepareFactory.build({ amount: '10', data: Buffer.alloc(256) })
-
-    const modifiedPrepare = modifySerializedIlpPrepareAmount(serializeIlpPrepare(prepare), 5n)
-
-    expect(deserializeIlpPrepare(modifiedPrepare).amount).toBe('5')
-  })
-})
-
-describe('modifySerializedIlpPrepareExpiry', () => {
+describe('modifySerializedIlpPrepare', () => {
   const START_DATE = 1434412800000 // June 16, 2015 00:00:00 GMT
 
-  it('can modify the expiry for a length indicator that is not longer than 1 byte', async () => {
-    const prepare = IlpPrepareFactory.build({ amount: '10', expiresAt: new Date(START_DATE) })
+  test.each([['small length indicator', Buffer.alloc(0)], ['large length indication', Buffer.alloc(256)]])('can modify the amount for %s', (desc, data: Buffer) => {
+    const prepare = IlpPrepareFactory.build({ amount: '10', expiresAt: new Date(START_DATE), data: data })
 
-    const modifiedPrepare = modifySerializedIlpPrepareExpiry(serializeIlpPrepare(prepare), new Date(START_DATE + 10 * 1000))
+    const modifiedPrepare = modifySerializedIlpPrepare(serializeIlpPrepare(prepare), 100n)
 
-    expect(deserializeIlpPrepare(modifiedPrepare).expiresAt).toEqual(new Date(START_DATE + 10 * 1000))
+    const deserializedPacket = deserializeIlpPrepare(modifiedPrepare)
+    expect(deserializedPacket.amount).toEqual('100')
+    expect(deserializedPacket.expiresAt).toEqual(new Date(START_DATE))
   })
 
-  it('can modify the expiry for a length indicator that is longer than 1 byte', async () => {
-    const prepare = IlpPrepareFactory.build({ amount: '10', data: Buffer.alloc(256), expiresAt: new Date(START_DATE) })
+  test.each([['small length indicator', Buffer.alloc(0)], ['large length indication', Buffer.alloc(256)]])('can modify the expiry for %s', (desc, data: Buffer) => {
+    const prepare = IlpPrepareFactory.build({ amount: '10', expiresAt: new Date(START_DATE), data: data })
 
-    const modifiedPrepare = modifySerializedIlpPrepareExpiry(serializeIlpPrepare(prepare), new Date(START_DATE + 10 * 1000))
+    const modifiedPrepare = modifySerializedIlpPrepare(serializeIlpPrepare(prepare), undefined, new Date(START_DATE - 30 * 1000))
 
-    expect(deserializeIlpPrepare(modifiedPrepare).expiresAt).toEqual(new Date(START_DATE + 10 * 1000))
+    const deserializedPacket = deserializeIlpPrepare(modifiedPrepare)
+    expect(deserializedPacket.amount).toEqual('10')
+    expect(deserializedPacket.expiresAt).toEqual(new Date(START_DATE - 30 * 1000))
+  })
+
+  test.each([['small length indicator', Buffer.alloc(0)], ['large length indication', Buffer.alloc(256)]])('can modify the amount and expiry for %s', (desc, data: Buffer) => {
+    const prepare = IlpPrepareFactory.build({ amount: '10', expiresAt: new Date(START_DATE), data: data })
+
+    const modifiedPrepare = modifySerializedIlpPrepare(serializeIlpPrepare(prepare), 3624n, new Date(START_DATE - 30 * 1000))
+
+    const deserializedPacket = deserializeIlpPrepare(modifiedPrepare)
+    expect(deserializedPacket.amount).toEqual('3624')
+    expect(deserializedPacket.expiresAt).toEqual(new Date(START_DATE - 30 * 1000))
   })
 })
