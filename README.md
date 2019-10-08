@@ -106,23 +106,24 @@ yarn test
 ```
 
 ### Versioning
-We use independent versioning and only maintainers can release a new version. In order to do this, be sure that you are on `master` and are up to date.
+We use independent versioning and only maintainers can release a new version. In order to do this, be sure that you are on `master` and are up to date. You will need to set the `GH_TOKEN` env variable to your 
+personal [github access token](https://github.com/settings/tokens).
 ```sh
 # On master
 git pull
-lerna version --conventional-commits
+GH_TOKEN=<github-token> lerna version --conventional-commits- -create-release github
 ```
-Follow the command prompts to pick the appropriate version numbers. Once this is done, lerna will automatically update the `package.json` file, commit the changes and add the necessary tags. Thereafter it will push the commits and tags to `Github`. This will kick off `CircleCI` where it will be published to `npm`. It is important to note that only tags on the latest commit will be picked up and published. So make sure that you don't make any changes, that you want in the release, after you've run `lerna version`.
+Follow the command prompts to pick the appropriate version numbers. Once this is done, lerna will automatically update the `package.json` file, commit the changes and add the necessary tags. Thereafter it will push the commits and tags to `Github`. This will kick off the `publish` github workflow where it will be built, linted, tested and published to `npm`. It is important to note that only tags on the latest commit will be picked up and published. So make sure that you don't make any changes, that you want in the release, after you've run `lerna version`.
 
 ### Alpha releases
 Should you want to release an `alpha` then run
 ```sh
 # On master
 git pull
-lerna version --conventional-commits --conventional-prerelease
+GH_TOKEN=<github-token> lerna version --conventional-commits --conventional-prerelease --create-release github
 ```
 This will append `-alpha.<alpha-version>` to the release name. The alpha release can be graduated (`1.0.1-alpha.1` => `1.0.1`) by running
 ```sh
 # On master
-lerna version --conventional-commits --conventional-graduate
+GH_TOKEN=<github-token> lerna version --conventional-commits --conventional-graduate --create-release github
 ```
