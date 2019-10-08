@@ -29,11 +29,11 @@ jobs:
     - name: yarn install, lint, build, test, codecov and publish
       run: |
         yarn install
-        yarn lint:all
+        yarn lint
         yarn build
-        yarn cover
+        yarn test:ci
         yarn codecov
-        yarn publish:release
+        yarn release:publish 
       env:
         CI: true
         CODECOV_TOKEN: ${{secrets.codecov_token}}
