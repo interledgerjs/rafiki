@@ -3,12 +3,8 @@
   "localized-strings": {
     "next": "Next",
     "previous": "Previous",
-    "tagline": "A website for testing",
+    "tagline": "A framework for build with Interledger",
     "docs": {
-      "doc1": {
-        "title": "Latin-ish",
-        "sidebar_label": "Example Page"
-      },
       "doc2": {
         "title": "document number 2"
       },
@@ -20,16 +16,18 @@
       },
       "doc5": {
         "title": "Fifth Document"
+      },
+      "intro": {
+        "title": "Latin-ish",
+        "sidebar_label": "Introduction"
       }
     },
     "links": {
       "Docs": "Docs",
-      "API": "API",
-      "Help": "Help",
-      "Blog": "Blog"
+      "Help": "Help"
     },
     "categories": {
-      "Docusaurus": "Docusaurus",
+      "Rafiki": "Rafiki",
       "First Category": "First Category",
       "Second Category": "Second Category"
     }
