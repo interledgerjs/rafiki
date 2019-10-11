@@ -51,7 +51,7 @@ describe('Max Packet Amount Middleware', function () {
     await expect(middleware(ctx, next)).rejects.toBeInstanceOf(AmountTooLargeError)
 
     expect(next).toHaveBeenCalledTimes(0)
-    expect(ctx.services.logger.warn).toHaveBeenCalledWith('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount: BigInt(50), request: ctx.request })
+    expect(ctx.services.logger.warn).toHaveBeenCalledWith('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount: alice.maxPacketAmount!.toString(), request: ctx.request })
   })
 
 })
