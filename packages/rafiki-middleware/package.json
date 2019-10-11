@@ -1,6 +1,6 @@
 {
   "name": "@interledger/rafiki-middleware",
-  "version": "0.2.16-alpha.0",
+  "version": "0.2.16-alpha.1",
   "description": "Collection of common ilp middleware.",
   "author": "Interledger Team <info@interledger.org>",
   "homepage": "https://github.com/interledgerjs/rafiki#readme",
