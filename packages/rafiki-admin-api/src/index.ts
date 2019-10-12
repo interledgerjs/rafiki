@@ -1,8 +1,19 @@
-import { Router, Rafiki, RafikiMiddleware, TokenAuthConfig, PeersService, AccountsService } from '@interledger/rafiki-core'
+import {
+  Router,
+  Rafiki,
+  RafikiMiddleware,
+  TokenAuthConfig,
+  PeersService,
+  AccountsService,
+  createAuthMiddleware
+} from '@interledger/rafiki-core'
 import { Context } from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server } from 'http'
+import createLogger from 'pino'
+
+const logger = createLogger()
 
 export interface AdminApiOptions {
   host?: string;
@@ -24,7 +35,7 @@ export class AdminApi {
   private _httpServer?: Server
   private _host?: string
   private _port?: number
-  constructor ({ host, port }: AdminApiOptions, { peers, accounts }: AdminApiServices) {
+  constructor ({ host, port }: AdminApiOptions, { peers, accounts, auth }: AdminApiServices) {
     this._koa = new Rafiki()
     // this._koa.use(createAuthMiddleware(auth))
     this._koa.use(this._getRoutes(peers, accounts).middleware())
@@ -41,7 +52,7 @@ export class AdminApi {
     const adminApiPort = this._port || 7780
 
     this._httpServer = this._koa.listen(adminApiPort, adminApiHost)
-    this._koa.context.log.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
+    logger.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
   }
 
   private _getRoutes (peers: PeersService, accounts: AccountsService): createRouter.Router {
@@ -85,7 +96,9 @@ export class AdminApi {
       path: '/peers',
       validate: {
         body: {
-          id: Joi.string().required()
+          id: Joi.string().required(),
+          relation: Joi.string().required(),
+          url: Joi.string().optional()
         },
         type: 'json'
       },

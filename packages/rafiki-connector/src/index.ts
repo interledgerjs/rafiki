@@ -12,7 +12,6 @@ import {
 import {
   createIncomingMaxPacketAmountMiddleware,
   createIncomingRateLimitMiddleware,
-  createIncomingReduceExpiryMiddleware,
   createIncomingThroughputMiddleware,
   createOutgoingReduceExpiryMiddleware,
   createOutgoingThroughputMiddleware,
@@ -27,7 +26,7 @@ import createLogger from 'pino'
 import compose = require('koa-compose')
 config()
 const logger = createLogger()
-
+logger.level = 'trace'
 /**
  * Admin API Variables
  */
@@ -40,7 +39,7 @@ const ADMIN_API_PORT = parseInt(process.env.ADMIN_API_PORT || '3001', 10)
  */
 const PREFIX = process.env.PREFIX || 'test'
 const ILP_ADDRESS = process.env.ILP_ADDRESS || undefined
-const PORT = parseInt(process.env.ADMIN_API_PORT || '3000', 10)
+const PORT = parseInt(process.env.PORT || '3000', 10)
 
 const peerService = new InMemoryPeers()
 const accountsService = new InMemoryAccountsService()
@@ -64,7 +63,6 @@ const incoming = compose([
   createIncomingMaxPacketAmountMiddleware(),
   createIncomingRateLimitMiddleware(),
   createIncomingThroughputMiddleware(),
-  createIncomingReduceExpiryMiddleware(),
   createIncomingBalanceMiddleware()
 ])
 
@@ -93,7 +91,7 @@ const appRouter = new RafikiRouter()
 
 // Default ILP routes
 // TODO Understand the priority and workings of the router... Seems to do funky stuff. Maybe worth just writing ILP one?
-appRouter.ilpRoute('test.*', middleware)
+appRouter.ilpRoute(`${PREFIX}.*`, middleware)
 appRouter.ilpRoute('peer.config', createIldcpProtocolController())
 appRouter.ilpRoute('peer.route.*', createCcpProtocolController())
 // TODO Handle echo

@@ -29,6 +29,7 @@
     "@types/dotenv": "^6.1.1",
     "@types/pino": "^5.8.9",
     "dotenv": "^8.1.0",
+    "jsonwebtoken": "^8.5.1",
     "pino": "^5.13.2"
   }
 }
