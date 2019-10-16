@@ -13,6 +13,7 @@
     "codecov": "lerna run codecov",
     "lint": "standardx \"./packages/**/*.ts\"",
     "lint:fix": "standardx --fix \"./packages/**/*.ts\"",
+    "lint:staged": "lint-staged",
     "release:publish": "lerna publish from-git --yes",
     "release:version": "lerna version --conventional-commits",
     "test": "lerna run test --stream",
@@ -39,6 +40,19 @@
     "tslint": "^5.18.0",
     "tslint-config-standard": "^8.0.1",
     "typescript": "^3.5.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn lint:staged",
+      "post-commit": "git update-index --again"
+    }
+  },
+  "lint-staged": {
+    "*.ts*": [
+      "yarn lint --fix",
+      "prettier-standard",
+      "git add"
+    ]
   },
   "standardx": {
     "ignore": [
