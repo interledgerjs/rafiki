@@ -22,14 +22,18 @@ export default class PrefixMap<T> {
     this.items = {}
   }
 
-  keys () { return this.prefixes }
+  keys (): string[] {
+    return this.prefixes
+  }
 
-  size () { return this.prefixes.length }
+  size (): number {
+    return this.prefixes.length
+  }
 
   /**
    * Find the value of the longest matching prefix key.
    */
-  resolve (key: string) {
+  resolve (key: string): T | undefined {
     const prefix = this.resolvePrefix(key)
 
     return typeof prefix !== 'undefined' ? this.items[prefix] : undefined
@@ -38,24 +42,28 @@ export default class PrefixMap<T> {
   /**
    * Find the longest matching prefix key.
    */
-  resolvePrefix (key: string) {
+  resolvePrefix (key: string): string | undefined {
     // Exact match
     if (this.items[key]) return key // redundant; optimization?
     // prefix match (the list is in descending length order, and secondarily, reverse-alphabetically)
-    const index = findIndex(this.prefixes, (e: string) => key.startsWith(e + '.'))
+    const index = findIndex(this.prefixes, (e: string) =>
+      key.startsWith(e + '.')
+    )
     if (index === -1) return undefined
     const prefix = this.prefixes[index]
     return prefix
   }
 
-  get (prefix: string): T | undefined { return this.items[prefix] }
+  get (prefix: string): T | undefined {
+    return this.items[prefix]
+  }
 
   /**
    * Look up all keys that start with a certain prefix.
    */
   * getKeysStartingWith (prefix: string): IterableIterator<string> {
     // TODO: This could be done *much* more efficiently
-    const predicate = (key: string) => key.startsWith(prefix)
+    const predicate = (key: string): boolean => key.startsWith(prefix)
     let index = -1
     // tslint:disable-next-line:no-conditional-assignment
     while ((index = findIndex(this.prefixes, predicate, index + 1)) !== -1) {
@@ -64,7 +72,7 @@ export default class PrefixMap<T> {
   }
 
   * getKeysPrefixesOf (search: string): IterableIterator<string> {
-    const predicate = (key: string) => search.startsWith(key + '.')
+    const predicate = (key: string): boolean => search.startsWith(key + '.')
     let index = -1
     // tslint:disable-next-line:no-conditional-assignment
     while ((index = findIndex(this.prefixes, predicate, index + 1)) !== -1) {
@@ -75,7 +83,7 @@ export default class PrefixMap<T> {
   /**
    * @param {function(item, key)} fn
    */
-  each (fn: (item: T, key: string) => void) {
+  each (fn: (item: T, key: string) => void): void {
     for (const prefix of this.prefixes) {
       fn(this.items[prefix], prefix)
     }
@@ -85,9 +93,9 @@ export default class PrefixMap<T> {
    * Insert the prefix while keeping the prefixes sorted first in length order
    * and if two prefixes are the same length, sort them in reverse alphabetical order
    */
-  insert (prefix: string, item: T) {
+  insert (prefix: string, item: T): T {
     if (!this.items[prefix]) {
-      const index = findIndex(this.prefixes, (e) => {
+      const index = findIndex(this.prefixes, e => {
         if (prefix.length === e.length) {
           return prefix > e
         }
@@ -104,13 +112,13 @@ export default class PrefixMap<T> {
     return item
   }
 
-  delete (prefix: string) {
+  delete (prefix: string): void {
     const index = this.prefixes.indexOf(prefix)
     if (this.prefixes[index] === prefix) this.prefixes.splice(index, 1)
     delete this.items[prefix]
   }
 
-  toJSON () {
+  toJSON (): { [key: string]: T } {
     return this.items
   }
 
@@ -129,9 +137,11 @@ export default class PrefixMap<T> {
    * This function may make it even more specific if necessary to make it
    * unambiguous, but it will never return a less specific prefix.
    */
-  getShortestUnambiguousPrefix (address: string, prefix = '') {
+  getShortestUnambiguousPrefix (address: string, prefix = ''): string {
     if (!address.startsWith(prefix)) {
-      throw new Error(`address must start with prefix. address=${address} prefix=${prefix}`)
+      throw new Error(
+        `address must start with prefix. address=${address} prefix=${prefix}`
+      )
     }
 
     this.keys().forEach((secondPrefix: string) => {

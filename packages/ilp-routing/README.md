@@ -1,9 +1,6 @@
 # ilp-routing
 > (BETA Stage) Router and Route Manager for Interledger-style addressing
 
-[![NPM Package](https://img.shields.io/npm/v/ilp-routing.svg?style=flat)](https://npmjs.org/package/ilp-routing)
-[![CircleCI](https://circleci.com/gh/interledgerjs/ilp-routing.svg?style=shield)](https://circleci.com/gh/interledgerjs/ilp-routing)
-
 <!-- ## Usage
 
 ```js
@@ -30,14 +27,6 @@ A route manager that deals with adding/removing peers and adding/removing routes
 All source code is expected to be TypeScript and is placed in the `src` folder. Tests are put in the `test` folder.
 
 The NPM package will not contain any TypeScript files (`*.ts`) but will have typings and source maps.
-
-### Scripts
-
-  - `clean` : Cleans the build folder and test output
-  - `build` : Build the project
-  - `lint`  : Run the linter over the project
-  - `test`  : Run the unit tests and produce a code coverage report
-  - `doc`   : Build the docs
 
 ### TODO
 - [ ] Add Logging

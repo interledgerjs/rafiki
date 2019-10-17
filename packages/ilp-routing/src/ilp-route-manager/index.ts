@@ -4,7 +4,6 @@ import { Peer } from './peer'
 import { IncomingRoute, Route } from '../types/routing'
 
 export class RouteManager {
-
   private peers: Map<string, Peer> = new Map()
   private router: Router
 
@@ -13,12 +12,12 @@ export class RouteManager {
   }
 
   // Possibly also allow a route to be added defaulted?
-  addPeer (peerId: string, relation: Relation) {
+  addPeer (peerId: string, relation: Relation): void {
     const peer = new Peer({ peerId: peerId, relation: relation })
     this.peers.set(peerId, peer)
   }
 
-  removePeer (peerId: string) {
+  removePeer (peerId: string): void {
     const peer = this.getPeer(peerId)
     if (peer) {
       const prefixes = peer.getPrefixes()
@@ -29,16 +28,16 @@ export class RouteManager {
     }
   }
 
-  getPeer (peerId: string) {
+  getPeer (peerId: string): Peer | undefined {
     return this.peers.get(peerId)
   }
 
-  getPeerList () {
+  getPeerList (): string[] {
     return Array.from(this.peers.keys())
   }
 
   // Do a check if the peerId exists as a peer and then also add the route to the routing table
-  addRoute (route: IncomingRoute) {
+  addRoute (route: IncomingRoute): void {
     const peer = this.getPeer(route.peer)
     if (peer) {
       // Gotcha the insert of the route into the peers routing table must occur before calling updatePrefix
@@ -49,7 +48,7 @@ export class RouteManager {
     }
   }
 
-  removeRoute (peerId: string, prefix: string) {
+  removeRoute (peerId: string, prefix: string): void {
     const peer = this.getPeer(peerId)
     if (peer) {
       peer.deleteRoute(prefix)
@@ -63,7 +62,7 @@ export class RouteManager {
    * get best peer for prefix and updateRouting based on the new route
    * @param prefix prefix
    */
-  private updatePrefix (prefix: string) {
+  private updatePrefix (prefix: string): void {
     const newBest = this.getBestPeerForPrefix(prefix)
     this.updateRouteInRouter(prefix, newBest)
   }
@@ -108,15 +107,20 @@ export class RouteManager {
         return 0
       })[0]
 
-    return bestRoute && {
-      nextHop: bestRoute.peer,
-      path: bestRoute.path,
-      weight: bestRoute.weight,
-      auth: bestRoute.auth
-    }
+    return (
+      bestRoute && {
+        nextHop: bestRoute.peer,
+        path: bestRoute.path,
+        weight: bestRoute.weight,
+        auth: bestRoute.auth
+      }
+    )
   }
 
-  private updateRouteInRouter (prefix: string, newBest: Route | undefined) {
+  private updateRouteInRouter (
+    prefix: string,
+    newBest: Route | undefined
+  ): void {
     if (newBest) {
       this.router.addRoute(prefix, newBest)
     } else {

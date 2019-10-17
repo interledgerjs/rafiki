@@ -1,12 +1,11 @@
 import RoutingTable from './routing-table'
 import { Route } from '../types/routing'
 import ForwardingRoutingTable, { RouteUpdate } from './forwarding-routing-table'
+// eslint-disable-next-line
 import { canDragonFilter } from '../lib/dragon'
-import { Relation } from '../types/relation'
 import { sha256 } from '../lib/utils'
 
 export class Router {
-
   private globalPrefix: string
   private ownAddress: string
   private routingTable: RoutingTable
@@ -18,23 +17,23 @@ export class Router {
     this.globalPrefix = 'g'
   }
 
-  setGlobalPrefix (prefix: string) {
+  setGlobalPrefix (prefix: string): void {
     this.globalPrefix = prefix
   }
 
-  setOwnAddress (address: string) {
+  setOwnAddress (address: string): void {
     this.ownAddress = address
   }
 
-  getOwnAddress () {
+  getOwnAddress (): string {
     return this.ownAddress
   }
 
-  addRoute (prefix: string, route: Route) {
+  addRoute (prefix: string, route: Route): void {
     this.updateLocalRoute(prefix, route)
   }
 
-  removeRoute (prefix: string) {
+  removeRoute (prefix: string): void {
     this.updateLocalRoute(prefix)
   }
 
@@ -53,7 +52,9 @@ export class Router {
     if (nextHop) {
       return nextHop
     } else {
-      throw new Error("Can't route the request due to no route found for given prefix")
+      throw new Error(
+        "Can't route the request due to no route found for given prefix"
+      )
     }
   }
 
@@ -63,7 +64,7 @@ export class Router {
    * @param prefix prefix
    * @param route route
    */
-  private updateLocalRoute (prefix: string, route?: Route) {
+  private updateLocalRoute (prefix: string, route?: Route): boolean {
     const currentBest = this.routingTable.get(prefix)
     const currentNextHop = currentBest && currentBest.nextHop
     const newNextHop = route && route.nextHop
@@ -85,7 +86,7 @@ export class Router {
     return false
   }
 
-  private getGlobalPrefix () {
+  private getGlobalPrefix (): string {
     return this.globalPrefix
   }
 
@@ -102,7 +103,7 @@ export class Router {
    * @param prefix prefix
    * @param route route
    */
-  private updateForwardingRoute (prefix: string, route?: Route) {
+  private updateForwardingRoute (prefix: string, route?: Route): void {
     if (route) {
       route = {
         ...route,
@@ -113,24 +114,20 @@ export class Router {
       if (
         // Routes must start with the global prefix
         !prefix.startsWith(this.getGlobalPrefix()) ||
-
         // Don't publish the default route
         prefix === this.getGlobalPrefix() ||
-
         // Don't advertise local customer routes that we originated. Packets for
         // these destinations should still reach us because we are advertising our
         // own address as a prefix.
-        (
-          prefix.startsWith(this.getOwnAddress() + '.') &&
-          route.path.length === 1
-        ) // ||
+        (prefix.startsWith(this.getOwnAddress() + '.') &&
+          route.path.length === 1) // ||
 
-        // canDragonFilter(
-        //   this.forwardingRoutingTable,
-        //   this.getAccountRelation,
-        //   prefix,
-        //   route
-        // )
+      // canDragonFilter(
+      //   this.forwardingRoutingTable,
+      //   this.getAccountRelation,
+      //   prefix,
+      //   route
+      // )
       ) {
         route = undefined
       }
@@ -138,7 +135,8 @@ export class Router {
 
     const currentBest = this.forwardingRoutingTable.get(prefix)
 
-    const currentNextHop = currentBest && currentBest.route && currentBest.route.nextHop
+    const currentNextHop =
+      currentBest && currentBest.route && currentBest.route.nextHop
     const newNextHop = route && route.nextHop
 
     if (currentNextHop !== newNextHop) {
@@ -165,7 +163,9 @@ export class Router {
         // if we can apply DRAGON filtering.
         //
         // Note that we do this check *after* we have added the new route above.
-        const subPrefixes = this.forwardingRoutingTable.getKeysStartingWith(prefix)
+        const subPrefixes = this.forwardingRoutingTable.getKeysStartingWith(
+          prefix
+        )
 
         for (const subPrefix of subPrefixes) {
           if (subPrefix === prefix) continue
@@ -181,7 +181,4 @@ export class Router {
   }
 }
 
-export {
-  ForwardingRoutingTable,
-  RouteUpdate
-}
+export { ForwardingRoutingTable, RouteUpdate }
