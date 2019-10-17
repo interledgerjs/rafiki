@@ -16,6 +16,7 @@ export interface MockIncomingMessageOptions {
 }
 
 export class MockIncomingMessage extends Transform {
+  id: string | number | object
   httpVersion: '1.1'
   httpVersionMajor: 1
   httpVersionMinor: 1

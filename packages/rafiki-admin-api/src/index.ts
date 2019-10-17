@@ -10,6 +10,9 @@ import { Context } from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
 import { Server } from 'http'
+import createLogger from 'pino'
+
+const logger = createLogger()
 
 export interface AdminApiOptions {
   host?: string;
@@ -51,7 +54,7 @@ export class AdminApi {
     const adminApiPort = this._port || 7780
 
     this._httpServer = this._koa.listen(adminApiPort, adminApiHost)
-    this._koa.context.log.info(
+    logger.info(
       `admin api listening. host=${adminApiHost} port=${adminApiPort}`
     )
   }
@@ -102,7 +105,9 @@ export class AdminApi {
       path: '/peers',
       validate: {
         body: {
-          id: Joi.string().required()
+          id: Joi.string().required(),
+          relation: Joi.string().required(),
+          url: Joi.string().optional()
         },
         type: 'json'
       },
