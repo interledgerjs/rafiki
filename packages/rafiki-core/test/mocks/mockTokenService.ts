@@ -4,8 +4,7 @@ import { uuid } from '../../src/lib/crypto'
 export class MockTokenService implements TokenService {
   private _tokens = new Map<string, TokenInfo>()
 
-  constructor (private _cb?: (token: string) => TokenInfo) {
-  }
+  constructor (private _cb?: (token: string) => TokenInfo) {}
 
   public async introspect (token: string): Promise<TokenInfo> {
     return this._tokens.get(token) || { active: false }

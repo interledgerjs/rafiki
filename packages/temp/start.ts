@@ -18,10 +18,18 @@ import { AdminApi } from './servers'
 
 // Logging
 // tslint:disable-next-line
-const stringify = (value: any) => typeof value === 'bigint' ? value.toString() : JSON.stringify(value)
-const formatter = winston.format.printf(({ service, level, message, component, timestamp, ...metaData }) => {
-  return `${timestamp} [${service}${component ? '-' + component : ''}] ${level}: ${message}` + (metaData ? ' meta data: ' + stringify(metaData) : '')
-})
+const stringify = (value: any) =>
+  typeof value === 'bigint' ? value.toString() : JSON.stringify(value)
+const formatter = winston.format.printf(
+  ({ service, level, message, component, timestamp, ...metaData }) => {
+    return (
+      `${timestamp} [${service}${
+        component ? '-' + component : ''
+      }] ${level}: ${message}` +
+      (metaData ? ' meta data: ' + stringify(metaData) : '')
+    )
+  }
+)
 
 winston.configure({
   level: process.env.LOG_LEVEL || 'info',
@@ -32,9 +40,7 @@ winston.configure({
     formatter
   ),
   defaultMeta: { service: 'rafiki' },
-  transports: [
-    new winston.transports.Console()
-  ]
+  transports: [new winston.transports.Console()]
 })
 
 // Load config from ENV vars
@@ -45,7 +51,10 @@ config.loadFromEnv()
 const knex = Knex(config.databaseConnectionString)
 
 // Remote vs Local token auth
-const tokens = config.authProviderUrl !== '' ? new RemoteTokenService(config.authProviderUrl) : new KnexTokenService(knex)
+const tokens =
+  config.authProviderUrl !== ''
+    ? new RemoteTokenService(config.authProviderUrl)
+    : new KnexTokenService(knex)
 const peers = new InMemoryPeers()
 const router = new InMemoryRouter(peers, {
   globalPrefix: config.env === 'production' ? 'g' : 'test',
@@ -61,62 +70,76 @@ const app = createApp(config, {
 
 // Create Admin API
 // TODO: Clean this up
-const auth = (config.adminApiAuth)
+const auth = config.adminApiAuth
   ? {
     introspect: tokens.introspect,
-    authenticate: (token: TokenInfo) => { return token.sub === 'self' }
+    authenticate: (token: TokenInfo) => {
+      return token.sub === 'self'
+    }
   }
-  : async (ctx: RafikiContext, next: Function) => { await next() }
+  : async (ctx: RafikiContext, next: Function) => {
+    await next()
+  }
 
-const adminApi = new AdminApi({
-  host: config.adminApiHost,
-  port: config.adminApiPort
-}, {
-  router,
-  peers,
-  auth
-})
+const adminApi = new AdminApi(
+  {
+    host: config.adminApiHost,
+    port: config.adminApiPort
+  },
+  {
+    router,
+    peers,
+    auth
+  }
+)
 
 // Create Settlement API
-const settlementAdminApi = new SettlementAdminApi({
-  host: config.settlementAdminApiHost,
-  port: config.settlementAdminApiPort
-}, {
-  updateAccountBalance: async (id: string, amountDiff: bigint, scale: number) => {
-    const peer = await peers.get(id)
-    const balance = await peer.balance
-    const scaleDiff = peer.info.assetScale - scale
-
-    // TODO: update to check whether scaledAmountDiff is an integer
-    if (scaleDiff < 0) {
-      // TODO: should probably throw an error
-      // logger.warn('Could not adjust balance due to scale differences', { amountDiff, scale })
-      return
-    }
-    const scaleRatio = Math.pow(10, scaleDiff)
-    const scaledAmountDiff = amountDiff * BigInt(scaleRatio)
-
-    const { maximum, minimum } = peer.info.balance
-    await balance.adjust(scaledAmountDiff, minimum, maximum)
+const settlementAdminApi = new SettlementAdminApi(
+  {
+    host: config.settlementAdminApiHost,
+    port: config.settlementAdminApiPort
   },
-  sendMessage: async (id: string, message: Buffer) => {
-    const packet = serializeIlpPrepare({
-      amount: '0',
-      destination: 'peer.settle',
-      executionCondition: STATIC_CONDITION,
-      expiresAt: new Date(Date.now() + 60000),
-      data: message
-    })
+  {
+    updateAccountBalance: async (
+      id: string,
+      amountDiff: bigint,
+      scale: number
+    ) => {
+      const peer = await peers.get(id)
+      const balance = await peer.balance
+      const scaleDiff = peer.info.assetScale - scale
 
-    const ilpReply = deserializeIlpReply(await sendToPeer(id, packet, peers))
+      // TODO: update to check whether scaledAmountDiff is an integer
+      if (scaleDiff < 0) {
+        // TODO: should probably throw an error
+        // logger.warn('Could not adjust balance due to scale differences', { amountDiff, scale })
+        return
+      }
+      const scaleRatio = Math.pow(10, scaleDiff)
+      const scaledAmountDiff = amountDiff * BigInt(scaleRatio)
 
-    if (isReject(ilpReply)) {
-      throw new Error('IlpPacket to settlement engine was rejected')
+      const { maximum, minimum } = peer.info.balance
+      await balance.adjust(scaledAmountDiff, minimum, maximum)
+    },
+    sendMessage: async (id: string, message: Buffer) => {
+      const packet = serializeIlpPrepare({
+        amount: '0',
+        destination: 'peer.settle',
+        executionCondition: STATIC_CONDITION,
+        expiresAt: new Date(Date.now() + 60000),
+        data: message
+      })
+
+      const ilpReply = deserializeIlpReply(await sendToPeer(id, packet, peers))
+
+      if (isReject(ilpReply)) {
+        throw new Error('IlpPacket to settlement engine was rejected')
+      }
+
+      return ilpReply.data
     }
-
-    return ilpReply.data
   }
-})
+)
 
 let server: Server
 export const gracefulShutdown = async () => {
@@ -137,12 +160,13 @@ export const gracefulShutdown = async () => {
   winston.debug('completed graceful shutdown.')
 }
 export const start = async () => {
-
   let shuttingDown = false
   process.on('SIGINT', async () => {
     try {
       if (shuttingDown) {
-        winston.warn('received second SIGINT during graceful shutdown, exiting forcefully.')
+        winston.warn(
+          'received second SIGINT during graceful shutdown, exiting forcefully.'
+        )
         process.exit(1)
         return
       }
@@ -153,7 +177,8 @@ export const start = async () => {
       await gracefulShutdown()
       process.exit(0)
     } catch (err) {
-      const errInfo = (err && typeof err === 'object' && err.stack) ? err.stack : err
+      const errInfo =
+        err && typeof err === 'object' && err.stack ? err.stack : err
       winston.error('error while shutting down. error=%s', errInfo)
       process.exit(1)
     }
@@ -164,11 +189,15 @@ export const start = async () => {
   } else {
     const status = await knex.migrate.status().catch(error => {
       winston.error('Error getting migrations status.', { error })
-      winston.info('Please ensure you run the migrations before starting Rafiki')
+      winston.info(
+        'Please ensure you run the migrations before starting Rafiki'
+      )
       process.exit(1)
     })
     if (status !== 0) {
-      winston.error('You need to run the latest migrations before running Rafiki')
+      winston.error(
+        'You need to run the latest migrations before running Rafiki'
+      )
       process.exit(1)
     }
   }
@@ -186,7 +215,7 @@ export const start = async () => {
 // If this script is run directly, start the server
 if (!module.parent) {
   start().catch(e => {
-    const errInfo = (e && typeof e === 'object' && e.stack) ? e.stack : e
+    const errInfo = e && typeof e === 'object' && e.stack ? e.stack : e
     winston.error(errInfo)
   })
 }

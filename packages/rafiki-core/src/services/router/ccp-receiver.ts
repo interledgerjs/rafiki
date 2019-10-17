@@ -56,7 +56,13 @@ export class CcpReceiver {
    */
   private _epoch = 0
 
-  constructor ({ peerId, sendData, addRoute, removeRoute, getRouteWeight }: CcpReceiverOpts) {
+  constructor ({
+    peerId,
+    sendData,
+    addRoute,
+    removeRoute,
+    getRouteWeight
+  }: CcpReceiverOpts) {
     this._peerId = peerId
     this._sendData = sendData
     this._addRoute = addRoute
@@ -86,26 +92,38 @@ export class CcpReceiver {
     this._bump(holdDownTime)
 
     if (this._routingTableId !== routingTableId) {
-      log('saw new routing table.', { oldRoutingTableId: this._routingTableId, newRoutingTableId: routingTableId })
+      log('saw new routing table.', {
+        oldRoutingTableId: this._routingTableId,
+        newRoutingTableId: routingTableId
+      })
       this._routingTableId = routingTableId
       this._epoch = 0
     }
 
     if (fromEpochIndex > this._epoch) {
       // There is a gap, we need to go back to the last epoch we have
-      log('gap in routing updates', { expectedEpoch: this._epoch, actualFromEpoch: fromEpochIndex })
+      log('gap in routing updates', {
+        expectedEpoch: this._epoch,
+        actualFromEpoch: fromEpochIndex
+      })
       await this.sendRouteControl(true) // TODO: test
       return []
     }
     if (this._epoch > toEpochIndex) {
       // This routing update is older than what we already have
-      log('old routing update, ignoring', { expectedEpoch: this._epoch, actualFromEpoch: toEpochIndex })
+      log('old routing update, ignoring', {
+        expectedEpoch: this._epoch,
+        actualFromEpoch: toEpochIndex
+      })
       return []
     }
 
     // just a heartbeat
     if (newRoutes.length === 0 && withdrawnRoutes.length === 0) {
-      log('pure heartbeat.', { fromEpoch: fromEpochIndex, toEpoch: toEpochIndex })
+      log('pure heartbeat.', {
+        fromEpoch: fromEpochIndex,
+        toEpoch: toEpochIndex
+      })
       this._epoch = toEpochIndex
       return []
     }
@@ -129,7 +147,11 @@ export class CcpReceiver {
 
     this._epoch = toEpochIndex
 
-    log('applied route update', { count: changedPrefixes.length, fromEpoch: fromEpochIndex, toEpoch: toEpochIndex })
+    log('applied route update', {
+      count: changedPrefixes.length,
+      fromEpoch: fromEpochIndex,
+      toEpoch: toEpochIndex
+    })
 
     return {} as CcpRouteUpdateResponse
   }
@@ -144,7 +166,9 @@ export class CcpReceiver {
     log('Sending Route Control message')
 
     try {
-      const data = await this._sendData(serializeCcpRouteControlRequest(routeControl))
+      const data = await this._sendData(
+        serializeCcpRouteControlRequest(routeControl)
+      )
       const packet = deserializeIlpReply(data)
       if (isFulfill(packet)) {
         log('successfully sent route control message.')
@@ -156,17 +180,21 @@ export class CcpReceiver {
         throw new Error('route control message returned unknown response.')
       }
     } catch (err) {
-      const errInfo = (err instanceof Object && err.stack) ? err.stack : err
+      const errInfo = err instanceof Object && err.stack ? err.stack : err
       log('failed to set route control information on peer', { error: errInfo })
       // TODO: Should have more elegant, thought-through retry logic here
       if (!sendOnce) {
-        const retryTimeout = setTimeout(this.sendRouteControl, ROUTE_CONTROL_RETRY_INTERVAL)
+        const retryTimeout = setTimeout(
+          this.sendRouteControl,
+          ROUTE_CONTROL_RETRY_INTERVAL
+        )
         retryTimeout.unref()
       }
     }
   }
 
-  private _bump (holdDownTime: number): void { // eslint-disable-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private _bump (holdDownTime: number): void {
     // TODO: Should this be now() + holdDownTime?
     this._expiry = Date.now()
   }

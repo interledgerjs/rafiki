@@ -1,4 +1,11 @@
-import { Router, Rafiki, RafikiMiddleware, TokenAuthConfig, PeersService, AccountsService } from '@interledger/rafiki-core'
+import {
+  Router,
+  Rafiki,
+  RafikiMiddleware,
+  TokenAuthConfig,
+  PeersService,
+  AccountsService
+} from '@interledger/rafiki-core'
 import { Context } from 'koa'
 import createRouter, { Joi } from 'koa-joi-router'
 import bodyParser from 'koa-bodyparser'
@@ -24,7 +31,10 @@ export class AdminApi {
   private _httpServer?: Server
   private _host?: string
   private _port?: number
-  constructor ({ host, port }: AdminApiOptions, { peers, accounts }: AdminApiServices) {
+  constructor (
+    { host, port }: AdminApiOptions,
+    { peers, accounts }: AdminApiServices
+  ) {
     this._koa = new Rafiki()
     // this._koa.use(createAuthMiddleware(auth))
     this._koa.use(this._getRoutes(peers, accounts).middleware())
@@ -41,17 +51,24 @@ export class AdminApi {
     const adminApiPort = this._port || 7780
 
     this._httpServer = this._koa.listen(adminApiPort, adminApiHost)
-    this._koa.context.log.info(`admin api listening. host=${adminApiHost} port=${adminApiPort}`)
+    this._koa.context.log.info(
+      `admin api listening. host=${adminApiHost} port=${adminApiPort}`
+    )
   }
 
-  private _getRoutes (peers: PeersService, accounts: AccountsService): createRouter.Router {
+  private _getRoutes (
+    peers: PeersService,
+    accounts: AccountsService
+  ): createRouter.Router {
     const middlewareRouter = createRouter()
 
     middlewareRouter.use(bodyParser())
     middlewareRouter.route({
       method: 'get',
       path: '/health',
-      handler: async (ctx: Context) => { ctx.body = 'Status: ok' }
+      handler: async (ctx: Context) => {
+        ctx.body = 'Status: ok'
+      }
     })
     middlewareRouter.route({
       method: 'get',
@@ -102,7 +119,9 @@ export class AdminApi {
     middlewareRouter.route({
       method: 'get',
       path: '/peers',
-      handler: async (ctx: Context) => { ctx.body = await peers.list() }
+      handler: async (ctx: Context) => {
+        ctx.body = await peers.list()
+      }
     })
     // router.route({
     //   method: 'get',

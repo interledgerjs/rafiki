@@ -1,5 +1,9 @@
 import Koa from 'koa'
-import { MockIncomingMessageOptions, MockIncomingMessage, MockServerResponse } from '.'
+import {
+  MockIncomingMessageOptions,
+  MockIncomingMessage,
+  MockServerResponse
+} from '.'
 
 export type Options<StateT, CustomT> = {
   app?: Koa<StateT, CustomT>;
@@ -9,7 +13,9 @@ export type Options<StateT, CustomT> = {
   [name: string]: any;
 } & Partial<Omit<CustomT, 'res' | 'req'>>
 
-export function createContext<StateT = any, CustomT = {}> (options: Options<StateT, CustomT> = {}): Koa.ParameterizedContext<StateT, CustomT> {
+export function createContext<StateT = any, CustomT = {}> (
+  options: Options<StateT, CustomT> = {}
+): Koa.ParameterizedContext<StateT, CustomT> {
   const app = options.app || new Koa<StateT, CustomT>()
   const req = new MockIncomingMessage(options.req || {})
   const res = new MockServerResponse(req, options.res)

@@ -7,7 +7,10 @@ import {
   createIncomingBalanceMiddleware,
   createOutgoingBalanceMiddleware,
   createIncomingErrorHandlerMiddleware,
-  createIldcpProtocolController, createCcpProtocolController, createOutgoingExpireMiddleware, createClientController
+  createIldcpProtocolController,
+  createCcpProtocolController,
+  createOutgoingExpireMiddleware,
+  createClientController
 } from '@interledger/rafiki-core'
 import {
   createIncomingMaxPacketAmountMiddleware,
@@ -49,14 +52,17 @@ const router = new InMemoryRouter(peerService, {
   ilpAddress: ILP_ADDRESS
 })
 
-const adminApi = new AdminApi({ host: ADMIN_API_HOST, port: ADMIN_API_PORT }, {
-  auth: (): boolean => {
-    return true
-  },
-  peers: peerService,
-  accounts: accountsService,
-  router: router
-})
+const adminApi = new AdminApi(
+  { host: ADMIN_API_HOST, port: ADMIN_API_PORT },
+  {
+    auth: (): boolean => {
+      return true
+    },
+    peers: peerService,
+    accounts: accountsService,
+    router: router
+  }
+)
 
 const incoming = compose([
   // Incoming Rules
@@ -119,25 +125,31 @@ export const gracefulShutdown = async (): Promise<void> => {
 }
 export const start = async (): Promise<void> => {
   let shuttingDown = false
-  process.on('SIGINT', async (): Promise<void> => {
-    try {
-      if (shuttingDown) {
-        logger.warn('received second SIGINT during graceful shutdown, exiting forcefully.')
+  process.on(
+    'SIGINT',
+    async (): Promise<void> => {
+      try {
+        if (shuttingDown) {
+          logger.warn(
+            'received second SIGINT during graceful shutdown, exiting forcefully.'
+          )
+          process.exit(1)
+          return
+        }
+
+        shuttingDown = true
+
+        // Graceful shutdown
+        await gracefulShutdown()
+        logger.info('completed graceful shutdown.')
+      } catch (err) {
+        const errInfo =
+          err && typeof err === 'object' && err.stack ? err.stack : err
+        logger.error('error while shutting down. error=%s', errInfo)
         process.exit(1)
-        return
       }
-
-      shuttingDown = true
-
-      // Graceful shutdown
-      await gracefulShutdown()
-      logger.info('completed graceful shutdown.')
-    } catch (err) {
-      const errInfo = (err && typeof err === 'object' && err.stack) ? err.stack : err
-      logger.error('error while shutting down. error=%s', errInfo)
-      process.exit(1)
     }
-  })
+  )
 
   logger.info('🚀 the 🐒')
   server = app.listen(PORT)
@@ -148,7 +160,7 @@ export const start = async (): Promise<void> => {
 // If this script is run directly, start the server
 if (!module.parent) {
   start().catch(e => {
-    const errInfo = (e && typeof e === 'object' && e.stack) ? e.stack : e
+    const errInfo = e && typeof e === 'object' && e.stack ? e.stack : e
     logger.error(errInfo)
   })
 }

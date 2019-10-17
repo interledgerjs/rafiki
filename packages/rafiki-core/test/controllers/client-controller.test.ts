@@ -1,6 +1,10 @@
 import { createContext } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../../src/rafiki'
-import { PeerFactory, IlpPrepareFactory, RafikiServicesFactory } from '../../src/factories'
+import {
+  PeerFactory,
+  IlpPrepareFactory,
+  RafikiServicesFactory
+} from '../../src/factories'
 import { createClientController } from '../../src/controllers/client'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 
@@ -29,5 +33,4 @@ describe('Client Controller', function () {
     expect(bob.send).toHaveBeenCalled()
     expect(ctx.response.rawReply).toBeDefined()
   })
-
 })

@@ -48,14 +48,25 @@ export function getBearerToken (ctx: Koa.Context): string | undefined {
  * @param config.introspect a function to introspect the token
  * @param config.authenticate a function to determine if the user is authenticated based on the introspected token
  */
-export function createTokenAuthMiddleware (config?: Partial<TokenAuthConfig>): RafikiMiddleware {
-  const _auth = (config && config.authenticate) ? config.authenticate : defaultAuthenticate
-  const _introspect = (config && config.introspect) ? config.introspect : defaultIntrospect
+export function createTokenAuthMiddleware (
+  config?: Partial<TokenAuthConfig>
+): RafikiMiddleware {
+  const _auth =
+    config && config.authenticate ? config.authenticate : defaultAuthenticate
+  const _introspect =
+    config && config.introspect ? config.introspect : defaultIntrospect
 
-  return async function auth (ctx: Koa.Context, next: () => Promise<any>): Promise<void> {
+  return async function auth (
+    ctx: Koa.Context,
+    next: () => Promise<any>
+  ): Promise<void> {
     // Parse out Bearer token
     ctx.state.token = getBearerToken(ctx)
-    ctx.assert(ctx.state.token, 401, 'Bearer token required in Authorization header')
+    ctx.assert(
+      ctx.state.token,
+      401,
+      'Bearer token required in Authorization header'
+    )
 
     // Introspect token
     ctx.state.user = await _introspect(ctx.state.token)

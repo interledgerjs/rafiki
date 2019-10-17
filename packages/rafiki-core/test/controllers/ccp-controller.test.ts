@@ -1,10 +1,19 @@
-
 import { serializeIlpPrepare } from 'ilp-packet'
-import { serializeCcpResponse, deserializeCcpRouteControlRequest, deserializeCcpRouteUpdateRequest } from 'ilp-protocol-ccp'
+import {
+  serializeCcpResponse,
+  deserializeCcpRouteControlRequest,
+  deserializeCcpRouteUpdateRequest
+} from 'ilp-protocol-ccp'
 import { createContext } from '@interledger/rafiki-utils'
 import { RafikiContext } from '../../src/rafiki'
 import { createCcpProtocolController } from '../../src/controllers/ccp-protocol'
-import { PeerFactory, IlpPrepareFactory, RafikiServicesFactory, RouteUpdatePreparePacketFactory, RouteControlPreparePacketFactory } from '../../src/factories'
+import {
+  PeerFactory,
+  IlpPrepareFactory,
+  RafikiServicesFactory,
+  RouteUpdatePreparePacketFactory,
+  RouteControlPreparePacketFactory
+} from '../../src/factories'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 
 describe('CCP Rule', function () {
@@ -37,9 +46,15 @@ describe('CCP Rule', function () {
 
     await expect(controller(ctx)).resolves.toBeUndefined()
 
-    expect(services.logger.trace).toHaveBeenCalledWith('received peer.route.update', { request: ctx.request.prepare })
+    expect(services.logger.trace).toHaveBeenCalledWith(
+      'received peer.route.update',
+      { request: ctx.request.prepare }
+    )
     expect(ctx.response.rawReply).toEqual(serializeCcpResponse())
-    expect(services.router.handleRouteUpdate).toHaveBeenCalledWith(alice.id, deserializeCcpRouteUpdateRequest(ctx.request.rawPrepare))
+    expect(services.router.handleRouteUpdate).toHaveBeenCalledWith(
+      alice.id,
+      deserializeCcpRouteUpdateRequest(ctx.request.rawPrepare)
+    )
   })
   test('gives router ccp route control requests and returns a CcpResponse for route control request', async () => {
     const routeControl = RouteControlPreparePacketFactory.build()
@@ -48,16 +63,23 @@ describe('CCP Rule', function () {
 
     await expect(controller(ctx)).resolves.toBeUndefined()
 
-    expect(services.logger.trace).toHaveBeenCalledWith('received peer.route.control', { request: ctx.request.prepare })
+    expect(services.logger.trace).toHaveBeenCalledWith(
+      'received peer.route.control',
+      { request: ctx.request.prepare }
+    )
     expect(ctx.response.rawReply).toEqual(serializeCcpResponse())
-    expect(services.router.handleRouteControl).toHaveBeenCalledWith(alice.id, deserializeCcpRouteControlRequest(ctx.request.rawPrepare))
+    expect(services.router.handleRouteControl).toHaveBeenCalledWith(
+      alice.id,
+      deserializeCcpRouteControlRequest(ctx.request.rawPrepare)
+    )
   })
   test('throws error for non ccp related messages', async () => {
     const prepare = IlpPrepareFactory.build()
     ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
     ctx.request.rawPrepare = serializeIlpPrepare(prepare)
 
-    await expect(controller(ctx)).rejects.toThrowError('Unrecognized CCP message')
+    await expect(controller(ctx)).rejects.toThrowError(
+      'Unrecognized CCP message'
+    )
   })
-
 })

@@ -1,5 +1,9 @@
 import bodyParser from 'koa-bodyparser'
-import { PeersService, AccountsService, AccountSnapshot } from '@interledger/rafiki-core'
+import {
+  PeersService,
+  AccountsService,
+  AccountSnapshot
+} from '@interledger/rafiki-core'
 import { normalizeAsset } from '@interledger/rafiki-utils'
 import { createSettlementApiRoutes } from './routes'
 import Koa, { Context } from 'koa'
@@ -57,9 +61,15 @@ export class AccountingSystem {
     return account
   }
 
-  private async getAccountSettlementEngineOrThrow (account: AccountSnapshot): Promise<SettlementEngine> {
-    if (!account.settlementEngine) throw new Error('No settlement Engine defined for account')
-    const settlementEngine = await this._settlementEngineService.get(account.settlementEngine)
+  private async getAccountSettlementEngineOrThrow (
+    account: AccountSnapshot
+  ): Promise<SettlementEngine> {
+    if (!account.settlementEngine) {
+      throw new Error('No settlement Engine defined for account')
+    }
+    const settlementEngine = await this._settlementEngineService.get(
+      account.settlementEngine
+    )
     if (!settlementEngine) throw new Error('Settlement Engine not found')
     return settlementEngine
   }
@@ -84,39 +94,64 @@ export class AccountingSystem {
     await engine.removeAccount(account.id)
   }
 
-  async receiveRequest (accountId: string, packet: IlpPrepare): Promise<IlpReply> {
+  async receiveRequest (
+    accountId: string,
+    packet: IlpPrepare
+  ): Promise<IlpReply> {
     const account = await this.getAccountOrThrow(accountId)
     const engine = await this.getAccountSettlementEngineOrThrow(account)
 
     return engine.receiveRequest(account.id, packet)
   }
 
-  async sendSettlement (account: AccountSnapshot, amount: bigint, scale: number): Promise<void> {
+  async sendSettlement (
+    account: AccountSnapshot,
+    amount: bigint,
+    scale: number
+  ): Promise<void> {
     const engine = await this.getAccountSettlementEngineOrThrow(account)
 
-    const response: SettlementResponse = await engine.sendSettlement(account.id, amount, scale)
+    const response: SettlementResponse = await engine.sendSettlement(
+      account.id,
+      amount,
+      scale
+    )
 
     if (response.scale > scale) {
-      throw new Error('Cant process scale with greater precision than account settings')
+      throw new Error(
+        'Cant process scale with greater precision than account settings'
+      )
     }
 
-    const normalizedAmount = normalizeAsset(response.scale, account.assetScale, BigInt(response.amount))
+    const normalizedAmount = normalizeAsset(
+      response.scale,
+      account.assetScale,
+      BigInt(response.amount)
+    )
 
-    await this._accountsService.adjustBalancePayable(-normalizedAmount, account.id, async ({ commit }) => {
-      await commit()
-    })
+    await this._accountsService.adjustBalancePayable(
+      -normalizedAmount,
+      account.id,
+      async ({ commit }) => {
+        await commit()
+      }
+    )
   }
 
   async maybeSettle (accountSnapshot: AccountSnapshot): Promise<void> {
     // Quick check if must settle based on the snapshot data
-    const settle = accountSnapshot.settlementThreshold && accountSnapshot.balancePayable > accountSnapshot.settlementThreshold
+    const settle =
+      accountSnapshot.settlementThreshold &&
+      accountSnapshot.balancePayable > accountSnapshot.settlementThreshold
     // Are not required to settle so return
     if (!settle && typeof accountSnapshot.settleTo !== 'undefined') return
 
     // TODO this needs an optimization if you are settling often (ie every packet)
     // Get account and check using current values! as the snapshot may be out of date
     const account = await this.getAccountOrThrow(accountSnapshot.id)
-    const shouldSettle = account.settlementThreshold && account.balancePayable > account.settlementThreshold
+    const shouldSettle =
+      account.settlementThreshold &&
+      account.balancePayable > account.settlementThreshold
 
     // Check using latest data
     if (!shouldSettle && typeof account.settleTo !== 'undefined') return

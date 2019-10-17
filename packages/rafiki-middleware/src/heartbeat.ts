@@ -14,8 +14,14 @@ export interface HeartbeatRuleServices {
  *
  * TODO: Should be a controller
  */
-export function createIncomingHeartbeatMiddleware (config: HeartbeatRuleServices): RafikiMiddleware { // eslint-disable-line @typescript-eslint/no-unused-vars
-  return async ({ services: { logger }, request, response }: RafikiContext, next: () => Promise<any>): Promise<void> => {
+export function createIncomingHeartbeatMiddleware (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  config: HeartbeatRuleServices
+): RafikiMiddleware {
+  return async (
+    { services: { logger }, request, response }: RafikiContext,
+    next: () => Promise<any>
+  ): Promise<void> => {
     const { destination, data } = request.prepare
     if (destination === 'peer.heartbeat') {
       logger.debug('received incoming heartbeat')

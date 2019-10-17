@@ -1,13 +1,16 @@
 import { Errors } from 'ilp-packet'
 import { createContext } from '@interledger/rafiki-utils'
 import { RafikiContext, ZeroCopyIlpPrepare } from '@interledger/rafiki-core'
-import { RafikiServicesFactory, PeerFactory, IlpPrepareFactory } from '@interledger/rafiki-core/build/factories'
+import {
+  RafikiServicesFactory,
+  PeerFactory,
+  IlpPrepareFactory
+} from '@interledger/rafiki-core/build/factories'
 import { createIncomingMaxPacketAmountMiddleware } from '../src/max-packet-amount'
 
 const { AmountTooLargeError } = Errors
 
 describe('Max Packet Amount Middleware', function () {
-
   const services = RafikiServicesFactory.build()
   const alice = PeerFactory.build({ id: 'alice', maxPacketAmount: BigInt(50) })
   const bob = PeerFactory.build({ id: 'bob' })
@@ -48,10 +51,17 @@ describe('Max Packet Amount Middleware', function () {
     ctx.request.prepare = new ZeroCopyIlpPrepare(prepareOverMaxAmount)
     const next = jest.fn()
 
-    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(AmountTooLargeError)
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(
+      AmountTooLargeError
+    )
 
     expect(next).toHaveBeenCalledTimes(0)
-    expect(ctx.services.logger.warn).toHaveBeenCalledWith('rejected a packet due to amount exceeding maxPacketAmount', { maxPacketAmount: alice.maxPacketAmount!.toString(), request: ctx.request })
+    expect(ctx.services.logger.warn).toHaveBeenCalledWith(
+      'rejected a packet due to amount exceeding maxPacketAmount',
+      {
+        maxPacketAmount: alice.maxPacketAmount!.toString(),
+        request: ctx.request
+      }
+    )
   })
-
 })

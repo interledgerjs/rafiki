@@ -10,7 +10,8 @@ export interface Agreement {
   cap?: boolean;
 }
 
-export function isAgreement (val: any): val is Agreement { // eslint-disable-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function isAgreement (val: any): val is Agreement {
   // TODO
   return true
 }

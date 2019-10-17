@@ -1,11 +1,34 @@
 import { createContext } from '@interledger/rafiki-utils'
-import { RafikiContext, InMemoryPeers, InMemoryAccountsService, ZeroCopyIlpPrepare } from '../../src'
-import { createIncomingBalanceMiddleware, createOutgoingBalanceMiddleware } from '../../src/middleware'
-import { RafikiServicesFactory, PeerInfoFactory, AccountInfoFactory, IlpPrepareFactory, IlpFulfillFactory, IlpRejectFactory } from '../../src/factories'
+import {
+  RafikiContext,
+  InMemoryPeers,
+  InMemoryAccountsService,
+  ZeroCopyIlpPrepare
+} from '../../src'
+import {
+  createIncomingBalanceMiddleware,
+  createOutgoingBalanceMiddleware
+} from '../../src/middleware'
+import {
+  RafikiServicesFactory,
+  PeerInfoFactory,
+  AccountInfoFactory,
+  IlpPrepareFactory,
+  IlpFulfillFactory,
+  IlpRejectFactory
+} from '../../src/factories'
 
 // TODO: make one peer to many account relationship
-const aliceAccountInfo = AccountInfoFactory.build({ id: 'alice', peerId: 'alice', maximumPayable: BigInt(1000) })
-const bobAccountInfo = AccountInfoFactory.build({ id: 'bob', peerId: 'bob', maximumReceivable: BigInt(1000) })
+const aliceAccountInfo = AccountInfoFactory.build({
+  id: 'alice',
+  peerId: 'alice',
+  maximumPayable: BigInt(1000)
+})
+const bobAccountInfo = AccountInfoFactory.build({
+  id: 'bob',
+  peerId: 'bob',
+  maximumReceivable: BigInt(1000)
+})
 const accounts = new InMemoryAccountsService()
 const services = RafikiServicesFactory.build({ accounts })
 const ctx = createContext<any, RafikiContext>()
@@ -41,10 +64,18 @@ describe('Incoming Balance Middleware', function () {
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(100))
-    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(100)
+    )
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
   })
 
   test('reject response does not adjust the account balances', async () => {
@@ -57,10 +88,18 @@ describe('Incoming Balance Middleware', function () {
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
   })
 
   test('ignores 0 amount packets', async () => {
@@ -74,13 +113,20 @@ describe('Incoming Balance Middleware', function () {
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
     expect(adjustReceivablesSpy).toHaveBeenCalledTimes(0)
   })
-
 })
 
 describe('Outgoing Balance Middleware', function () {
@@ -95,10 +141,18 @@ describe('Outgoing Balance Middleware', function () {
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(100))
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(
+      BigInt(100)
+    )
   })
 
   it('reject response does not adjust the account balances', async () => {
@@ -111,10 +165,18 @@ describe('Outgoing Balance Middleware', function () {
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
   })
 
   test('ignores 0 amount packets', async () => {
@@ -128,10 +190,18 @@ describe('Outgoing Balance Middleware', function () {
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
-    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(BigInt(0))
-    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(BigInt(0))
+    expect((await accounts.get(aliceAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(aliceAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balanceReceivable).toEqual(
+      BigInt(0)
+    )
+    expect((await accounts.get(bobAccountInfo.id)).balancePayable).toEqual(
+      BigInt(0)
+    )
     expect(adjustPayablesSpy).toHaveBeenCalledTimes(0)
   })
 })

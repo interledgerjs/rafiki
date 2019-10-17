@@ -5,15 +5,22 @@ import { Errors } from 'ilp-packet'
 const { WrongConditionError } = Errors
 
 export function createOutgoingValidateFulfillmentMiddleware (): RafikiMiddleware {
-  return async ({ services: { logger }, request: { prepare }, response }: RafikiContext, next: () => Promise<any>): Promise<void> => {
+  return async (
+    { services: { logger }, request: { prepare }, response }: RafikiContext,
+    next: () => Promise<any>
+  ): Promise<void> => {
     const { executionCondition } = prepare
     await next()
     if (response.fulfill) {
       const { fulfillment } = response.fulfill
-      const calculatedCondition = createHash('sha256').update(fulfillment).digest()
+      const calculatedCondition = createHash('sha256')
+        .update(fulfillment)
+        .digest()
       if (!calculatedCondition.equals(executionCondition)) {
         logger.warn('invalid fulfillment', { response })
-        throw new WrongConditionError('fulfillment did not match expected value.')
+        throw new WrongConditionError(
+          'fulfillment did not match expected value.'
+        )
       }
     }
   }

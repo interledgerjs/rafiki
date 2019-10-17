@@ -6,7 +6,6 @@ import { SELF_PEER_ID } from '../../src/constants'
 import { InMemoryPeers } from '../../src/services'
 
 describe('Error Handler Middleware', () => {
-
   const peers = new InMemoryPeers()
   const selfPeer = PeerInfoFactory.build({ id: SELF_PEER_ID })
   const services = RafikiServicesFactory.build({}, { peers })
@@ -27,7 +26,10 @@ describe('Error Handler Middleware', () => {
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
     expect(ctx.response.reject).toBeDefined()
-    expect(ctx.services.logger.error).toHaveBeenCalledWith('Error thrown in incoming pipeline', { err: errorToBeThrown })
+    expect(ctx.services.logger.error).toHaveBeenCalledWith(
+      'Error thrown in incoming pipeline',
+      { err: errorToBeThrown }
+    )
   })
 
   test('sets triggeredBy to own address if error is thrown in next', async () => {
@@ -56,6 +58,8 @@ describe('Error Handler Middleware', () => {
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
     expect(ctx.response.reject).toBeDefined()
-    expect(ctx.services.logger.error).toHaveBeenCalledWith('handler did not return a valid value.')
+    expect(ctx.services.logger.error).toHaveBeenCalledWith(
+      'handler did not return a valid value.'
+    )
   })
 })

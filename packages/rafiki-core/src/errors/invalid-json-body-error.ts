@@ -15,7 +15,10 @@ export class InvalidJsonBodyError extends ExtensibleError {
     this.validationErrors = validationErrors
   }
 
-  debugPrint (log: (message: string) => void, validationError?: ErrorObject): void {
+  debugPrint (
+    log: (message: string) => void,
+    validationError?: ErrorObject
+  ): void {
     if (!validationError) {
       if (this.validationErrors) {
         for (const ve of this.validationErrors) {
@@ -25,8 +28,12 @@ export class InvalidJsonBodyError extends ExtensibleError {
       return
     }
 
-    const additionalInfo = Object.keys(validationError.params).map(key => `${key}=${validationError.params[key]}`).join(' ')
+    const additionalInfo = Object.keys(validationError.params)
+      .map(key => `${key}=${validationError.params[key]}`)
+      .join(' ')
 
-    log(`-- ${validationError.dataPath}: ${validationError.message}. ${additionalInfo}`)
+    log(
+      `-- ${validationError.dataPath}: ${validationError.message}. ${additionalInfo}`
+    )
   }
 }

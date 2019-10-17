@@ -1,8 +1,17 @@
-import { IncomingRoute, RouteManager, Router as RoutingTable } from 'ilp-routing'
+import {
+  IncomingRoute,
+  RouteManager,
+  Router as RoutingTable
+} from 'ilp-routing'
 import { fetch as ildcpFetch } from 'ilp-protocol-ildcp'
 import { Relation, RelationWeights, PeerInfo } from '../../types'
 import { PeerNotFoundError } from '../../errors'
-import { CcpRouteControlRequest, CcpRouteUpdateRequest, CcpRouteControlResponse, CcpRouteUpdateResponse } from 'ilp-protocol-ccp'
+import {
+  CcpRouteControlRequest,
+  CcpRouteUpdateRequest,
+  CcpRouteControlResponse,
+  CcpRouteUpdateResponse
+} from 'ilp-protocol-ccp'
 import { CcpSender, CcpSenderService } from './ccp-sender'
 import { CcpReceiver, CcpReceiverService } from './ccp-receiver'
 import { PeersService } from '../peers'
@@ -27,7 +36,10 @@ export class InMemoryRouter implements Router {
   private _ccpSenders: CcpSenderService = new CcpSenderService()
   private _ccpReceivers: CcpReceiverService = new CcpReceiverService()
 
-  constructor (private _peers: PeersService, { globalPrefix, ilpAddress }: ImMemoryRouterConfig) {
+  constructor (
+    private _peers: PeersService,
+    { globalPrefix, ilpAddress }: ImMemoryRouterConfig
+  ) {
     // Setup the `self` peer
     this._routeManager.addPeer(SELF_PEER_ID, 'local')
     this._routingTable.setGlobalPrefix(globalPrefix || 'test')
@@ -38,13 +50,19 @@ export class InMemoryRouter implements Router {
     // Added
     this._peers.added.subscribe(async (peer: PeerInfo) => {
       const routingWeight = peer.relationWeight || 0
-      await this._addPeer(peer.id, peer.relation, routingWeight, peer.isCcpSender, peer.isCcpReceiver)
+      await this._addPeer(
+        peer.id,
+        peer.relation,
+        routingWeight,
+        peer.isCcpSender,
+        peer.isCcpReceiver
+      )
     })
 
     // Updated
-    this._peers.updated.subscribe(async (peer: PeerInfo) => { // eslint-disable-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    this._peers.updated.subscribe(async (peer: PeerInfo) => {
       // TODO: Handle updates to peer
-
     })
 
     // Removed
@@ -53,11 +71,17 @@ export class InMemoryRouter implements Router {
     })
   }
 
-  public async handleRouteControl (peerId: string, request: CcpRouteControlRequest): Promise<CcpRouteControlResponse> {
+  public async handleRouteControl (
+    peerId: string,
+    request: CcpRouteControlRequest
+  ): Promise<CcpRouteControlResponse> {
     return this._ccpSenders.getOrThrow(peerId).handleRouteControl(request)
   }
 
-  public async handleRouteUpdate (peerId: string, request: CcpRouteUpdateRequest): Promise<CcpRouteUpdateResponse> {
+  public async handleRouteUpdate (
+    peerId: string,
+    request: CcpRouteUpdateRequest
+  ): Promise<CcpRouteUpdateResponse> {
     return this._ccpReceivers.getOrThrow(peerId).handleRouteUpdate(request)
   }
 
@@ -71,8 +95,11 @@ export class InMemoryRouter implements Router {
   public getAddresses (peerId: string): string[] {
     const peer = this._routeManager.getPeer(peerId)
     return peer
-      ? peer['routes']['prefixes'].sort((a: string, b: string) => { // eslint-disable-line dot-notation
-        return peer['routes']['items'][b]['weight'] - peer['routes']['items'][a]['weight'] // eslint-disable-line dot-notation
+      ? peer['routes']['prefixes'].sort((a: string, b: string) => {
+        return (
+          peer['routes']['items'][b]['weight'] -
+            peer['routes']['items'][a]['weight']
+        )
       })
       : []
   }
@@ -81,7 +108,13 @@ export class InMemoryRouter implements Router {
     return this._routingTable.getRoutingTable().toJSON()
   }
 
-  private async _addPeer (peerId: string, relation: Relation, weight: number, isSender = false, isReceiver = false): Promise<void> {
+  private async _addPeer (
+    peerId: string,
+    relation: Relation,
+    weight: number,
+    isSender = false,
+    isReceiver = false
+  ): Promise<void> {
     log('adding peer', { peerId, relation })
     this._routeManager.addPeer(peerId, relation)
 
@@ -93,8 +126,12 @@ export class InMemoryRouter implements Router {
         sendData: async (data: Buffer): Promise<Buffer> => {
           return sendToPeer(peerId, data, this._peers)
         },
-        addRoute: (route: IncomingRoute): void => { this._routeManager.addRoute(route) },
-        removeRoute: (peerId: string, prefix: string): void => { this._routeManager.removeRoute(peerId, prefix) },
+        addRoute: (route: IncomingRoute): void => {
+          this._routeManager.addRoute(route)
+        },
+        removeRoute: (peerId: string, prefix: string): void => {
+          this._routeManager.removeRoute(peerId, prefix)
+        },
         getRouteWeight
       })
       this._ccpReceivers.set(peerId, receiver)
@@ -122,9 +159,11 @@ export class InMemoryRouter implements Router {
     }
 
     if (relation === 'parent') {
-      const { clientAddress } = await ildcpFetch(async (data: Buffer): Promise<Buffer> => {
-        return sendToPeer(peerId, data, this._peers)
-      })
+      const { clientAddress } = await ildcpFetch(
+        async (data: Buffer): Promise<Buffer> => {
+          return sendToPeer(peerId, data, this._peers)
+        }
+      )
       if (clientAddress === 'unknown') {
         const e = new Error('Failed to get ILDCP address from parent.')
         throw e

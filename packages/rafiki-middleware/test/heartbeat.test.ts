@@ -74,7 +74,7 @@ test.todo('heartbeat test')
 //       onFailedHeartbeat: () => {},
 //     })
 
-//     heartbeatRule.startup() 
+//     heartbeatRule.startup()
 //     this.clock.tick(30000) // one default heartbeat interval
 //     this.clock.tick(30000) // next heartbeat interval
 
@@ -93,7 +93,7 @@ test.todo('heartbeat test')
 //       onFailedHeartbeat: () => {},
 //     })
 
-//     heartbeatRule.startup()    
+//     heartbeatRule.startup()
 //     this.clock.tick(30000) // one default heartbeat interval
 
 //     assert.isOk(peerAdded)

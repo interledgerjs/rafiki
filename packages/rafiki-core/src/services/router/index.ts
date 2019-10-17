@@ -7,15 +7,21 @@ import {
 import { RelationWeights } from '../../types'
 
 export interface Router {
-  handleRouteControl: (peerId: string, request: CcpRouteControlRequest) => Promise<CcpRouteControlResponse>;
+  handleRouteControl: (
+    peerId: string,
+    request: CcpRouteControlRequest
+  ) => Promise<CcpRouteControlResponse>;
 
-  handleRouteUpdate: (peerId: string, request: CcpRouteUpdateRequest) => Promise<CcpRouteUpdateResponse>;
+  handleRouteUpdate: (
+    peerId: string,
+    request: CcpRouteUpdateRequest
+  ) => Promise<CcpRouteUpdateResponse>;
 
-  getPeerForAddress (destination: string): string;
+  getPeerForAddress(destination: string): string;
 
-  getAddresses (peerId: string): string[];
+  getAddresses(peerId: string): string[];
 
-  getRoutingTable (): {};
+  getRoutingTable(): {};
 }
 
 export function getRouteWeight (peerId: string): number {
@@ -23,16 +29,16 @@ export function getRouteWeight (peerId: string): number {
   const peer = this._routeManager.getPeer(peerId)
   if (peer) {
     switch (peer.getRelation()) {
-      case ('parent'):
+      case 'parent':
         weight += RelationWeights.parent
         break
-      case ('peer'):
+      case 'peer':
         weight += RelationWeights.peer
         break
-      case ('child'):
+      case 'child':
         weight += RelationWeights.child
         break
-      case ('local'):
+      case 'local':
         weight += RelationWeights.local
         break
     }

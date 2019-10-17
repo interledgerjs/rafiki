@@ -1,18 +1,23 @@
 import { createContext } from '@interledger/rafiki-utils'
 import { createPeerMiddleware } from '../../src/middleware/peer'
-import { PeerFactory, IlpPrepareFactory, RafikiServicesFactory } from '../../src/factories'
+import {
+  PeerFactory,
+  IlpPrepareFactory,
+  RafikiServicesFactory
+} from '../../src/factories'
 import { RafikiContext } from '../../src/rafiki'
 import { InMemoryPeers } from '../../src/services'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 
-describe('Peer Middleware',() => {
-
+describe('Peer Middleware', () => {
   const incomingPeerInfo = PeerFactory.build({ id: 'incomingPeer' })
   const outgoingPeerInfo = PeerFactory.build({ id: 'outgoingPeer' })
   const peers = new InMemoryPeers()
   const router = {
     getAddresses: jest.fn(),
-    getPeerForAddress: jest.fn().mockImplementation((address: string) => 'outgoingPeer'),
+    getPeerForAddress: jest
+      .fn()
+      .mockImplementation((address: string) => 'outgoingPeer'),
     getRoutingTable: jest.fn(),
     handleRouteControl: jest.fn(),
     handleRouteUpdate: jest.fn()
@@ -29,7 +34,9 @@ describe('Peer Middleware',() => {
     const next = jest.fn()
     const ctx = createContext<any, RafikiContext>()
     ctx.services = rafikiServices
-    ctx.request.prepare = new ZeroCopyIlpPrepare(IlpPrepareFactory.build({ destination: 'test.rafiki.outgoingPeer' }))
+    ctx.request.prepare = new ZeroCopyIlpPrepare(
+      IlpPrepareFactory.build({ destination: 'test.rafiki.outgoingPeer' })
+    )
 
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 

@@ -1,4 +1,3 @@
-
 export type Relation = 'parent' | 'child' | 'peer' | 'local'
 
 export type PeerRelation = 'parent' | 'peer' | 'child'

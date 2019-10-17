@@ -22,12 +22,20 @@ export interface AccountsService {
   /**
    * Adjust the balance on a peer's payable account and return a snapshot of the account after the adjustment
    */
-  adjustBalancePayable: (amount: bigint, accountId: string, callback: (trx: Transaction) => Promise<any>) => Promise<AccountSnapshot>;
+  adjustBalancePayable: (
+    amount: bigint,
+    accountId: string,
+    callback: (trx: Transaction) => Promise<any>
+  ) => Promise<AccountSnapshot>;
 
   /**
    * Adjust the balance on a peer's receivable account and return a snapshot of the account after the adjustment
    */
-  adjustBalanceReceivable: (amount: bigint, accountId: string, callback: (trx: Transaction) => Promise<any>) => Promise<AccountSnapshot>;
+  adjustBalanceReceivable: (
+    amount: bigint,
+    accountId: string,
+    callback: (trx: Transaction) => Promise<any>
+  ) => Promise<AccountSnapshot>;
 }
 
 export * from './in-memory'
