@@ -1,6 +1,6 @@
 {
   "name": "ilp-routing",
-  "version": "20.0.1-beta.0",
+  "version": "20.0.1-beta.1",
   "description": "Routing Library for Interledger modules",
   "main": "build/index.js",
   "types": "build/index.d.ts",

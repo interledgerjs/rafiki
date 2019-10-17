@@ -4411,13 +4411,6 @@ ilp-protocol-ildcp@^2.0.1:
     ilp-packet "^3.0.9"
     oer-utils "^5.0.1"
 
-ilp-routing@^20.0.1-beta.1:
-  version "20.0.1-beta.1"
-  resolved "https://registry.yarnpkg.com/ilp-routing/-/ilp-routing-20.0.1-beta.1.tgz#b0a3ebd29d271b47034ba9b700ab2e1414cb263c"
-  integrity sha512-ToJjHQttZ+mj4dx5sIH7FCXP+4gFrlCo7YGQXuPxlqyFQerYqlZ5ZaIj2becztI5Nxa44nCrn4Ab+g3FX2fjIQ==
-  dependencies:
-    lodash "^4.17.11"
-
 import-fresh@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/import-fresh/-/import-fresh-2.0.0.tgz#d81355c15612d386c61f9ddd3922d4304822a546"

@@ -1,12 +1,6 @@
-import * as Chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
-import 'mocha'
-import * as sinon from 'sinon'
 import { Router } from '../src'
 import { RouteManager } from '../src/ilp-route-manager'
 import { Peer } from '../src/ilp-route-manager/peer'
-Chai.use(chaiAsPromised)
-const assert = Object.assign(Chai.assert, sinon.assert)
 
 describe('ilp-route-manager', function () {
   let router: Router
@@ -16,39 +10,39 @@ describe('ilp-route-manager', function () {
   })
 
   describe('instantiation', function () {
-    it('can be instantiated', function () {
+    test('can be instantiated', function () {
       const routeManager = new RouteManager(router)
 
-      assert.instanceOf(routeManager, RouteManager)
+      expect(routeManager).toBeInstanceOf(RouteManager)
     })
   })
 
   describe('peer', function () {
-    it('can add a peer', function () {
+    test('can add a peer', function () {
       const routeManager = new RouteManager(router)
 
       routeManager.addPeer('harry', 'peer')
 
       const peer = routeManager.getPeer('harry')
-      assert.isDefined(routeManager.getPeer('harry'))
-      assert.instanceOf(peer, Peer)
+      expect(routeManager.getPeer('harry')).toBeDefined()
+      expect(peer).toBeInstanceOf(Peer)
     })
 
-    it('can remove a peer', function () {
+    test('can remove a peer', function () {
       const routeManager = new RouteManager(router)
 
       routeManager.removePeer('harry')
 
-      assert.isUndefined(routeManager.getPeer('harry'))
+      expect(routeManager.getPeer('harry')).not.toBeDefined()
     })
 
-    it('can get all peers', function () {
+    test('can get all peers', function () {
       const routeManager = new RouteManager(router)
 
       routeManager.addPeer('harry', 'peer')
 
       const peers = routeManager.getPeerList()
-      assert.deepEqual(peers, ['harry'])
+      expect(peers).toEqual(['harry'])
     })
   })
 
@@ -63,7 +57,7 @@ describe('ilp-route-manager', function () {
     })
 
     describe('adding', function () {
-      it('adding a route adds it to peer routing table', function () {
+      test('adding a route adds it to peer routing table', function () {
         routeManager.addRoute({
           peer: 'harry',
           prefix: 'g.harry',
@@ -72,14 +66,14 @@ describe('ilp-route-manager', function () {
 
         const route = peer!.getPrefix('g.harry')
 
-        assert.deepEqual(route, {
+        expect(route).toEqual({
           peer: 'harry',
           prefix: 'g.harry',
           path: []
         })
       })
 
-      it('adding a better route adds it to the routingTable', function () {
+      test('adding a better route adds it to the routingTable', function () {
         routeManager.addPeer('mary', 'child')
         routeManager.addRoute({
           peer: 'harry',
@@ -94,10 +88,10 @@ describe('ilp-route-manager', function () {
         })
 
         const nextHop = router.nextHop('g.nick')
-        assert.equal(nextHop, 'mary')
+        expect(nextHop).toEqual('mary')
       })
 
-      it('adding a worse route does not update routing table', function () {
+      test('adding a worse route does not update routing table', function () {
         routeManager.addPeer('mary', 'child')
         routeManager.addRoute({
           peer: 'harry',
@@ -112,14 +106,14 @@ describe('ilp-route-manager', function () {
         })
 
         const nextHop = router.nextHop('g.harry')
-        assert.equal(nextHop, 'harry')
+        expect(nextHop).toEqual('harry')
       })
     })
 
     // Section for testing weighting stuff
     describe('weighting', function () {})
 
-    it('removing a route removes from peer routing table', function () {
+    test('removing a route removes from peer routing table', function () {
       routeManager.addRoute({
         peer: 'harry',
         prefix: 'g.harry',
@@ -129,10 +123,10 @@ describe('ilp-route-manager', function () {
       routeManager.removeRoute('harry', 'g.harry')
 
       const route = peer!.getPrefix('g.harry')
-      assert.isUndefined(route)
+      expect(route).not.toBeDefined()
     })
 
-    it('does not add a route for a peer that does not exist', function () {
+    test('does not add a route for a peer that does not exist', function () {
       routeManager.addRoute({
         peer: 'mary',
         prefix: 'g.harry',
@@ -140,20 +134,20 @@ describe('ilp-route-manager', function () {
       })
 
       const nextHop = router.getRoutingTable().get('g.harry')
-      assert.isUndefined(nextHop)
+      expect(nextHop).not.toBeDefined()
     })
 
-    it('removing a peer should remove all its routes from the routing table', function () {
+    test('removing a peer should remove all its routes from the routing table', function () {
       routeManager.addRoute({
         peer: 'harry',
         prefix: 'g.harry',
         path: []
       })
-      assert.isDefined(router.getRoutingTable().get('g.harry'))
+      expect(router.getRoutingTable().get('g.harry')).toBeDefined()
 
       routeManager.removePeer('harry')
 
-      assert.isUndefined(router.getRoutingTable().get('g.harry'))
+      expect(router.getRoutingTable().get('g.harry')).not.toBeDefined()
     })
   })
 })

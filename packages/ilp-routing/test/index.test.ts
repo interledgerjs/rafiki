@@ -8,7 +8,7 @@ describe('ilp-router', function () {
       router = new Router()
     })
 
-    it('can add a route for a peer', function () {
+    test('can add a route for a peer', function () {
       router.addRoute('g.harry', {
         nextHop: 'harry',
         path: []
@@ -16,14 +16,14 @@ describe('ilp-router', function () {
 
       const table = router.getRoutingTable()
 
-      assert.isTrue(table.keys().includes('g.harry'))
-      assert.deepEqual(table.resolve('g.harry.sally'), {
+      expect(table.keys().includes('g.harry')).toBe(true)
+      expect(table.resolve('g.harry.sally')).toEqual({
         nextHop: 'harry',
         path: []
       })
     })
 
-    it('can remove a route for a peer', function () {
+    test('can remove a route for a peer', function () {
       router.addRoute('g.harry', {
         nextHop: 'harry',
         path: []
@@ -32,8 +32,8 @@ describe('ilp-router', function () {
       router.removeRoute('g.harry')
 
       const table = router.getRoutingTable()
-      assert.isFalse(table.keys().includes('g.harry'))
-      assert.isUndefined(table.resolve('g.harry.sally'))
+      expect(table.keys().includes('g.harry')).toBe(false)
+      expect(table.resolve('g.harry.sally')).not.toBeDefined()
     })
   })
 
@@ -48,13 +48,13 @@ describe('ilp-router', function () {
       })
     })
 
-    it('returns peerId if nextHop called for route to a peer', function () {
+    test('returns peerId if nextHop called for route to a peer', function () {
       const nextHop = router.nextHop('g.harry.met.sally')
-      assert.equal(nextHop, 'harry')
+      expect(nextHop).toEqual('harry')
     })
 
-    it("throws an error if can't route request", function () {
-      assert.throws(() => router.nextHop('g.sally'))
+    test("throws an error if can't route request", function () {
+      expect(() => router.nextHop('g.sally')).toThrow()
     })
   })
 
