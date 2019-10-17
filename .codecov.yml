@@ -8,3 +8,6 @@ flags:
   middleware:
     paths:
       - packages/rafiki-middleware/src
+  routing:
+    paths:
+      - packages/ilp-routing/src
