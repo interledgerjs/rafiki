@@ -6,7 +6,10 @@ const { T04_INSUFFICIENT_LIQUIDITY } = Errors.codes
  * Log error for reject packets caused by insufficient liquidity or an exceeded maximum balance.
  */
 export function createOutgoingLiquidityCheckMiddleware (): RafikiMiddleware {
-  return async ({ services: { logger }, response, peers }: RafikiContext, next: () => Promise<any>): Promise<void> => {
+  return async (
+    { services: { logger }, response, peers }: RafikiContext,
+    next: () => Promise<any>
+  ): Promise<void> => {
     await next()
 
     if (response.reject) {

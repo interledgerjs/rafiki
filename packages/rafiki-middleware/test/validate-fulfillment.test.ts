@@ -2,7 +2,12 @@ import { Errors } from 'ilp-packet'
 import { RafikiContext, ZeroCopyIlpPrepare } from '@interledger/rafiki-core'
 import { createContext } from '@interledger/rafiki-utils'
 import { createOutgoingValidateFulfillmentMiddleware } from '../src/validate-fulfillment'
-import { RafikiServicesFactory, IlpPrepareFactory, IlpFulfillFactory, IlpRejectFactory } from '@interledger/rafiki-core/build/factories'
+import {
+  RafikiServicesFactory,
+  IlpPrepareFactory,
+  IlpFulfillFactory,
+  IlpRejectFactory
+} from '@interledger/rafiki-core/build/factories'
 
 const { WrongConditionError } = Errors
 
@@ -18,14 +23,23 @@ describe('Validate Fulfillment Middleware', function () {
   })
 
   test('throws wrong condition error if fulfillment is incorrect', async () => {
-    const prepare = IlpPrepareFactory.build({ executionCondition: Buffer.from('uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=', 'base64') })
-    const incorrectFulfill = IlpFulfillFactory.build({ fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs') })
+    const prepare = IlpPrepareFactory.build({
+      executionCondition: Buffer.from(
+        'uzoYx3K6u+Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U=',
+        'base64'
+      )
+    })
+    const incorrectFulfill = IlpFulfillFactory.build({
+      fulfillment: Buffer.from('ILPHaxsILPHaxsILPHaxsILPHILPHaxs')
+    })
     const next = jest.fn().mockImplementation(() => {
       ctx.response.fulfill = incorrectFulfill
     })
     ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
 
-    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(WrongConditionError)
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(
+      WrongConditionError
+    )
     expect(ctx.services.logger.warn).toHaveBeenCalled()
   })
 

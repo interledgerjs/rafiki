@@ -1,4 +1,3 @@
-
 export interface AccountInfo {
   id: string;
   peerId: string;

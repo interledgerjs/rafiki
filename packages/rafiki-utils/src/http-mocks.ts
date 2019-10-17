@@ -1,17 +1,22 @@
-import { IncomingMessage, IncomingHttpHeaders, STATUS_CODES, OutgoingHttpHeaders } from 'http'
+import {
+  IncomingMessage,
+  IncomingHttpHeaders,
+  STATUS_CODES,
+  OutgoingHttpHeaders
+} from 'http'
 import { Transform } from 'stream'
 import { Socket } from 'net'
 
 export interface MockIncomingMessageOptions {
-  [ key: string]: string | undefined | string[] | IncomingHttpHeaders;
+  [key: string]: string | undefined | string[] | IncomingHttpHeaders;
   method?: string;
   url?: string;
   headers?: IncomingHttpHeaders;
   rawHeaders?: string[];
-
 }
 
 export class MockIncomingMessage extends Transform {
+  id: string | number | object
   httpVersion: '1.1'
   httpVersionMajor: 1
   httpVersionMinor: 1
@@ -21,7 +26,9 @@ export class MockIncomingMessage extends Transform {
   rawHeaders: string[]
   trailers: { [key: string]: string | undefined }
   rawTrailers: string[]
-  setTimeout (msecs: number, callback: () => void): this { // eslint-disable-line @typescript-eslint/no-unused-vars
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setTimeout (msecs: number, callback: () => void): this {
     throw new Error('method not implemented.')
   }
 
@@ -51,13 +58,8 @@ export class MockIncomingMessage extends Transform {
     })
 
     // Copy unreserved options
-    const reservedOptions = [
-      'method',
-      'url',
-      'headers',
-      'rawHeaders'
-    ]
-    Object.keys(options).forEach((key) => {
+    const reservedOptions = ['method', 'url', 'headers', 'rawHeaders']
+    Object.keys(options).forEach(key => {
       if (reservedOptions.indexOf(key) === -1) {
         this[key] = options[key]
       }
@@ -70,18 +72,26 @@ export class MockIncomingMessage extends Transform {
     this.headers = {}
     this.rawHeaders = []
     if (options.headers) {
-      Object.keys(options.headers).forEach((key) => {
+      Object.keys(options.headers).forEach(key => {
         const header = options.headers![key]
         if (header !== undefined) {
           this.headers[key.toLowerCase()] = header
           this.rawHeaders.push(key)
-          this.rawHeaders.push((typeof header !== 'string') ? header.join(' ') : header)
+          this.rawHeaders.push(
+            typeof header !== 'string' ? header.join(' ') : header
+          )
         }
       })
     }
 
     // Auto-end when no body
-    if (this.method === 'GET' || this.method === 'HEAD' || this.method === 'DELETE') this.end()
+    if (
+      this.method === 'GET' ||
+      this.method === 'HEAD' ||
+      this.method === 'DELETE'
+    ) {
+      this.end()
+    }
   }
 
   public fail (error: Error): void {
@@ -136,7 +146,11 @@ export class MockServerResponse extends Transform {
     if (callback) callback()
   }
 
-  writeHead = (statusCode: number, reasonPhrase?: string | OutgoingHttpHeaders, headers?: OutgoingHttpHeaders): this => {
+  writeHead = (
+    statusCode: number,
+    reasonPhrase?: string | OutgoingHttpHeaders,
+    headers?: OutgoingHttpHeaders
+  ): this => {
     if (typeof reasonPhrase !== 'string') {
       headers = reasonPhrase
       reasonPhrase = undefined

@@ -8,7 +8,8 @@ import { map } from 'rxjs/operators'
 const { InsufficientLiquidityError } = Errors
 
 // Implementations SHOULD use a better logger than debug for production services
-const log = debug('rafiki:in-memory-accounts-service') // eslint-disable-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const log = debug('rafiki:in-memory-accounts-service')
 
 /**
  * An in-memory account service for development and testing purposes.
@@ -30,9 +31,9 @@ export class InMemoryAccountsService implements AccountsService {
   }
 
   get updated (): Observable<AccountSnapshot> {
-    return this._updatedAccounts.asObservable().pipe(
-      map(value => Object.assign({}, value))
-    )
+    return this._updatedAccounts
+      .asObservable()
+      .pipe(map(value => Object.assign({}, value)))
   }
 
   async get (id: string): Promise<InMemoryAccount> {
@@ -65,7 +66,11 @@ export class InMemoryAccountsService implements AccountsService {
 
   // Adjust amount the we owe
   // As this is called after we have got the fulfillment. It doesn't actually make much sense
-  public async adjustBalancePayable (amount: bigint, accountId: string, callback: (trx: Transaction) => Promise<any>): Promise<AccountSnapshot> {
+  public async adjustBalancePayable (
+    amount: bigint,
+    accountId: string,
+    callback: (trx: Transaction) => Promise<any>
+  ): Promise<AccountSnapshot> {
     const account = await this.get(accountId)
 
     if (amount > BigInt(0)) {
@@ -83,8 +88,15 @@ export class InMemoryAccountsService implements AccountsService {
       try {
         // Maybe doing the adjustment must occur before the liquidity check + how to handle atomicity
         account.balancePayableInflight += amount
-        if ((account.balancePayableInflight + account.balancePayable) > account.maximumPayable) {
-          throw new InsufficientLiquidityError(`Max payable exceeded: expected: ${(account.balancePayableInflight + account.balancePayable).toString()} maximum: ${account.maximumPayable.toString()}`)
+        if (
+          account.balancePayableInflight + account.balancePayable >
+          account.maximumPayable
+        ) {
+          throw new InsufficientLiquidityError(
+            `Max payable exceeded: expected: ${(
+              account.balancePayableInflight + account.balancePayable
+            ).toString()} maximum: ${account.maximumPayable.toString()}`
+          )
         }
 
         await callback(transaction)
@@ -107,8 +119,7 @@ export class InMemoryAccountsService implements AccountsService {
         commit: async () => {
           account.balancePayable += amount
         },
-        rollback: async () => {
-        }
+        rollback: async () => {}
       }
 
       await callback(transaction)
@@ -120,7 +131,11 @@ export class InMemoryAccountsService implements AccountsService {
     }
   }
 
-  public async adjustBalanceReceivable (amount: bigint, accountId: string, callback: (trx: Transaction) => Promise<any>): Promise<AccountSnapshot> {
+  public async adjustBalanceReceivable (
+    amount: bigint,
+    accountId: string,
+    callback: (trx: Transaction) => Promise<any>
+  ): Promise<AccountSnapshot> {
     const account = await this.get(accountId)
     const transaction: Transaction = {
       commit: async () => {
@@ -136,7 +151,10 @@ export class InMemoryAccountsService implements AccountsService {
     try {
       // Maybe doing the adjustment must occur before the liquidity check + how to handle atomicity
       account.balanceReceivableInflight += amount
-      if ((account.balanceReceivableInflight + account.balanceReceivable) > account.maximumReceivable) {
+      if (
+        account.balanceReceivableInflight + account.balanceReceivable >
+        account.maximumReceivable
+      ) {
         throw new InsufficientLiquidityError('')
       }
 
@@ -156,7 +174,8 @@ export class InMemoryAccountsService implements AccountsService {
   }
 
   // Can take money from payable and transfer to receivables
-  public async maybeSettle (account: InMemoryAccount): Promise<void> { // eslint-disable-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async maybeSettle (account: InMemoryAccount): Promise<void> {
     // // First potentially net.
     // // if payable_balance > 0 && receivable_balance > 0 {
     // //   let amount_to_net = min(payable_balance, receivable_balance);

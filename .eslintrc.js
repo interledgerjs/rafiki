@@ -22,6 +22,8 @@ module.exports = {
     // Waiting on Sir Anders (https://github.com/microsoft/TypeScript/pull/32695)
     "@typescript-eslint/no-non-null-assertion": "off",
     // Otherwise can't declare private variables in constructor
-    "no-useless-constructor": "off"
+    "no-useless-constructor": "off",
+    // TODO: re-enable once ilp-logger is pulled into this monorepo
+    "dot-notation": "off"
   }
 };

@@ -10,13 +10,19 @@ import {
 import { createPeerMiddleware, PeerMiddlewareOptions } from './middleware/peer'
 import { PeersService, Peer } from './services/peers'
 import { AuthState } from './middleware/auth'
-import { createTokenAuthMiddleware, TokenAuthConfig } from './middleware/token-auth'
+import {
+  createTokenAuthMiddleware,
+  TokenAuthConfig
+} from './middleware/token-auth'
 import { AccountSnapshot, AccountsService } from './services/accounts'
 import { LoggingService } from './services/logger'
 import { IncomingMessage, ServerResponse } from 'http'
 import { IlpReply, IlpReject, IlpFulfill } from 'ilp-packet'
 import { DebugLogger } from './services/logger/debug'
-import { AccountMiddlewareOptions, createAccountMiddleware } from './middleware/account'
+import {
+  AccountMiddlewareOptions,
+  createAccountMiddleware
+} from './middleware/account'
 
 export interface RafikiServices {
   router: Router;
@@ -25,7 +31,10 @@ export interface RafikiServices {
   logger: LoggingService;
 }
 
-export interface RafikiIlpConfig extends IlpPacketMiddlewareOptions, PeerMiddlewareOptions, AccountMiddlewareOptions {
+export interface RafikiIlpConfig
+  extends IlpPacketMiddlewareOptions,
+    PeerMiddlewareOptions,
+    AccountMiddlewareOptions {
   path?: string;
 }
 export type RafikiState<T> = T & AuthState
@@ -62,7 +71,10 @@ export type RafikiContextMixin = {
   res: ServerResponse & RafikiResponseMixin;
 }
 
-export type RafikiContext<T = any> = Koa.ParameterizedContext<T, RafikiContextMixin>
+export type RafikiContext<T = any> = Koa.ParameterizedContext<
+  T,
+  RafikiContextMixin
+>
 export type RafikiMiddleware<T = any> = Middleware<T, RafikiContextMixin>
 
 export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
@@ -72,10 +84,11 @@ export class Rafiki<T = any> extends Koa<T, RafikiContextMixin> {
   constructor (config?: Partial<RafikiServices>) {
     super()
 
-    this._router = (config && config.router) ? config.router : undefined
-    this._peers = (config && config.peers) ? config.peers : undefined
-    this._accounts = (config && config.accounts) ? config.accounts : undefined
-    const logger = (config && config.logger) ? config.logger : new DebugLogger('rafiki')
+    this._router = config && config.router ? config.router : undefined
+    this._peers = config && config.peers ? config.peers : undefined
+    this._accounts = config && config.accounts ? config.accounts : undefined
+    const logger =
+      config && config.logger ? config.logger : new DebugLogger('rafiki')
     const peersOrThrow = (): PeersService => {
       if (this._peers) return this._peers
       throw new Error('No peers service provided to the app')
@@ -147,7 +160,9 @@ interface RafikiCreateAppServices extends RafikiServices {
   auth: RafikiMiddleware<AuthState> | Partial<TokenAuthConfig>;
 }
 
-export function createAuthMiddleware (auth?: RafikiMiddleware<AuthState> | Partial<TokenAuthConfig>): RafikiMiddleware {
+export function createAuthMiddleware (
+  auth?: RafikiMiddleware<AuthState> | Partial<TokenAuthConfig>
+): RafikiMiddleware {
   if (typeof auth === 'function') {
     return auth
   } else {
@@ -155,7 +170,10 @@ export function createAuthMiddleware (auth?: RafikiMiddleware<AuthState> | Parti
   }
 }
 
-export function createApp ({ auth, peers, accounts, router, logger }: Partial<RafikiCreateAppServices>, config?: RafikiIlpConfig): Rafiki {
+export function createApp (
+  { auth, peers, accounts, router, logger }: Partial<RafikiCreateAppServices>,
+  config?: RafikiIlpConfig
+): Rafiki {
   const app = new Rafiki({
     peers,
     router,
@@ -177,10 +195,17 @@ export class RafikiRouter {
     this._router = createRouter()
   }
 
-  public ilpRoute (ilpAddressPattern: string, handler: RafikiMiddleware<any>): void {
-    const path = '/' + ilpAddressToPath(ilpAddressPattern)
-      .split('/').filter(Boolean).join('/') // Trim trailing slash
-      .replace('*', '(.*)') // Replace wildcard with regex that only matches valid address chars
+  public ilpRoute (
+    ilpAddressPattern: string,
+    handler: RafikiMiddleware<any>
+  ): void {
+    const path =
+      '/' +
+      ilpAddressToPath(ilpAddressPattern)
+        .split('/')
+        .filter(Boolean)
+        .join('/') // Trim trailing slash
+        .replace('*', '(.*)') // Replace wildcard with regex that only matches valid address chars
 
     this._router.post(path, handler)
   }

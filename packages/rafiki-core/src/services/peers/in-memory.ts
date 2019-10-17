@@ -28,8 +28,13 @@ export class InMemoryPeer implements Peer {
     Object.assign(this, info)
 
     if (this.url) {
-      const axiosConfig: AxiosRequestConfig = { responseType: 'arraybuffer', headers: {} }
-      if (this.authToken) axiosConfig.headers = { Authorization: `Bearer ${this.authToken}` }
+      const axiosConfig: AxiosRequestConfig = {
+        responseType: 'arraybuffer',
+        headers: {}
+      }
+      if (this.authToken) {
+        axiosConfig.headers = { Authorization: `Bearer ${this.authToken}` }
+      }
       this.axiosClient = new AxiosClient(this.url, axiosConfig)
     }
   }

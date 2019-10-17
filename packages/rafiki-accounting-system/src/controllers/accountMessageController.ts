@@ -1,4 +1,8 @@
-import { PeerNotFoundError, STATIC_CONDITION, sendToPeer } from '@interledger/rafiki-core'
+import {
+  PeerNotFoundError,
+  STATIC_CONDITION,
+  sendToPeer
+} from '@interledger/rafiki-core'
 import { serializeIlpPrepare, deserializeIlpReply, isReject } from 'ilp-packet'
 import { AccountingSystemContext } from '../index'
 
@@ -16,7 +20,9 @@ export async function create (ctx: AccountingSystemContext): Promise<void> {
       data: message
     })
 
-    const reply = deserializeIlpReply(await sendToPeer(peerId, packet, ctx.services.peers))
+    const reply = deserializeIlpReply(
+      await sendToPeer(peerId, packet, ctx.services.peers)
+    )
     if (isReject(reply)) {
       throw new Error('IlpPacket to settlement engine was rejected')
     }

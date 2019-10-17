@@ -1,15 +1,26 @@
 import { Errors } from 'ilp-packet'
 import { RafikiContext } from '@interledger/rafiki-core'
-import { PeerFactory, RafikiServicesFactory, IlpPrepareFactory } from '@interledger/rafiki-core/build/factories'
+import {
+  PeerFactory,
+  RafikiServicesFactory,
+  IlpPrepareFactory
+} from '@interledger/rafiki-core/build/factories'
 import { createContext, TokenBucket } from '@interledger/rafiki-utils'
-import { createIncomingThroughputMiddleware, createOutgoingThroughputMiddleware } from '../src/throughput'
+import {
+  createIncomingThroughputMiddleware,
+  createOutgoingThroughputMiddleware
+} from '../src/throughput'
 import { ZeroCopyIlpPrepare } from '@interledger/rafiki-core/src'
 
 const { InsufficientLiquidityError } = Errors
 
 describe('Incoming Throughput Middleware', function () {
   const services = RafikiServicesFactory.build()
-  const alice = PeerFactory.build({ id: 'alice', incomingThroughputLimit: BigInt(10), incomingThroughputLimitRefillPeriod: 10000 })
+  const alice = PeerFactory.build({
+    id: 'alice',
+    incomingThroughputLimit: BigInt(10),
+    incomingThroughputLimitRefillPeriod: 10000
+  })
   const bob = PeerFactory.build({ id: 'bob' })
   const ctx = createContext<any, RafikiContext>()
   ctx.services = services
@@ -29,13 +40,20 @@ describe('Incoming Throughput Middleware', function () {
     ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
     const middleware = createIncomingThroughputMiddleware()
 
-    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientLiquidityError)
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(
+      InsufficientLiquidityError
+    )
     expect(services.logger.warn).toHaveBeenCalled()
   })
   test('allows throughput again after refill period', async () => {
     const now = 1434412800000
     // first return value for token bucket constructor, subsequent for prepare packets being sent
-    Date.now = jest.fn().mockReturnValueOnce(now).mockReturnValueOnce(now).mockReturnValueOnce(now + 1000).mockReturnValueOnce(now + 12000) // move time along every time now is called
+    Date.now = jest
+      .fn()
+      .mockReturnValueOnce(now)
+      .mockReturnValueOnce(now)
+      .mockReturnValueOnce(now + 1000)
+      .mockReturnValueOnce(now + 12000) // move time along every time now is called
     const prepare = IlpPrepareFactory.build({ amount: '10' })
     const next = jest.fn()
     ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
@@ -45,7 +63,9 @@ describe('Incoming Throughput Middleware', function () {
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
     // time is 1 second after now
-    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientLiquidityError)
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(
+      InsufficientLiquidityError
+    )
     expect(services.logger.warn).toHaveBeenCalled()
 
     // time is 12 seconds after now
@@ -76,7 +96,11 @@ describe('Incoming Throughput Middleware', function () {
 describe('Outgoing Throughput Middleware', function () {
   const services = RafikiServicesFactory.build()
   const alice = PeerFactory.build({ id: 'alice' })
-  const bob = PeerFactory.build({ id: 'bob', outgoingThroughputLimit: BigInt(10), outgoingThroughputLimitRefillPeriod: 10000 })
+  const bob = PeerFactory.build({
+    id: 'bob',
+    outgoingThroughputLimit: BigInt(10),
+    outgoingThroughputLimitRefillPeriod: 10000
+  })
   const ctx = createContext<any, RafikiContext>()
   ctx.services = services
   ctx.peers = {
@@ -95,13 +119,20 @@ describe('Outgoing Throughput Middleware', function () {
     ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
     const middleware = createOutgoingThroughputMiddleware()
 
-    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientLiquidityError)
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(
+      InsufficientLiquidityError
+    )
     expect(services.logger.warn).toHaveBeenCalled()
   })
   test('allows throughput again after refill period', async () => {
     const now = 1434412800000
     // first return value for token bucket constructor, subsequent for prepare packets being sent
-    Date.now = jest.fn().mockReturnValueOnce(now).mockReturnValueOnce(now).mockReturnValueOnce(now + 1000).mockReturnValueOnce(now + 12000) // move time along every time now is called
+    Date.now = jest
+      .fn()
+      .mockReturnValueOnce(now)
+      .mockReturnValueOnce(now)
+      .mockReturnValueOnce(now + 1000)
+      .mockReturnValueOnce(now + 12000) // move time along every time now is called
     const prepare = IlpPrepareFactory.build({ amount: '10' })
     const next = jest.fn()
     ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
@@ -111,7 +142,9 @@ describe('Outgoing Throughput Middleware', function () {
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
 
     // time is 1 second after now
-    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(InsufficientLiquidityError)
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(
+      InsufficientLiquidityError
+    )
     expect(services.logger.warn).toHaveBeenCalled()
 
     // time is 12 seconds after now

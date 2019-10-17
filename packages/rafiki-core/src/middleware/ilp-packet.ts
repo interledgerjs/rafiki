@@ -50,7 +50,7 @@ export class ZeroCopyIlpPrepare implements RafikiPrepare {
   public _amountChanged = false
 
   constructor (prepare: Buffer | IlpPrepare) {
-    const packet = (Buffer.isBuffer(prepare))
+    const packet = Buffer.isBuffer(prepare)
       ? deserializeIlpPrepare(prepare)
       : prepare
     this._prepare = packet
@@ -116,11 +116,21 @@ export class ZeroCopyIlpPrepare implements RafikiPrepare {
   }
 }
 
-export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions): RafikiMiddleware {
-  const _getRawBody = (config && config.getRawBody) ? config.getRawBody : getRawBody
+export function createIlpPacketMiddleware (
+  config?: IlpPacketMiddlewareOptions
+): RafikiMiddleware {
+  const _getRawBody =
+    config && config.getRawBody ? config.getRawBody : getRawBody
 
-  return async function ilpPacket (ctx: RafikiContext, next: () => Promise<any>): Promise<void> {
-    ctx.assert(ctx.request.type === CONTENT_TYPE, 400, 'Expected Content-Type of ' + CONTENT_TYPE)
+  return async function ilpPacket (
+    ctx: RafikiContext,
+    next: () => Promise<any>
+  ): Promise<void> {
+    ctx.assert(
+      ctx.request.type === CONTENT_TYPE,
+      400,
+      'Expected Content-Type of ' + CONTENT_TYPE
+    )
     const buffer = await _getRawBody(ctx.req)
     const prepare = new ZeroCopyIlpPrepare(buffer)
     ctx.req.prepare = prepare
@@ -189,7 +199,7 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions):
       },
       reply: {
         enumerable: true,
-        get: (): IlpFulfill | IlpReject | undefined => (fulfill || reject),
+        get: (): IlpFulfill | IlpReject | undefined => fulfill || reject,
         set: (val: IlpReply | undefined): void => {
           if (val) {
             if (isFulfill(val)) {
@@ -209,7 +219,7 @@ export function createIlpPacketMiddleware (config?: IlpPacketMiddlewareOptions):
       },
       rawReply: {
         enumerable: true,
-        get: (): Buffer | undefined => (rawFulfill || rawReject),
+        get: (): Buffer | undefined => rawFulfill || rawReject,
         set: (val: Buffer | undefined): void => {
           if (val) {
             const packet = deserializeIlpReply(val)

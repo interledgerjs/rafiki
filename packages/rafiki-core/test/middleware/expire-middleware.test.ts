@@ -6,11 +6,12 @@ import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
 import { TransferTimedOutError } from 'ilp-packet/dist/src/errors'
 
 describe('Expire Middleware', function () {
-
   jest.useFakeTimers()
 
   it('throws error if out of expiry window', async () => {
-    const prepare = IlpPrepareFactory.build({ expiresAt: new Date(Date.now() + 10 * 1000) })
+    const prepare = IlpPrepareFactory.build({
+      expiresAt: new Date(Date.now() + 10 * 1000)
+    })
     const ctx = createContext<any, RafikiContext>()
     ctx.request.prepare = new ZeroCopyIlpPrepare(prepare)
     ctx.services = RafikiServicesFactory.build()
@@ -19,6 +20,8 @@ describe('Expire Middleware', function () {
     })
     const middleware = createOutgoingExpireMiddleware()
 
-    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(TransferTimedOutError)
+    await expect(middleware(ctx, next)).rejects.toBeInstanceOf(
+      TransferTimedOutError
+    )
   })
 })

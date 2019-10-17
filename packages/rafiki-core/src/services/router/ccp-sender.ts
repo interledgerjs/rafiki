@@ -6,7 +6,12 @@ import {
   serializeCcpRouteUpdateRequest,
   CcpRouteControlResponse
 } from 'ilp-protocol-ccp'
-import { ForwardingRoutingTable, BroadcastRoute, Relation, RouteUpdate } from 'ilp-routing'
+import {
+  ForwardingRoutingTable,
+  BroadcastRoute,
+  Relation,
+  RouteUpdate
+} from 'ilp-routing'
 import { randomBytes } from 'crypto'
 import { PeerNotFoundError } from '../../errors'
 import debug from 'debug'
@@ -98,15 +103,27 @@ export class CcpSender {
     lastKnownEpoch
   }: CcpRouteControlRequest): Promise<CcpRouteControlResponse> {
     if (this._mode !== mode) {
-      log('peer requested changing routing mode', { oldMode: ModeReverseMap[this._mode], newMode: ModeReverseMap[mode] })
+      log('peer requested changing routing mode', {
+        oldMode: ModeReverseMap[this._mode],
+        newMode: ModeReverseMap[mode]
+      })
     }
     this._mode = mode
 
-    if (lastKnownRoutingTableId !== this._forwardingRoutingTable.routingTableId) {
-      log('peer has old routing table id, resetting lastKnownEpoch to zero', { theirTableId: lastKnownRoutingTableId, correctTableId: this._forwardingRoutingTable.routingTableId })
+    if (
+      lastKnownRoutingTableId !== this._forwardingRoutingTable.routingTableId
+    ) {
+      log('peer has old routing table id, resetting lastKnownEpoch to zero', {
+        theirTableId: lastKnownRoutingTableId,
+        correctTableId: this._forwardingRoutingTable.routingTableId
+      })
       this._lastKnownEpoch = 0
     } else {
-      log('peer epoch set', { peerId: this._peerId, lastKnownEpoch, epoch: this._forwardingRoutingTable.currentEpoch })
+      log('peer epoch set', {
+        peerId: this._peerId,
+        lastKnownEpoch,
+        epoch: this._forwardingRoutingTable.currentEpoch
+      })
       this._lastKnownEpoch = lastKnownEpoch
     }
 
@@ -147,13 +164,21 @@ export class CcpSender {
 
     delay = Math.max(MINIMUM_UPDATE_INTERVAL, delay)
 
-    log('scheduling next route update', { peerId: this._peerId, delay, currentEpoch: this._forwardingRoutingTable.currentEpoch, lastEpoch: this._lastKnownEpoch })
+    log('scheduling next route update', {
+      peerId: this._peerId,
+      delay,
+      currentEpoch: this._forwardingRoutingTable.currentEpoch,
+      lastEpoch: this._lastKnownEpoch
+    })
     this._sendRouteUpdateTimer = setTimeout(() => {
       this._sendSingleRouteUpdate()
         .then(() => this._scheduleRouteUpdate())
         .catch((err: any) => {
-          const errInfo = (err instanceof Object && err.stack) ? err.stack : err
-          log('failed to broadcast route information to peer', { peerId: this._peerId, error: errInfo })
+          const errInfo = err instanceof Object && err.stack ? err.stack : err
+          log('failed to broadcast route information to peer', {
+            peerId: this._peerId,
+            error: errInfo
+          })
         })
     }, delay)
     this._sendRouteUpdateTimer.unref()
@@ -163,8 +188,10 @@ export class CcpSender {
     this._lastUpdate = Date.now()
 
     const nextRequestedEpoch = this._lastKnownEpoch
-    const allUpdates = this._forwardingRoutingTable.log
-      .slice(nextRequestedEpoch, nextRequestedEpoch + MAX_EPOCHS_PER_UPDATE)
+    const allUpdates = this._forwardingRoutingTable.log.slice(
+      nextRequestedEpoch,
+      nextRequestedEpoch + MAX_EPOCHS_PER_UPDATE
+    )
 
     const toEpoch = nextRequestedEpoch + allUpdates.length
 
@@ -182,12 +209,11 @@ export class CcpSender {
         if (
           // Don't send peer their own routes
           update.route.nextHop === this._peerId ||
-
           // Don't advertise peer and provider routes to providers
-          (
-            relation === 'parent' &&
-            ['peer', 'parent'].indexOf(this._getPeerRelation(update.route.nextHop)) !== -1
-          )
+          (relation === 'parent' &&
+            ['peer', 'parent'].indexOf(
+              this._getPeerRelation(update.route.nextHop)
+            ) !== -1)
         ) {
           return {
             ...update,
@@ -216,7 +242,14 @@ export class CcpSender {
       }
     }
 
-    log('broadcasting routes to peer', { speaker: this._getOwnAddress(), peerId: this._peerId, fromEpoch: this._lastKnownEpoch, toEpoch: toEpoch, routeCount: newRoutes.length, unreachableCount: withdrawnRoutes.length })
+    log('broadcasting routes to peer', {
+      speaker: this._getOwnAddress(),
+      peerId: this._peerId,
+      fromEpoch: this._lastKnownEpoch,
+      toEpoch: toEpoch,
+      routeCount: newRoutes.length,
+      unreachableCount: withdrawnRoutes.length
+    })
     const auth = randomBytes(32) // TODO: temp for now
     const routeUpdate: CcpRouteUpdateRequest = {
       speaker: this._getOwnAddress(),
@@ -241,11 +274,16 @@ export class CcpSender {
 
     const timeout = this._routeBroadcastInterval
 
-    const timerPromise: Promise<Buffer> = new Promise((resolve, reject): void => {
-      const timer = setTimeout(() => reject(new Error('route update timed out.')), timeout)
-      // Don't let this timer keep Node running
-      timer.unref()
-    })
+    const timerPromise: Promise<Buffer> = new Promise(
+      (resolve, reject): void => {
+        const timer = setTimeout(
+          () => reject(new Error('route update timed out.')),
+          timeout
+        )
+        // Don't let this timer keep Node running
+        timer.unref()
+      }
+    )
 
     try {
       await Promise.race([

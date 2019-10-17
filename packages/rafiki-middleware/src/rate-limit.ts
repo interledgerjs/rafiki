@@ -1,5 +1,9 @@
 import { Errors } from 'ilp-packet'
-import { PeerInfo, RafikiContext, RafikiMiddleware } from '@interledger/rafiki-core'
+import {
+  PeerInfo,
+  RafikiContext,
+  RafikiMiddleware
+} from '@interledger/rafiki-core'
 import { TokenBucket } from '@interledger/rafiki-utils'
 
 const { RateLimitedError } = Errors
@@ -8,10 +12,15 @@ const DEFAULT_REFILL_PERIOD = 60 * 1000 // 1 minute
 const DEFAULT_REFILL_COUNT = BigInt(10000)
 
 export function createRateLimitBucketForPeer (peerInfo: PeerInfo): TokenBucket {
-  const { rateLimitRefillPeriod, rateLimitRefillCount, rateLimitCapacity } = peerInfo
+  const {
+    rateLimitRefillPeriod,
+    rateLimitRefillCount,
+    rateLimitCapacity
+  } = peerInfo
   const refillPeriod: number = rateLimitRefillPeriod || DEFAULT_REFILL_PERIOD
   const refillCount: bigint = rateLimitRefillCount || DEFAULT_REFILL_COUNT
-  const capacity: bigint = (typeof rateLimitCapacity !== 'undefined') ? rateLimitCapacity : refillCount
+  const capacity: bigint =
+    typeof rateLimitCapacity !== 'undefined' ? rateLimitCapacity : refillCount
 
   // TODO: When we add the ability to update middleware, our state will get
   //   reset every update, which may not be desired.
@@ -23,7 +32,10 @@ export function createRateLimitBucketForPeer (peerInfo: PeerInfo): TokenBucket {
  */
 export function createIncomingRateLimitMiddleware (): RafikiMiddleware {
   const buckets = new Map<string, TokenBucket>()
-  return async ({ services: { logger }, request: { prepare }, peers }: RafikiContext, next: () => Promise<any>): Promise<void> => {
+  return async (
+    { services: { logger }, request: { prepare }, peers }: RafikiContext,
+    next: () => Promise<any>
+  ): Promise<void> => {
     const peer = await peers.incoming
     let bucket = buckets.get(peer.id)
     if (!bucket) {

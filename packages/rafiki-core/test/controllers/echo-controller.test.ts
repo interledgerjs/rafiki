@@ -10,7 +10,6 @@ const ECHO_DATA_PREFIX = Buffer.from('ECHOECHOECHOECHO', 'ascii')
 const minMessageWindow = 1000
 
 describe('Echo protocol', function () {
-
   const controller = createEchoProtocolController(minMessageWindow)
   const initialEchoWriter = new Writer()
   initialEchoWriter.write(ECHO_DATA_PREFIX)
@@ -49,7 +48,7 @@ describe('Echo protocol', function () {
     const type1EchoPacket: IlpPrepare = {
       destination: 'test.fred.bob',
       amount: '0',
-      expiresAt:  new Date(Number(expiry) - minMessageWindow),
+      expiresAt: new Date(Number(expiry) - minMessageWindow),
       data: responseEchoData,
       executionCondition: condition
     }
@@ -72,7 +71,9 @@ describe('Echo protocol', function () {
     }
     ctx.request.prepare = new ZeroCopyIlpPrepare(incorrectEchoPacket)
 
-    await expect(controller(ctx)).rejects.toThrowError('packet data too short for echo request. length=8')
+    await expect(controller(ctx)).rejects.toThrowError(
+      'packet data too short for echo request. length=8'
+    )
   })
 
   test('throws invalid packet type error if packet data does not start with echo prefix', async function () {
@@ -87,7 +88,9 @@ describe('Echo protocol', function () {
     }
     ctx.request.prepare = new ZeroCopyIlpPrepare(incorrectEchoPacket)
 
-    await expect(controller(ctx)).rejects.toThrowError('packet data does not start with ECHO prefix.')
+    await expect(controller(ctx)).rejects.toThrowError(
+      'packet data does not start with ECHO prefix.'
+    )
   })
 
   test('throws error for unexpected echo response', async function () {
@@ -101,6 +104,8 @@ describe('Echo protocol', function () {
 
     ctx.request.prepare = new ZeroCopyIlpPrepare(unexpectedEchoPacket)
 
-    await expect(controller(ctx)).rejects.toThrowError('received unexpected echo response.')
+    await expect(controller(ctx)).rejects.toThrowError(
+      'received unexpected echo response.'
+    )
   })
 })

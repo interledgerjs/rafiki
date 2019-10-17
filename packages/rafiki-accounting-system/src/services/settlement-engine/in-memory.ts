@@ -1,7 +1,8 @@
 import { SettlementEngine, SettlementEngineService } from '.'
 
-export class InMemorySettlementEngineService implements SettlementEngineService {
-  private _settlementEngines: Map < string, SettlementEngine >
+export class InMemorySettlementEngineService
+implements SettlementEngineService {
+  private _settlementEngines: Map<string, SettlementEngine>
 
   constructor () {
     this._settlementEngines = new Map<string, SettlementEngine>()
@@ -13,13 +14,20 @@ export class InMemorySettlementEngineService implements SettlementEngineService 
     return settlementEngine
   }
 
-  public async add (id: string, settlementEngine: SettlementEngine): Promise<void> {
-    if (this._settlementEngines.get(id)) throw new Error('Settlement Engine already exists')
+  public async add (
+    id: string,
+    settlementEngine: SettlementEngine
+  ): Promise<void> {
+    if (this._settlementEngines.get(id)) {
+      throw new Error('Settlement Engine already exists')
+    }
     this._settlementEngines.set(id, settlementEngine)
   }
 
   public async remove (id: string): Promise<void> {
-    if (!this._settlementEngines.get(id)) throw new Error('Settlement Engine does not exist')
+    if (!this._settlementEngines.get(id)) {
+      throw new Error('Settlement Engine does not exist')
+    }
     this._settlementEngines.delete(id)
   }
 }

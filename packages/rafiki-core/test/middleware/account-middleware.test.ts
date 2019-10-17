@@ -1,5 +1,10 @@
 import { createContext } from '@interledger/rafiki-utils'
-import { PeerFactory, IlpPrepareFactory, RafikiServicesFactory, AccountInfoFactory } from '../../src/factories'
+import {
+  PeerFactory,
+  IlpPrepareFactory,
+  RafikiServicesFactory,
+  AccountInfoFactory
+} from '../../src/factories'
 import { RafikiContext } from '../../src/rafiki'
 import { InMemoryAccountsService } from '../../src/services'
 import { ZeroCopyIlpPrepare } from '../../src/middleware/ilp-packet'
@@ -39,8 +44,12 @@ describe('Account Middleware', () => {
   })
 
   test('can pass a custom function to get accountIds', async () => {
-    const otherIncomingAccountInfo = AccountInfoFactory.build({ id: 'otherIncomingAccount' })
-    const otherOutgoingAccountInfo = AccountInfoFactory.build({ id: 'otherOutgoingAccount' })
+    const otherIncomingAccountInfo = AccountInfoFactory.build({
+      id: 'otherIncomingAccount'
+    })
+    const otherOutgoingAccountInfo = AccountInfoFactory.build({
+      id: 'otherOutgoingAccount'
+    })
     accounts.add(otherIncomingAccountInfo)
     accounts.add(otherOutgoingAccountInfo)
     const middleware = createAccountMiddleware({

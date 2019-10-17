@@ -22,11 +22,22 @@ const defaultMiddlewareOptions: PeerMiddlewareOptions = {
   getOutgoingPeerId: defaultGetOutgoingPeerId
 }
 
-export function createPeerMiddleware (config: PeerMiddlewareOptions = defaultMiddlewareOptions): RafikiMiddleware {
-  const getIncomingPeerId = (config && config.getIncomingPeerId) ? config.getIncomingPeerId : defaultGetIncomingPeerId
-  const getOutgoingPeerId = (config && config.getOutgoingPeerId) ? config.getOutgoingPeerId : defaultGetOutgoingPeerId
+export function createPeerMiddleware (
+  config: PeerMiddlewareOptions = defaultMiddlewareOptions
+): RafikiMiddleware {
+  const getIncomingPeerId =
+    config && config.getIncomingPeerId
+      ? config.getIncomingPeerId
+      : defaultGetIncomingPeerId
+  const getOutgoingPeerId =
+    config && config.getOutgoingPeerId
+      ? config.getOutgoingPeerId
+      : defaultGetOutgoingPeerId
 
-  return async function peer (ctx: RafikiContext<AuthState>, next: () => Promise<any>): Promise<void> {
+  return async function peer (
+    ctx: RafikiContext<AuthState>,
+    next: () => Promise<any>
+  ): Promise<void> {
     let incomingPeer: Promise<Peer> | undefined
     let outgoingPeer: Promise<Peer> | undefined
     ctx.peers = {

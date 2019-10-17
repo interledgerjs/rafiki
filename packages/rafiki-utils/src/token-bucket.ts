@@ -4,9 +4,17 @@ export class TokenBucket {
   private _capacity: bigint
   private _refillRate: number
 
-  constructor ({ refillPeriod, refillCount, capacity }: { refillPeriod: number; refillCount: bigint; capacity?: bigint }) {
+  constructor ({
+    refillPeriod,
+    refillCount,
+    capacity
+  }: {
+    refillPeriod: number;
+    refillCount: bigint;
+    capacity?: bigint;
+  }) {
     this._lastTime = Date.now()
-    this._capacity = (typeof capacity !== 'undefined') ? capacity : refillCount
+    this._capacity = typeof capacity !== 'undefined' ? capacity : refillCount
     this._left = this._capacity
     this._refillRate = Number(refillCount) / refillPeriod
   }
@@ -17,7 +25,10 @@ export class TokenBucket {
     const refillAmount = Math.floor(delta * this._refillRate)
 
     this._lastTime = now
-    this._left = (this._left + BigInt(refillAmount) < this._capacity) ? this._left + BigInt(refillAmount) : this._capacity
+    this._left =
+      this._left + BigInt(refillAmount) < this._capacity
+        ? this._left + BigInt(refillAmount)
+        : this._capacity
 
     if (this._left < count) {
       return false

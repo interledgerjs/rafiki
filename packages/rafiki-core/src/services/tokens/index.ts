@@ -2,7 +2,6 @@ export * from './remote'
 export type IntrospectFunction = (token: string) => Promise<TokenInfo>
 
 export interface TokenService {
-
   /**
    * Introspect a token
    */

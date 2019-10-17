@@ -1,9 +1,17 @@
 import { AccountingSystem } from '../src'
-import { AccountSnapshot, InMemoryAccountsService, InMemoryPeers } from '@interledger/rafiki-core'
-import { IlpPrepareFactory, IlpFulfillFactory } from '@interledger/rafiki-core/build/factories'
+import {
+  AccountSnapshot,
+  InMemoryAccountsService,
+  InMemoryPeers
+} from '@interledger/rafiki-core'
+import {
+  IlpPrepareFactory,
+  IlpFulfillFactory
+} from '@interledger/rafiki-core/build/factories'
 import {
   InMemorySettlementEngineService,
-  RemoteSettlementEngine, SettlementResponse
+  RemoteSettlementEngine,
+  SettlementResponse
 } from '../src/services/settlement-engine'
 import { IlpPrepare } from 'ilp-packet'
 
@@ -43,15 +51,12 @@ describe('Accounting System Test', () => {
   })
 
   describe('Accounts', () => {
-
     beforeEach(async () => {
       await accounting.listen()
     })
 
     it('Adding an account calls out to accounts SE', async () => {
-      const mockAddAccount = jest.fn().mockImplementation((id: string) => {
-        return
-      })
+      const mockAddAccount = jest.fn().mockImplementation((id: string) => {})
       settlementEngine.addAccount = mockAddAccount
       await accounting.addAccount('alice')
 
@@ -61,7 +66,6 @@ describe('Accounting System Test', () => {
     it('Adding an account calls for an SE that doesnt exist throws and error', async () => {
       const mockAddAccount = jest.fn().mockImplementation((id: string) => {
         expect(id === 'alice')
-        return
       })
       accounts.add({
         id: 'bob',
@@ -78,9 +82,7 @@ describe('Accounting System Test', () => {
     })
 
     it('Removing an account calls out to remove from SE', async () => {
-      const mockRemoveAccount = jest.fn().mockImplementation((id: string) => {
-        return
-      })
+      const mockRemoveAccount = jest.fn().mockImplementation((id: string) => {})
 
       settlementEngine.removeAccount = mockRemoveAccount
       await accounting.removeAccount('alice')
@@ -89,9 +91,7 @@ describe('Accounting System Test', () => {
     })
 
     it('Removing an account calls for an SE that doesnt exist throws and error', async () => {
-      const mockRemoveAccount = jest.fn().mockImplementation((id: string) => {
-        return
-      })
+      const mockRemoveAccount = jest.fn().mockImplementation((id: string) => {})
       accounts.add({
         id: 'bob',
         peerId: 'bob',
@@ -109,12 +109,13 @@ describe('Accounting System Test', () => {
   })
 
   describe('Receive Request', () => {
-
     it('receiving a request passes it to SE and returns response', async () => {
       const fulfill = IlpFulfillFactory.build()
-      const mockReceiveRequest = jest.fn().mockImplementation((packet: IlpPrepare) => {
-        return fulfill
-      })
+      const mockReceiveRequest = jest
+        .fn()
+        .mockImplementation((packet: IlpPrepare) => {
+          return fulfill
+        })
       settlementEngine.receiveRequest = mockReceiveRequest
       const prepare: IlpPrepare = IlpPrepareFactory.build()
       const response = await accounting.receiveRequest('alice', prepare)
@@ -122,16 +123,15 @@ describe('Accounting System Test', () => {
       expect(mockReceiveRequest.mock.calls.length).toBe(1)
       expect(response).toStrictEqual(fulfill)
     })
-
   })
 
   describe('Account Update Subscription', () => {
-
     it('Updates to payable amount triggers the accounting system to check if needs to perform settlement', async () => {
-      const maybeSettleMock = jest.fn().mockImplementation((account: AccountSnapshot) => {
-        expect(account.id).toBe('alice')
-        return
-      })
+      const maybeSettleMock = jest
+        .fn()
+        .mockImplementation((account: AccountSnapshot) => {
+          expect(account.id).toBe('alice')
+        })
       accounting.maybeSettle = maybeSettleMock
 
       // Need to do manually as need to bind the function call first
@@ -146,17 +146,20 @@ describe('Accounting System Test', () => {
   })
 
   describe('Settlement logic', () => {
-
     describe('maybe Settle', () => {
       it('Attempts to settle if balance payable exceeds settlement threshold', async () => {
         const account = await accounts.get('alice')
         account.balancePayable = 300n
 
-        const mockSettlement = jest.fn().mockImplementation((account: AccountSnapshot, amount: bigint, scale: number) => {
-          expect(account.id).toBe('alice')
-          expect(amount).toBe(300n)
-          expect(scale).toBe(6)
-        })
+        const mockSettlement = jest
+          .fn()
+          .mockImplementation(
+            (account: AccountSnapshot, amount: bigint, scale: number) => {
+              expect(account.id).toBe('alice')
+              expect(amount).toBe(300n)
+              expect(scale).toBe(6)
+            }
+          )
 
         accounting.sendSettlement = mockSettlement
 
@@ -168,9 +171,11 @@ describe('Accounting System Test', () => {
         const account = await accounts.get('alice')
         account.balancePayable = 100n
 
-        const mockSettlement = jest.fn().mockImplementation((account: AccountSnapshot, amount: bigint, scale: number) => {
-          return
-        })
+        const mockSettlement = jest
+          .fn()
+          .mockImplementation(
+            (account: AccountSnapshot, amount: bigint, scale: number) => {}
+          )
 
         accounting.sendSettlement = mockSettlement
 
@@ -180,20 +185,23 @@ describe('Accounting System Test', () => {
     })
 
     describe('sendSettlement', () => {
-
       it('Handles a send settlement operation', async () => {
         const account = await accounts.get('alice')
         account.balancePayable = 100n
-        const mockEngineSendSettlement = jest.fn().mockImplementation((accountId: string, amount: bigint, scale: number) => {
-          return {
-            amount: 100n,
-            scale: 9
-          } as SettlementResponse
-        })
+        const mockEngineSendSettlement = jest
+          .fn()
+          .mockImplementation(
+            (accountId: string, amount: bigint, scale: number) => {
+              return {
+                amount: 100n,
+                scale: 9
+              } as SettlementResponse
+            }
+          )
 
         settlementEngine.sendSettlement = mockEngineSendSettlement
 
-        await accounting.sendSettlement(account,100n, account.assetScale)
+        await accounting.sendSettlement(account, 100n, account.assetScale)
 
         expect(account.balancePayable.toString(10)).toEqual('0')
       })
@@ -201,16 +209,20 @@ describe('Accounting System Test', () => {
       it('Handles settlements with different asset scales correctly', async () => {
         const account = await accounts.get('alice')
         account.balancePayable = 123456789n
-        const mockEngineSendSettlement = jest.fn().mockImplementation((accountId: string, amount: bigint, scale: number) => {
-          return {
-            amount: 123456n,
-            scale: 6
-          } as SettlementResponse
-        })
+        const mockEngineSendSettlement = jest
+          .fn()
+          .mockImplementation(
+            (accountId: string, amount: bigint, scale: number) => {
+              return {
+                amount: 123456n,
+                scale: 6
+              } as SettlementResponse
+            }
+          )
 
         settlementEngine.sendSettlement = mockEngineSendSettlement
 
-        await accounting.sendSettlement(account,123456789n, account.assetScale)
+        await accounting.sendSettlement(account, 123456789n, account.assetScale)
 
         expect(account.balancePayable.toString(10)).toEqual('789')
       })
@@ -218,18 +230,23 @@ describe('Accounting System Test', () => {
       it('Throws error if settlements responds with scale more precise than account can handle', async () => {
         const account = await accounts.get('alice')
         account.balancePayable = 123456789n
-        const mockEngineSendSettlement = jest.fn().mockImplementation((accountId: string, amount: bigint, scale: number) => {
-          return {
-            amount: 123456n,
-            scale: 12
-          } as SettlementResponse
-        })
+        const mockEngineSendSettlement = jest
+          .fn()
+          .mockImplementation(
+            (accountId: string, amount: bigint, scale: number) => {
+              return {
+                amount: 123456n,
+                scale: 12
+              } as SettlementResponse
+            }
+          )
 
         settlementEngine.sendSettlement = mockEngineSendSettlement
 
-        await expect(accounting.sendSettlement(account,123456789n, account.assetScale)).rejects.toThrow()
+        await expect(
+          accounting.sendSettlement(account, 123456789n, account.assetScale)
+        ).rejects.toThrow()
       })
-
     })
   })
 })
