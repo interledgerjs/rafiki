@@ -54,7 +54,9 @@ export function canDragonFilter (
 
     const parentRelation = getRelation(parentRoute.nextHop)
     const childRelation = getRelation(route.nextHop)
-    if (getRelationPriority(parentRelation) < getRelationPriority(childRelation)) {
+    if (
+      getRelationPriority(parentRelation) < getRelationPriority(childRelation)
+    ) {
       // The more specific route is better for us, so we keep it
       continue
     }
