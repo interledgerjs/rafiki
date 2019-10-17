@@ -27,6 +27,6 @@ build
 .DS_Store
 *.sqlite
 .idea
-
-# Configs
 *.yml
+**/CHANGELOG.md
+.github
