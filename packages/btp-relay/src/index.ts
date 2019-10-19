@@ -43,7 +43,7 @@ export function createServer (): Server {
     })
   }
 
-  koa.use(async (ctx, next) => {
+  koa.use(async ctx => {
     const buffer = await getRawBody(ctx.req)
     // Need a mapping mechanism to find the socket
     const socket = connections.get('shh_its_a_secret')
@@ -71,7 +71,7 @@ export function createServer (): Server {
     }
   })
 
-  const anotherServer = koa.listen(3031)
+  koa.listen(3031)
   const wss: Server = new Server({
     port: 8080
   })

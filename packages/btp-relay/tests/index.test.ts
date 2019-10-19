@@ -1,5 +1,4 @@
 import BtpPlugin from 'ilp-plugin-btp'
-import { createServer } from '../src'
 import Koa from 'koa'
 import {
   deserializeIlpReply,
@@ -7,6 +6,7 @@ import {
   serializeIlpReply
 } from 'ilp-packet'
 import got from 'got'
+import { Server } from '../src/server'
 
 describe('btp-relay', () => {
   it('can send a packet that gets forwarded and waits for the reply', async () => {
@@ -19,11 +19,12 @@ describe('btp-relay', () => {
       })
     })
     const httpServer = koa.listen(3030)
-    const server = createServer()
+    const server = new Server()
     const client = new BtpPlugin({
       server: 'btp+ws://:shh_its_a_secret@localhost:8080'
     })
 
+    await server.listen()
     await client.connect()
 
     const response = await client.sendData(
@@ -44,7 +45,7 @@ describe('btp-relay', () => {
 
     await httpServer.close()
     await client.disconnect()
-    server.close()
+    await server.close()
   })
 
   it('can send http request to', async () => {
@@ -57,7 +58,7 @@ describe('btp-relay', () => {
       })
     })
     const httpServer = koa.listen(3030)
-    const server = createServer()
+    const server = new Server()
     const client = new BtpPlugin({
       server: 'btp+ws://:shh_its_a_secret@localhost:8080'
     })
@@ -69,6 +70,7 @@ describe('btp-relay', () => {
       })
     })
 
+    await server.listen()
     await client.connect()
 
     const prepare = serializeIlpPrepare({
@@ -96,6 +98,6 @@ describe('btp-relay', () => {
 
     await httpServer.close()
     await client.disconnect()
-    server.close()
+    await server.close()
   })
 })
