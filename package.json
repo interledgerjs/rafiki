@@ -63,5 +63,8 @@
       "**/*.test.ts",
       "packages/temp/*"
     ]
+  },
+  "dependencies": {
+    "ws": "latest"
   }
 }

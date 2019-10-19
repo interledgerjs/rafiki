@@ -1,0 +1,34 @@
+{
+  "name": "btp-relay",
+  "version": "0.0.0",
+  "description": "A relay component for BTP",
+  "author": "Matt de Haast <matt.dehaast@coil.com>",
+  "homepage": "https://github.com/interledgerjs/rafiki#readme",
+  "license": "ISC",
+  "main": "src/btp-relay.js",
+  "directories": {
+    "lib": "src",
+    "test": "tests"
+  },
+  "files": [
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/interledgerjs/rafiki.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/interledgerjs/rafiki/issues"
+  },
+  "dependencies": {
+    "@types/got": "^9.6.7",
+    "btp-packet": "^2.2.1",
+    "got": "^9.6.0",
+    "ilp-plugin-btp": "^1.4.2",
+    "pino": "^5.13.5",
+    "ws": "^7.1.2"
+  }
+}
