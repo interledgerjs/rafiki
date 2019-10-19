@@ -63,7 +63,10 @@ describe('btp-relay', () => {
     })
     client.registerDataHandler(async data => {
       console.log('got data', data)
-      return Buffer.from('')
+      return serializeIlpReply({
+        fulfillment: Buffer.alloc(32),
+        data: Buffer.from('secret_data')
+      })
     })
 
     await client.connect()

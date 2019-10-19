@@ -14,7 +14,7 @@ import { EventEmitter } from 'events'
 import got from 'got'
 import Koa from 'koa'
 import { randomBytes } from 'crypto'
-
+import getRawBody from 'raw-body'
 const logger = createLogger()
 logger.level = 'trace'
 
@@ -35,7 +35,7 @@ export function createServer (): Server {
   const emitter = new EventEmitter()
   const connections = new Map<string, Websocket>()
 
-  const getWSResponse = (requestId: string): Promise<any> => {
+  const getWSResponse = (requestId: string): Promise<BtpPacket> => {
     return new Promise(resolve => {
       emitter.once(requestId, data => {
         resolve(data)
@@ -43,9 +43,8 @@ export function createServer (): Server {
     })
   }
 
-  koa.use(async ctx => {
-    const { request } = ctx
-    console.log(request.body)
+  koa.use(async (ctx, next) => {
+    const buffer = await getRawBody(ctx.req)
     // Need a mapping mechanism to find the socket
     const socket = connections.get('shh_its_a_secret')
     if (socket) {
@@ -58,16 +57,17 @@ export function createServer (): Server {
             {
               protocolName: 'ilp',
               contentType: MIME_APPLICATION_OCTET_STREAM,
-              data: request.body
+              data: buffer
             }
           ]
         }
       })
+      console.log('sendingBtpPacket', requestId)
       socket.send(btpPacket)
       // await for some emitted event to respond to respond back to server
       const response = await getWSResponse('request_' + requestId)
-      console.log(response)
-      ctx.body = response
+      const responseBuffer = response.data.protocolData[0].data
+      ctx.body = responseBuffer
     }
   })
 
@@ -131,11 +131,12 @@ export function createServer (): Server {
       logger.trace('connection authenticated')
       socket.on('message', async (data: Buffer) => {
         const btpPacket = deserialize(data)
+        console.log('gotBtpPacket', btpPacket.requestId)
         if (
           btpPacket.type === Type.TYPE_RESPONSE ||
           btpPacket.type === Type.TYPE_ERROR
         ) {
-          emitter.emit('request_' + btpPacket.requestId)
+          emitter.emit('request_' + btpPacket.requestId, btpPacket)
         } else {
           const response = await got
             .post('http://localhost:3030', {
