@@ -14,22 +14,22 @@ export function createServer (): Server {
   koa.use(async ctx => {
     const buffer = await getRawBody(ctx.req)
     // Need a mapping mechanism to find the socket
-    const socket = connections.get('shh_its_a_secret')
-    if (socket) {
-      ctx.body = await socket.send(buffer)
+    const connection = connections.get('shh_its_a_secret')
+    if (connection) {
+      ctx.body = await connection.send(buffer)
     }
   })
 
   koa.listen(3031)
   const server = new Server({
-    authenticate: async (username, password) => {
+    authenticate: async (username, password): Promise<string> => {
       logger.info('Got username and password', { username, password })
       return 'shh_its_a_secret'
     }
   })
 
   server.on('connection', (connection: Connection) => {
-    logger.info('got connection')
+    logger.info('got connection', { id: connection.id })
 
     connection.on('close', (code: number) => {
       logger.info('incoming connection closed. code=' + code)
