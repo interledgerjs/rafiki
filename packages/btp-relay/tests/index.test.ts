@@ -6,7 +6,7 @@ import {
   serializeIlpReply
 } from 'ilp-packet'
 import got from 'got'
-import { Server } from '../src/server'
+import { createServer } from '../src'
 
 describe('btp-relay', () => {
   it('can send a packet that gets forwarded and waits for the reply', async () => {
@@ -19,7 +19,7 @@ describe('btp-relay', () => {
       })
     })
     const httpServer = koa.listen(3030)
-    const server = new Server()
+    const server = createServer()
     const client = new BtpPlugin({
       server: 'btp+ws://:shh_its_a_secret@localhost:8080'
     })
@@ -58,7 +58,7 @@ describe('btp-relay', () => {
       })
     })
     const httpServer = koa.listen(3030)
-    const server = new Server()
+    const server = createServer()
     const client = new BtpPlugin({
       server: 'btp+ws://:shh_its_a_secret@localhost:8080'
     })

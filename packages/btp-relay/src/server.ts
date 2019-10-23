@@ -1,5 +1,4 @@
 import Websocket, { Server as WSServer } from 'ws'
-import { Server as HttpServer } from 'http'
 import {
   BtpPacket,
   deserialize,
@@ -8,42 +7,33 @@ import {
 } from 'btp-packet'
 import createLogger from 'pino'
 import { EventEmitter } from 'events'
-import Koa from 'koa'
-import getRawBody from 'raw-body'
 import { Connection } from './connection'
-import got from 'got'
+import { extractProtocolData } from './utils'
 const logger = createLogger()
 
-// export interface ServerOptions {
-//
-// }
+export type AuthFunction = (
+  username: string,
+  password: string
+) => Promise<string>
 
-export class Server {
+export interface ServerOptions {
+  authenticate: AuthFunction;
+  port?: number;
+}
+
+export class Server extends EventEmitter {
   private emitter = new EventEmitter()
-  private koa = new Koa()
-  private koaServer: HttpServer
   private wsServer: WSServer
+  private readonly authenticate: AuthFunction
   private connections = new Map<string, Connection>()
 
-  constructor () {
+  constructor (opts: ServerOptions) {
+    super()
+    this.authenticate = opts.authenticate
     this.wsServer = new WSServer({
-      port: 8080
+      port: opts.port || 8080
     })
-    this.setupKoa()
     this.setupWss()
-  }
-
-  setupKoa (): void {
-    this.koa.use(async ctx => {
-      const buffer = await getRawBody(ctx.req)
-
-      // Need a mapping mechanism to find the socket
-      const connection = this.connections.get('shh_its_a_secret')
-
-      if (connection) {
-        ctx.body = await connection.send(buffer)
-      }
-    })
   }
 
   setupWss (): void {
@@ -69,32 +59,36 @@ export class Server {
           authPacket = deserialize(binaryAuthMessage)
           logger.trace('got auth packet. packet=%j', authPacket)
 
-          // Its just a buffer
-          console.log(authPacket.data.protocolData[2].data.toString())
-
-          // this._validateAuthPacket(authPacket)
-          // if (this._incomingWs) {
-          //   this._closeIncomingSocket(this._incomingWs, authPacket)
-          // }
-          // this._incomingWs = socket
-          socket.send(serializeResponse(authPacket.requestId, []))
-          const connection = new Connection(socket, this.emitter)
-          connection.registerDataHandle((data: Buffer) => {
-            return got
-              .post('http://localhost:3030', {
-                headers: {
-                  'content-type': 'application/octet-stream'
-                },
-                body: data
-              })
-              .then((response: any) => Buffer.from(response.body))
-          })
-          this.connections.set(
-            authPacket.data.protocolData[2].data.toString(),
-            connection
+          const username = extractProtocolData(
+            'auth_username',
+            authPacket.data.protocolData
           )
+          const password = extractProtocolData(
+            'auth_token',
+            authPacket.data.protocolData
+          )
+
+          if (!username || !password) {
+            throw new Error('username and password not found')
+          }
+
+          const uniqueId = await this.authenticate(
+            username.toString(),
+            password.toString()
+          )
+
+          // If duplicate connection exists, close it
+          if (this.connections.has(uniqueId)) {
+            const conn = this.connections.get(uniqueId)
+            await conn!.close()
+          }
+
+          socket.send(serializeResponse(authPacket.requestId, []))
+
+          const connection = new Connection(socket, uniqueId, this.emitter)
+          this.connections.set(uniqueId, connection)
+          this.emit('connection', connection)
         } catch (err) {
-          // this._incomingWs = undefined
           if (authPacket) {
             const errorResponse = serializeError(
               {
@@ -115,10 +109,10 @@ export class Server {
   }
 
   async listen (): Promise<void> {
-    this.koaServer = await this.koa.listen(3031)
+    return Promise.resolve()
   }
 
   async close (): Promise<void> {
-    await Promise.all([this.wsServer.close(), this.koaServer.close()])
+    await Promise.all([this.wsServer.close()])
   }
 }

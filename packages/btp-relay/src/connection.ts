@@ -14,10 +14,16 @@ import { genRequestId } from './utils'
 export type DataHandlerFunction = (data: Buffer) => Promise<Buffer>
 
 export class Connection extends EventEmitter {
+  id: string
   _dataHandler: DataHandlerFunction
 
-  constructor (private socket: Websocket, private emitter: EventEmitter) {
+  constructor (
+    private socket: Websocket,
+    id: string,
+    private emitter: EventEmitter
+  ) {
     super()
+    this.id = id
     socket.on('message', this._handleMessage.bind(this))
   }
 
@@ -76,5 +82,9 @@ export class Connection extends EventEmitter {
         resolve(data)
       })
     })
+  }
+
+  close () {
+    this.socket.close()
   }
 }

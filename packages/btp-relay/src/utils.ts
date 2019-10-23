@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto'
+import { ProtocolData } from 'btp-packet/index'
 
 export function genRequestId (): Promise<number> {
   return new Promise<number>((resolve, reject) => {
@@ -7,4 +8,14 @@ export function genRequestId (): Promise<number> {
       resolve(buf.readUInt32BE(0))
     })
   })
+}
+
+export function extractProtocolData (
+  protocolName: string,
+  protocolData: ProtocolData[]
+): Buffer | null {
+  const protocol = protocolData.find(
+    protocol => protocol.protocolName === protocolName
+  )
+  return protocol ? protocol.data : null
 }
