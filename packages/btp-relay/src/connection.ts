@@ -1,15 +1,17 @@
 import Websocket from 'ws'
 import { EventEmitter } from 'events'
 import {
-  BtpPacket,
   deserialize,
   MIME_APPLICATION_OCTET_STREAM,
   serialize,
   serializeResponse,
   Type,
-  TYPE_MESSAGE
+  TYPE_ERROR,
+  TYPE_MESSAGE,
+  TYPE_RESPONSE
 } from 'btp-packet'
 import { genRequestId } from './utils'
+import { BtpPacketData } from 'ilp-plugin-btp'
 
 export type DataHandlerFunction = (data: Buffer) => Promise<Buffer>
 
@@ -25,6 +27,12 @@ export class Connection extends EventEmitter {
     super()
     this.id = id
     socket.on('message', this._handleMessage.bind(this))
+    socket.on('close', () => {
+      this.emit('close')
+    })
+    socket.on('error', error => {
+      this.emit('error', error)
+    })
   }
 
   registerDataHandle (handler: DataHandlerFunction): void {
@@ -33,7 +41,6 @@ export class Connection extends EventEmitter {
 
   async _handleMessage (data: Buffer): Promise<void> {
     const btpPacket = deserialize(data)
-    console.log('gotBtpPacket', btpPacket.requestId)
     if (
       btpPacket.type === Type.TYPE_RESPONSE ||
       btpPacket.type === Type.TYPE_ERROR
@@ -57,6 +64,29 @@ export class Connection extends EventEmitter {
 
   async send (data: Buffer): Promise<Buffer> {
     const requestId = await genRequestId()
+
+    let listener: any
+    let timer: NodeJS.Timer
+    const response = new Promise<BtpPacketData>((resolve, reject) => {
+      const callback = (type: number, data: BtpPacketData) => {
+        switch (type) {
+          case TYPE_RESPONSE:
+            resolve(data)
+            clearTimeout(timer)
+            break
+
+          case TYPE_ERROR:
+            reject(new Error(JSON.stringify(data)))
+            clearTimeout(timer)
+            break
+
+          default:
+            throw new Error('Unknown BTP packet type: ' + type)
+        }
+      }
+      listener = this.once('request_' + requestId, callback)
+    })
+
     const btpPacket = serialize({
       type: TYPE_MESSAGE,
       requestId,
@@ -70,18 +100,23 @@ export class Connection extends EventEmitter {
         ]
       }
     })
-    console.log('sendingBtpPacket', requestId)
-    this.socket.send(btpPacket)
-    const btpResponse = await this.getWSResponse('request_' + requestId)
-    return btpResponse.data.protocolData[0].data
-  }
 
-  private async getWSResponse (requestId: string): Promise<BtpPacket> {
-    return new Promise(resolve => {
-      this.emitter.once(requestId, data => {
-        resolve(data)
-      })
+    this.socket.send(btpPacket)
+
+    const timeout = new Promise<Buffer>((resolve, reject) => {
+      timer = setTimeout(() => {
+        this.removeListener('request_' + requestId, listener)
+        reject(new Error(requestId + ' timed out'))
+      }, 30000)
     })
+
+    const ilpResponse = response.then(
+      (btpPacket): Buffer => {
+        return btpPacket.protocolData[0].data
+      }
+    )
+
+    return Promise.race([ilpResponse, timeout])
   }
 
   close () {

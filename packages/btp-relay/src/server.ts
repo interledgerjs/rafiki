@@ -57,7 +57,7 @@ export class Server extends EventEmitter {
           // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
           // @ts-ignore
           authPacket = deserialize(binaryAuthMessage)
-          logger.trace('got auth packet. packet=%j', authPacket)
+          logger.trace('got auth packet', { packet: authPacket })
 
           const username = extractProtocolData(
             'auth_username',
@@ -69,6 +69,9 @@ export class Server extends EventEmitter {
           )
 
           if (!username || !password) {
+            logger.error(
+              'Username and password auth frames not found in first message'
+            )
             throw new Error('username and password not found')
           }
 
@@ -79,6 +82,9 @@ export class Server extends EventEmitter {
 
           // If duplicate connection exists, close it
           if (this.connections.has(uniqueId)) {
+            logger.info('Duplicate connection found for connectionId', {
+              connectionId: uniqueId
+            })
             const conn = this.connections.get(uniqueId)
             await conn!.close()
           }
@@ -87,6 +93,14 @@ export class Server extends EventEmitter {
 
           const connection = new Connection(socket, uniqueId, this.emitter)
           this.connections.set(uniqueId, connection)
+
+          connection.once('close', () => {
+            logger.debug('Connection close event', {
+              connectionId: connection.id
+            })
+            this.connections.delete(connection.id)
+          })
+
           this.emit('connection', connection)
         } catch (err) {
           if (authPacket) {
