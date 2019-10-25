@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [10.13.x]
+        node-version: [10.13.x, 12.x]
 
     steps:
     - uses: actions/checkout@v1
@@ -25,11 +25,6 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - name: Authenticate with registry
-      run: echo "//registry.npmjs.org/:_authToken=$NPM_AUTH_TOKEN" > $GITHUB_WORKSPACE/.npmrc
-      shell: bash
-      env:
-        NPM_AUTH_TOKEN: ${{secrets.npm_token}}
     - name: install 
       uses: borales/actions-yarn@v2.0.0
       with:
@@ -46,9 +41,5 @@ jobs:
       uses: borales/actions-yarn@v2.0.0
       with:
         cmd: test:ci
-    - name: upload code coverage
-      run: |
-        yarn codecov
       env:
         CI: true
-        CODECOV_TOKEN: ${{secrets.codecov_token}}
