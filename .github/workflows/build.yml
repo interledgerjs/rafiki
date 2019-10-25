@@ -25,8 +25,6 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - name: Use yarn
-      uses: Borales/actions-yarn@master
     - name: Authenticate with registry
       run: echo "//registry.npmjs.org/:_authToken=$NPM_AUTH_TOKEN" > $GITHUB_WORKSPACE/.npmrc
       shell: bash
