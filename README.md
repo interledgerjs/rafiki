@@ -1,5 +1,11 @@
 # rafiki
 
+## Deprecation notice
+
+This project was a thought experiment that will no longer be maintained. The concepts of which live on at [coilhq/rafiki](https://github.com/coilhq/rafiki), an open-source, comprehensive Interledger service for wallet providers, enabling them to provide Interledger functionality to their users.
+
+---
+
 > A modular ILP connector with stand-alone settlement engine and router
 
 <!-- [![NPM Package](https://img.shields.io/npm/v/ilp-routing.svg?style=flat)](https://npmjs.org/package/ilp-routing) -->
